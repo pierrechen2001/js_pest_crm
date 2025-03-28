@@ -12,7 +12,7 @@ function App() {
     <Router>
       <CssBaseline />
       <Sidebar />
-      <Container sx={{ marginLeft: '240px', padding: '20px' }}>
+      <Container sx={{ marginLeft: '100px', padding: '20px' }}>
         <Routes>
           <Route path="/customers" element={<Customers />} />
           <Route path="/orders" element={<Orders />} />
