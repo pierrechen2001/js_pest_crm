@@ -141,17 +141,18 @@ const customersData = [
 ];
 
 // 主應用組件
-function App() {
+const App = () => {
+  const [customers, setCustomers] = useState(initialCustomers || []); // 添加默認值
+
   return (
     <Router>
-      <AppContent />
+      <AppContent customers={customers} setCustomers={setCustomers} />
     </Router>
-
   );
-}
+};
 
 // 子組件，包含需要 router hooks 的邏輯
-function AppContent() {
+function AppContent({ customers, setCustomers }) {
   // 在 Router 環境中使用 useLocation
   const location = useLocation();
   const nodeRef = useRef(null);
@@ -248,7 +249,7 @@ function AppContent() {
                 <Route
                   path="/customers"
                   element={
-                    isAuthenticated ? <Customers /> : <Navigate to="/login" />
+                    isAuthenticated ? <Customers customers={customers} /> : <Navigate to="/login" />
                   }
                 />
                 <Route
