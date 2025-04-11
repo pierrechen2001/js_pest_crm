@@ -105,3 +105,7 @@ git checkout main
 git pull origin main
 git checkout feature-xyz
 git rebase main
+
+
+
+# npm install @mui/material @mui/icons-material @emotion/react @emotion/styled

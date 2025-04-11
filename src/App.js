@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { CssBaseline, CircularProgress, Box, Container } from "@mui/material";
 import Sidebar from "./components/Sidebar";
 import Customers from "./pages/Customers";
@@ -9,8 +9,23 @@ import Calendar from "./pages/Calendar";
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
+// 主應用組件
 function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+}
+
+// 子組件，包含需要 router hooks 的邏輯
+function AppContent() {
+  // 在 Router 環境中使用 useLocation
+  const location = useLocation();
+  const nodeRef = useRef(null);
+  
   // 檢查用戶是否已登入
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -65,10 +80,9 @@ function App() {
   }
 
   return (
-    <Router>
+    <>
       <CssBaseline />
       
-      {/* 有條件的渲染側邊欄 */}
       {isAuthenticated && <Sidebar onLogout={handleLogout} />}
       
       <Container
@@ -79,72 +93,83 @@ function App() {
           width: isAuthenticated ? "calc(100% - 240px)" : "100%",
         }}
       >
-        <Routes>
-          {/* 公開路由 */}
-          <Route
-            path="/login"
-            element={
-              isAuthenticated ? (
-                <Navigate to="/customers" />
-              ) : (
-                <Login onLogin={handleLogin} />
-              )
-            }
-          />
+        <TransitionGroup>
+          <CSSTransition
+            key={location.key}
+            nodeRef={nodeRef}
+            classNames="fade"
+            timeout={300}
+          >
+            <div ref={nodeRef}>
+              <Routes location={location}>
+                {/* 公開路由 */}
+                <Route
+                  path="/login"
+                  element={
+                    isAuthenticated ? (
+                      <Navigate to="/customers" />
+                    ) : (
+                      <Login onLogin={handleLogin} />
+                    )
+                  }
+                />
 
-          {/* 受保護的路由 */}
-          <Route
-            path="/customers"
-            element={
-              isAuthenticated ? <Customers /> : <Navigate to="/login" />
-            }
-          />
-          <Route
-            path="/orders"
-            element={
-              isAuthenticated ? <Orders /> : <Navigate to="/login" />
-            }
-          />
-          <Route
-            path="/inventory"
-            element={
-              isAuthenticated ? <Inventory /> : <Navigate to="/login" />
-            }
-          />
-          <Route
-            path="/calendar"
-            element={
-              isAuthenticated ? <Calendar /> : <Navigate to="/login" />
-            }
-          />
+                {/* 受保護的路由 */}
+                <Route
+                  path="/customers"
+                  element={
+                    isAuthenticated ? <Customers /> : <Navigate to="/login" />
+                  }
+                />
+                <Route
+                  path="/orders"
+                  element={
+                    isAuthenticated ? <Orders /> : <Navigate to="/login" />
+                  }
+                />
+                <Route
+                  path="/inventory"
+                  element={
+                    isAuthenticated ? <Inventory /> : <Navigate to="/login" />
+                  }
+                />
+                <Route
+                  path="/calendar"
+                  element={
+                    isAuthenticated ? <Calendar /> : <Navigate to="/login" />
+                  }
+                />
 
-          {/* 管理員路由 */}
-          <Route
-            path="/user-management"
-            element={
-              isAuthenticated ? <UserManagement /> : <Navigate to="/login" />
-            }
-          />
-          <Route
-            path="/role-management"
-            element={
-              isAuthenticated ? <RoleManagement /> : <Navigate to="/login" />
-            }
-          />
+                {/* 管理員路由 */}
+                <Route
+                  path="/user-management"
+                  element={
+                    isAuthenticated ? <UserManagement /> : <Navigate to="/login" />
+                  }
+                />
+                <Route
+                  path="/role-management"
+                  element={
+                    isAuthenticated ? <RoleManagement /> : <Navigate to="/login" />
+                  }
+                />
 
-          {/* 首頁重定向 */}
-          <Route
-            path="/"
-            element={
-              <Navigate to={isAuthenticated ? "/customers" : "/login"} />
-            }
-          />
+                {/* 首頁重定向 */}
+                <Route
+                  path="/"
+                  element={
+                    <Navigate to={isAuthenticated ? "/customers" : "/login"} />
+                  }
+                />
 
-          {/* 捕捉不存在的路由 */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+                {/* 捕捉不存在的路由 */}
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </div>
+          </CSSTransition>
+        </TransitionGroup>
       </Container>
-    </Router>
+    </>
   );
 }
 

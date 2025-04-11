@@ -9,13 +9,12 @@ import {
   Avatar, 
   Typography, 
   Box, 
-  IconButton, 
   Menu,
   MenuItem,
-  Tooltip,
   ListItemButton
 } from "@mui/material";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { styled } from '@mui/material/styles';
 
 // Icons
 import PeopleIcon from "@mui/icons-material/People";
@@ -25,7 +24,20 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SecurityIcon from "@mui/icons-material/Security";
 import LogoutIcon from "@mui/icons-material/Logout";
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+
+
+// 自定義樣式元件
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
+  width: 240,
+  flexShrink: 0,
+  '& .MuiDrawer-paper': {
+    width: 240,
+    boxSizing: 'border-box',
+    background: `linear-gradient(180deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+    color: theme.palette.common.white,
+    borderRight: 'none',
+  },
+}));
 
 const Sidebar = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -34,21 +46,21 @@ const Sidebar = ({ onLogout }) => {
   // 從 localStorage 獲取用戶信息
   const userEmail = localStorage.getItem("userEmail") || "使用者";
   const userName = localStorage.getItem("userName") || "用戶";
-  const userRoles = localStorage.getItem("userRoles") 
-    ? JSON.parse(localStorage.getItem("userRoles")) 
-    : ["user"];
+  // const userRoles = localStorage.getItem("userRoles") 
+  //   ? JSON.parse(localStorage.getItem("userRoles")) 
+  //   : ["user"];
   
   // 檢查是否是管理員
-  const isAdmin = userRoles.includes("admin");
+  // const isAdmin = userRoles.includes("admin");
   
   // 用戶選單狀態
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   
   // 處理選單開關
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
+  // const handleClick = (event) => {
+  //   setAnchorEl(event.currentTarget);
+  // };
   
   const handleClose = () => {
     setAnchorEl(null);
@@ -67,31 +79,32 @@ const Sidebar = ({ onLogout }) => {
   };
 
   return (
-    <Drawer
+    <StyledDrawer
       variant="permanent"
       anchor="left"
-      sx={{
-        width: 240,
-        flexShrink: 0,
-        "& .MuiDrawer-paper": {
-          width: 240,
-          boxSizing: "border-box",
-          borderRight: "1px solid rgba(0, 0, 0, 0.12)",
-        },
-      }}
     >
-      {/* 用戶資料區 */}
-      <Box sx={{ p: 2, display: "flex", alignItems: "center" }}>
-        <Tooltip title="帳號設定">
-          <IconButton onClick={handleClick} size="small">
-            <Avatar sx={{ bgcolor: "primary.main" }}>
-              {userName.charAt(0).toUpperCase()}
-            </Avatar>
-          </IconButton>
-        </Tooltip>
+      {/* 使用者資料區 - 用白色文字 */}
+      <Box sx={{ 
+        p: 3, 
+        display: "flex", 
+        alignItems: "center",
+        borderBottom: '1px solid rgba(255,255,255,0.1)'
+      }}>
+        <Avatar 
+          sx={{ 
+            bgcolor: 'common.white', 
+            color: 'primary.dark',
+            width: 42,
+            height: 42
+          }}
+        >
+          {userName.charAt(0).toUpperCase()}
+        </Avatar>
         <Box sx={{ ml: 2, overflow: "hidden" }}>
-          <Typography variant="subtitle1" noWrap>{userName}</Typography>
-          <Typography variant="body2" color="text.secondary" noWrap>
+          <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
+            {userName}
+          </Typography>
+          <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
             {userEmail}
           </Typography>
         </Box>
@@ -100,29 +113,33 @@ const Sidebar = ({ onLogout }) => {
       <Divider />
       
       {/* 導航鏈接 */}
-      <List component="nav" sx={{ p: 1 }}>
-        <ListItem disablePadding>
-          <ListItemButton 
-            component={Link} 
-            to="/customers"
-            selected={isActivePage("/customers")}
-            sx={{ 
-              borderRadius: 1,
-              mb: 0.5,
-              '&.Mui-selected': {
-                backgroundColor: 'primary.light',
-                '&:hover': {
-                  backgroundColor: 'primary.light',
-                },
-              }
-            }}
-          >
-            <ListItemIcon>
-              <PeopleIcon color={isActivePage("/customers") ? "primary" : "inherit"} />
-            </ListItemIcon>
-            <ListItemText primary="客戶管理" />
-          </ListItemButton>
-        </ListItem>
+      <List component="nav" sx={{ p: 2 }}>
+      <ListItem disablePadding>
+        <ListItemButton 
+          component={Link} 
+          to="/customers"
+          selected={isActivePage("/customers")}
+          sx={{ 
+            borderRadius: 1,
+            mb: 1,
+            color: 'common.white',
+            '&.Mui-selected': {
+              backgroundColor: 'rgba(255,255,255,0.15)',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              },
+            },
+            '&:hover': {
+              backgroundColor: 'rgba(255,255,255,0.1)',
+            }
+          }}
+        >
+          <ListItemIcon sx={{ color: 'common.white' }}>
+            <PeopleIcon />
+          </ListItemIcon>
+          <ListItemText primary="客戶管理" />
+        </ListItemButton>
+      </ListItem>
         
         <ListItem disablePadding>
           <ListItemButton 
@@ -282,7 +299,7 @@ const Sidebar = ({ onLogout }) => {
           登出
         </MenuItem>
       </Menu>
-    </Drawer>
+    </StyledDrawer>
   );
 };
 

@@ -18,7 +18,6 @@ import {
   TextField,
   IconButton,
   Chip,
-  Divider,
   FormControlLabel,
   Checkbox,
   Grid

@@ -4,12 +4,16 @@ import {
   Box, 
   Typography, 
   Button, 
-  Paper, 
   TextField,
   Snackbar,
   Alert,
-  Link
+  Link,
+  Card,
+  CardContent,
+  Avatar,
+  Fade
 } from "@mui/material";
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useNavigate } from "react-router-dom";
 
 const Login = ({ onLogin }) => {
@@ -67,93 +71,115 @@ const Login = ({ onLogin }) => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <Typography 
-          component="h1" 
-          variant="h4" 
-          sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}
-        >
-          庫存管理系統
-        </Typography>
-        
-        <Paper
-          elevation={3}
+      <Fade in={true} timeout={800}>
+        <Box
           sx={{
-            padding: 4,
+            marginTop: 8,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            width: "100%",
           }}
         >
-          <Typography component="h2" variant="h5" sx={{ mb: 2 }}>
-            登入系統
+          <Avatar sx={{ m: 1, bgcolor: 'secondary.main', width: 56, height: 56 }}>
+            <LockOutlinedIcon fontSize="large" />
+          </Avatar>
+          
+          <Typography 
+            component="h1" 
+            variant="h4" 
+            sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}
+          >
+            管理系統
           </Typography>
           
-          <Box component="form" onSubmit={handleLogin} sx={{ mt: 1, width: "100%" }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="電子郵件"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="密碼"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-              <Link 
-                component="button" 
-                variant="body2" 
-                onClick={handleForgotPassword}
-                underline="hover"
-              >
-                忘記密碼？
-              </Link>
-            </Box>
-            
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2, py: 1 }}
+          <Card
+            elevation={6}
+            sx={{
+              width: '100%',
+              borderRadius: 2,
+              overflow: 'hidden',
+            }}
+          >
+            <CardContent
+              sx={{
+                padding: 4,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
             >
-              登入
-            </Button>
+              <Typography component="h2" variant="h5" sx={{ mb: 2 }}>
+                登入系統
+              </Typography>
+              
+              <Box component="form" onSubmit={handleLogin} sx={{ mt: 1, width: "100%" }}>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="email"
+                  label="電子郵件"
+                  name="email"
+                  autoComplete="email"
+                  autoFocus
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  variant="outlined"
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label="密碼"
+                  type="password"
+                  id="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  variant="outlined"
+                />
+                
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                  <Link 
+                    component="button" 
+                    variant="body2" 
+                    onClick={handleForgotPassword}
+                    underline="hover"
+                    sx={{ color: 'primary.main' }}
+                  >
+                    忘記密碼？
+                  </Link>
+                </Box>
+                
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  sx={{ 
+                    mt: 3, 
+                    mb: 2, 
+                    py: 1.2,
+                    fontSize: '1rem',
+                    fontWeight: 'medium',
+                  }}
+                >
+                  登入
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+          
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              管理員帳號：admin@example.com（任意密碼）
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              一般使用者：user@example.com（任意密碼）
+            </Typography>
           </Box>
-        </Paper>
-        
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            管理員帳號：admin@example.com（任意密碼）
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            一般使用者：user@example.com（任意密碼）
-          </Typography>
         </Box>
-      </Box>
+      </Fade>
       
       <Snackbar 
         open={openSnackbar} 
