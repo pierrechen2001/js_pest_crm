@@ -3,6 +3,21 @@ import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, D
 import { useNavigate } from 'react-router-dom';
 import { Typography } from "@mui/material";
 
+
+const inventoryItems = [
+  {
+    id: 1,
+    name: "農藥",
+    orders: [{ quantity: 100, date: "2024-04-01", project: "Project A" }],
+    usages: [{ quantity: 20, date: "2024-04-03", project: "Project B" }],
+  },
+  {
+    id: 2,
+    name: "酒精",
+    orders: [],
+    usages: [],
+  }
+];
 const Inventory = () => {
   const [items, setItems] = useState(inventoryItems);
   const [mode, setMode] = useState("overview");
