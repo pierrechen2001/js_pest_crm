@@ -70,3 +70,42 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
 # -
 # -
+
+
+the process to use git:
+🔥 TL;DR（快速流程總結）
+
+1️⃣ 每個人都從 main 創建自己的分支
+
+git checkout main
+git pull origin main
+git checkout -b feature-xxx
+2️⃣ 開發 & 提交
+
+git add .
+git commit -m "你的變更描述"
+3️⃣ 推送前先同步 main
+
+git checkout main
+git pull origin main
+git checkout feature-xxx
+git rebase main
+4️⃣ 推送功能分支
+
+git push origin feature-xxx
+5️⃣ GitHub 上創建 Pull Request (PR) 6️⃣ 審查通過後合併 PR，然後刪除功能分支
+
+git checkout main
+git pull origin main
+git branch -d feature-xxx
+git push origin --delete feature-xxx
+7️⃣ 其他人只需要拉取 main
+
+git checkout main
+git pull origin main
+git checkout feature-xyz
+git rebase main
+
+
+
+# npm install @mui/material @mui/icons-material @emotion/react @emotion/styled
