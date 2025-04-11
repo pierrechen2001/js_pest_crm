@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, ToggleButton, ToggleButtonGroup, CircularProgress, Typography } from "@mui/material";
 import { useNavigate } from 'react-router-dom';
 
 
@@ -97,24 +97,14 @@ const taiwanDistricts = {
   ],
 };
 
-// const Customers = ({ customers: initialCustomers }) => {
-//   const navigate = useNavigate();
-  
-//   const [customers, setCustomers] = useState(initialCustomers);  // 初始客戶資料
-//   const [selectedType, setSelectedType] = useState("");  // 選擇的客戶類型
-//   const [searchText, setSearchText] = useState("");  // 搜尋文字
-
-//   // Dialog 相關狀態
-//   const [open, setOpen] = useState(false);
-//   const [step, setStep] = useState(1);
-//   const [newCustomerType, setNewCustomerType] = useState("");
-//   const [customerData, setCustomerData] = useState({});
-
-//   // 當 initialCustomers 改變時，更新 customers
-//   useEffect(() => {
-//     setCustomers(initialCustomers);
-//   }, [initialCustomers]);
-const Customers = ({ customers }) => {
+const Customers = ({ 
+  customers, 
+  loading, 
+  error, 
+  addCustomer, 
+  updateCustomer, 
+  deleteCustomer 
+}) => {
   const navigate = useNavigate();
   
   // Use state to store customers, selected type, search text, and dialog status
@@ -150,44 +140,52 @@ const Customers = ({ customers }) => {
   };
 
   // 新增客戶
-  const handleSaveCustomer = () => {
-    const newCustomer = {
-      id: customers.length + 1,
-      type: newCustomerType,
-      ...customerData,
-    };
-    setCustomers([...customers, newCustomer]);
-    handleClose();
+  const handleSaveCustomer = async () => {
+    try {
+      await addCustomer({
+        customer_type: newCustomerType,
+        customer_name: customerData.name,
+        contact_person_1: customerData.contact1,
+        contact_phone_1: customerData.cellphone1,
+        contact_person_2: customerData.contact2,
+        contact_phone_2: customerData.cellphone2,
+        contact_city: customerData.city,
+        contact_district: customerData.district,
+        contact_address: customerData.road,
+        email: customerData.email,
+        tax_id: customerData.TaxID,
+        invoice_title: customerData.Title,
+        notes: customerData.notes
+      });
+      handleClose();
+    } catch (error) {
+      console.error('Error saving customer:', error);
+    }
   };
 
   const filteredCustomers = customers
-  .filter((customer) => {
-    // 選擇特定類型的客戶
-    if (selectedType && customer.type !== selectedType) return false;
+    .filter((customer) => {
+      // 選擇特定類型的客戶
+      if (selectedType && customer.customer_type !== selectedType) return false;
 
-    // 確保 searchQuery 影響所有篩選條件
-    if (searchQuery.trim() !== "") {
-      const searchLower = searchQuery.toLowerCase();
-      const matchesAnyField =
-        customer.name?.toLowerCase().includes(searchLower) ||
-        customer.contact1?.toLowerCase().includes(searchLower) ||
-        customer.cellphone1?.includes(searchLower) || // 手機只比對數字
-        `${customer.city}${customer.district}${customer.road}`.includes(searchQuery);
+      // 搜索邏輯
+      if (searchQuery.trim() !== "") {
+        const searchLower = searchQuery.toLowerCase();
+        const matchesAnyField =
+          customer.customer_name?.toLowerCase().includes(searchLower) ||
+          customer.contact_person_1?.toLowerCase().includes(searchLower) ||
+          customer.contact_phone_1?.includes(searchLower) ||
+          `${customer.contact_city}${customer.contact_district}${customer.contact_address}`.includes(searchQuery);
 
-      if (!matchesAnyField) return false;
-    }
+        if (!matchesAnyField) return false;
+      }
 
-    // 若有選擇篩選條件，則只檢查該欄位
-    if (selectedFilters.length > 0) {
-      return selectedFilters.some((filter) => {
-        const fieldValue = customer[filter];
-        return fieldValue?.toString().toLowerCase().includes(searchQuery.toLowerCase());
-      });
-    }
+      return true;
+    })
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    return true; // 沒有選擇特定篩選條件時，保留所有客戶
-  })
-  .sort((a, b) => b.id - a.id);
+  if (loading) return <CircularProgress />;
+  if (error) return <Typography color="error">{error}</Typography>;
 
   return (
     <div style={{ padding: 20 }}>
@@ -320,30 +318,37 @@ const Customers = ({ customers }) => {
               <TableCell>列數</TableCell>
               <TableCell>客戶分類</TableCell>
               <TableCell>客戶名稱</TableCell>
-              <TableCell>聯絡人1</TableCell>
-              <TableCell>聯絡人手機1</TableCell>
-              {/* <TableCell>縣市</TableCell>
-              <TableCell>區域</TableCell> */}
+              <TableCell>聯絡人</TableCell>
+              <TableCell>聯絡電話</TableCell>
               <TableCell>地址</TableCell>
+              <TableCell>統編</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredCustomers.map((customer, index) => (
               <TableRow 
-              key={customer.id} 
-              hover 
-              style={{ cursor: "pointer" }} 
-              onClick={() => navigate(`/customer/${customer.id}`)} // ✅ 點擊後跳轉
-            >
+                key={customer.customer_id} 
+                hover 
+                style={{ cursor: "pointer" }} 
+                onClick={() => navigate(`/customer/${customer.customer_id}`)}
+              >
                 <TableCell>{index + 1}</TableCell>
-                <TableCell>{customer.type}</TableCell>
-                <TableCell>{customer.name}</TableCell>
-                <TableCell>{customer.contact1}</TableCell>
-                <TableCell>{customer.cellphone1}</TableCell>
-                <TableCell>{`${customer.city}${customer.district}${customer.road}`}</TableCell> {/* 合併顯示完整地址 */}
-                {/* <TableCell>{customer.city}</TableCell>
-                <TableCell>{customer.district}</TableCell>
-                <TableCell>{customer.road}</TableCell> */}
+                <TableCell>{customer.customer_type}</TableCell>
+                <TableCell>{customer.customer_name}</TableCell>
+                <TableCell>
+                  {customer.contact_person_1}
+                  {customer.contact_person_2 && <br />}
+                  {customer.contact_person_2}
+                </TableCell>
+                <TableCell>
+                  {customer.contact_phone_1}
+                  {customer.contact_phone_2 && <br />}
+                  {customer.contact_phone_2}
+                </TableCell>
+                <TableCell>
+                  {`${customer.contact_city}${customer.contact_district}${customer.contact_address}`}
+                </TableCell>
+                <TableCell>{customer.tax_id}</TableCell>
               </TableRow>
             ))}
           </TableBody>
