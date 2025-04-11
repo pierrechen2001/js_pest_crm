@@ -1,11 +1,7 @@
-import React, { useState } from "react";
-import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, TextField, Select, MenuItem } from "@mui/material";
-
-const inventoryItems = [
-  { id: 1, name: "殺蟲劑", orders: [{ quantity: 10, date: "2025-03-25", project: "專案A" }], usages: [{ quantity: 5, date: "2025-03-28", project: "專案B" }] },
-  { id: 2, name: "捕鼠器", orders: [{ quantity: 5, date: "2025-03-24", project: "專案C" }], usages: [{ quantity: 2, date: "2025-03-27", project: "專案D" }] },
-  { id: 3, name: "蚊香", orders: [{ quantity: 8, date: "2025-03-23", project: "專案E" }], usages: [{ quantity: 4, date: "2025-03-26", project: "專案F" }] },
-];
+import React, { useState, useEffect } from "react";
+import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete } from "@mui/material";
+import { useNavigate } from 'react-router-dom';
+import { Typography } from "@mui/material";
 
 const Inventory = () => {
   const [items, setItems] = useState(inventoryItems);
@@ -179,4 +175,10 @@ const Inventory = () => {
   );
 };
 
+<<<<<<< HEAD
 export default Inventory;
+=======
+
+export default Inventory;
+
+>>>>>>> 6d0b67f95e429157cb19b611acedcb94c32d682f
