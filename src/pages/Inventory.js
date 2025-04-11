@@ -3,7 +3,7 @@ import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, D
 import { useNavigate } from 'react-router-dom';
 import { Typography } from "@mui/material";
 
-
+// new 
 const inventoryItems = [
   {
     id: 1,
