@@ -175,10 +175,4 @@ const Inventory = () => {
   );
 };
 
-<<<<<<< HEAD
 export default Inventory;
-=======
-
-export default Inventory;
-
->>>>>>> 6d0b67f95e429157cb19b611acedcb94c32d682f
