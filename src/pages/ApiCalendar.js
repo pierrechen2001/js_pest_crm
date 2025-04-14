@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Typography, Container, Button, CircularProgress } from "@mui/material";
 import { gapi } from "gapi-script";
+const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const ApiCalendar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,15 +13,19 @@ const ApiCalendar = () => {
   useEffect(() => {
     const initClient = () => {
       gapi.client.init({
-        apiKey: "AIzaSyBGfyjDedMPiZlTqhO-ByPHY1ZC_Ax_RGA", // 您的 API 金鑰
-        clientId: "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com", // 您的 OAuth Client ID
+        apiKey,
+        clientId,
         discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
         scope: "https://www.googleapis.com/auth/calendar.readonly",
-      }).then(() => {
+      })
+      .then(() => {
         const authInstance = gapi.auth2.getAuthInstance();
         setIsAuthenticated(authInstance.isSignedIn.get());
-        authInstance.isSignedIn.listen(setIsAuthenticated); // 監聽認證狀態變化
-      });
+        authInstance.isSignedIn.listen(setIsAuthenticated);
+        console.log("apiKey:", apiKey);
+        console.log("clientId:", clientId);
+
+      })
     };
 
     gapi.load("client:auth2", initClient);

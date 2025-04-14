@@ -6,6 +6,7 @@ import Customers from "./pages/Customers";
 import Orders from "./pages/Orders";
 import Inventory from "./pages/Inventory";
 import Calendar from "./pages/Calendar";
+import ApiCalendar from "./pages/ApiCalendar";
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
@@ -247,6 +248,13 @@ function AppContent({ customers, loading, error, addCustomer, updateCustomer, de
                   path="/calendar"
                   element={
                     isAuthenticated ? <Calendar /> : <Navigate to="/login" />
+                  }
+                />
+
+                <Route
+                  path="/apicalendar"
+                  element={
+                    isAuthenticated ? <ApiCalendar /> : <Navigate to="/login" />
                   }
                 />
 
