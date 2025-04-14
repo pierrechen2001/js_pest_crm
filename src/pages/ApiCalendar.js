@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Typography, Container, Button, CircularProgress } from "@mui/material";
 import { gapi } from "gapi-script";
-const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+//const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+//const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const ApiCalendar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -13,8 +13,8 @@ const ApiCalendar = () => {
   useEffect(() => {
     const initClient = () => {
       gapi.client.init({
-        apiKey,
-        clientId,
+        apiKey : "AIzaSyBGfyjDedMPiZlTqhO-ByPHY1ZC_Ax_RGA",
+        clientId : "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com",
         discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
         scope: "https://www.googleapis.com/auth/calendar.readonly",
       })
@@ -22,9 +22,6 @@ const ApiCalendar = () => {
         const authInstance = gapi.auth2.getAuthInstance();
         setIsAuthenticated(authInstance.isSignedIn.get());
         authInstance.isSignedIn.listen(setIsAuthenticated);
-        console.log("apiKey:", apiKey);
-        console.log("clientId:", clientId);
-
       })
     };
 
