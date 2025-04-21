@@ -669,7 +669,7 @@ const Customers = ({
 </Dialog>
 
       {/* 客戶列表 */}
-      <TableContainer component={Paper}>
+      {/* <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -711,7 +711,48 @@ const Customers = ({
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+      </TableContainer> */}
+      <TableContainer component={Paper}>
+  <Table>
+    <TableHead>
+      <TableRow>
+        <TableCell style={{ width: "7%" }}>列數</TableCell>
+        <TableCell style={{ width: "12%" }}>客戶分類</TableCell>
+        <TableCell style={{ width: "20%" }}>客戶名稱</TableCell>
+        <TableCell style={{ width: "13%" }}>聯絡人</TableCell>
+        <TableCell style={{ width: "13%" }}>聯絡電話</TableCell>
+        <TableCell style={{ width: "35%" }}>地址</TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {filteredCustomers.map((customer, index) => (
+        <TableRow 
+          key={customer.customer_id} 
+          hover 
+          style={{ cursor: "pointer" }} 
+          onClick={() => navigate(`/customer/${customer.customer_id}`)}
+        >
+          <TableCell style={{ width: "7%" }}>{index + 1}</TableCell>
+          <TableCell style={{ width: "12%" }}>{customer.customer_type}</TableCell>
+          <TableCell style={{ width: "20%" }}>{customer.customer_name}</TableCell>
+          <TableCell style={{ width: "13%" }}>
+            {customer.contact_person_1}
+            {customer.contact_person_2 && <br />}
+            {customer.contact_person_2}
+          </TableCell>
+          <TableCell style={{ width: "13%" }}>
+            {customer.contact_phone_1}
+            {customer.contact_phone_2 && <br />}
+            {customer.contact_phone_2}
+          </TableCell>
+          <TableCell style={{ width: "35%" }}>
+            {`${customer.contact_city}${customer.contact_district}${customer.contact_address}`}
+          </TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</TableContainer>
     </div>
   );
 };
