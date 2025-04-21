@@ -209,6 +209,29 @@ const Sidebar = ({ onLogout }) => {
             <ListItemText primary="行事曆" />
           </ListItemButton>
         </ListItem>
+
+        <ListItem disablePadding>
+          <ListItemButton 
+            component={Link} 
+            to="/apicalendar"
+            selected={isActivePage("/apicalendar")}
+            sx={{ 
+              borderRadius: 1,
+              mb: 0.5,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.light',
+                '&:hover': {
+                  backgroundColor: 'primary.light',
+                },
+              }
+            }}
+          >
+            <ListItemIcon>
+              <CalendarMonthIcon color={isActivePage("/apicalendar") ? "primary" : "inherit"} />
+            </ListItemIcon>
+            <ListItemText primary="API行事曆" />
+          </ListItemButton>
+        </ListItem>
       </List>
       
       <Divider sx={{ mx: 2 }} />
