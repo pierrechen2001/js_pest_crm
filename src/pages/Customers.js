@@ -291,64 +291,6 @@ const Customers = ({
         </Select>
       </FormControl>
     )}
-    {/* {step === 2 && (
-      <div>
-        {/* 公司資訊 */}
-        {/* <Typography variant="h6" gutterBottom>公司資訊</Typography>
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-          <TextField label="客戶名稱" fullWidth name="name" value={customerData.name || ""} onChange={handleChange} />
-          {(newCustomerType !== "一般住家") && (
-            <>
-              <TextField label="統一編號" fullWidth name="TaxID" value={customerData.TaxID || ""} onChange={handleChange} />
-              <TextField label="抬頭" fullWidth name="Title" value={customerData.Title || ""} onChange={handleChange} />
-            </>
-          )}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-          <Autocomplete
-            options={taiwanCities}
-            renderInput={(params) => <TextField {...params} label="縣市" fullWidth />}
-            value={customerData.city || ""}
-            onChange={(event, newValue) => setCustomerData({ ...customerData, city: newValue })}
-          />
-          <Autocomplete
-            options={taiwanDistricts[customerData.city] || []}
-            renderInput={(params) => <TextField {...params} label="區域" fullWidth />}
-            value={customerData.district || ""}
-            onChange={(event, newValue) => setCustomerData({ ...customerData, district: newValue })}
-          />
-          <TextField label="地址" fullWidth name="road" value={customerData.road || ""} onChange={handleChange} />
-          </div>
-        </div>
-
-        {/* 聯絡人資訊 */}
-        {/* <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-          <TextField label="聯絡人1" fullWidth name="contact1" value={customerData.contact1 || ""} onChange={handleChange} />
-          <TextField label="手機1" fullWidth name="cellphone1" value={customerData.cellphone1 || ""} onChange={handleChange} />
-          <TextField label="電話（公）" fullWidth name="Tel" value={customerData.Tel || ""} onChange={handleChange} />
-        </div>
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-          <TextField label="聯絡人2" fullWidth name="contact2" value={customerData.contact2 || ""} onChange={handleChange} />
-          <TextField label="手機2" fullWidth name="cellphone2" value={customerData.cellphone2 || ""} onChange={handleChange} />
-          <TextField label="傳真號碼" fullWidth name="fax" value={customerData.fax || ""} onChange={handleChange} />
-        </div>
-
-        {/* 施工相關資訊 */}
-        {/* <Typography variant="h6" gutterBottom>施工相關資訊</Typography>
-        
-        {(newCustomerType === "古蹟、政府機關") && (
-          <FormControl fullWidth style={{ marginBottom: "20px" }}>
-            <InputLabel>歸屬</InputLabel>
-            <Select name="ownership" value={customerData.ownership || ""} onChange={handleChange}>
-              {ownershipOptions.map((option) => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-        <TextField label="注意事項" fullWidth name="notes" value={customerData.notes || ""} onChange={handleChange} style={{ marginBottom: "20px" }} />
-      </div>
-    )} */}
     {step === 2 && (
   <div>
     {/* 客戶資訊 */}

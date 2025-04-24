@@ -160,7 +160,7 @@ const Sidebar = ({ onLogout }) => {
             <ListItemIcon>
               <ShoppingCartIcon color={isActivePage("/orders") ? "primary" : "inherit"} />
             </ListItemIcon>
-            <ListItemText primary="訂單管理" />
+            <ListItemText primary="專案管理" />
           </ListItemButton>
         </ListItem>
         

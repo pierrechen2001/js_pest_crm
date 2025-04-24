@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabaseClient';
-import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Paper, Autocomplete, Checkbox, ListItemText, ToggleButton, ToggleButtonGroup, CircularProgress, Typography, Divider} from "@mui/material";
+import { Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Paper, Autocomplete, Checkbox, ListItemText, ToggleButton, ToggleButtonGroup, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton} from "@mui/material";
 import { Add } from "@mui/icons-material";
+import FilterListIcon from "@mui/icons-material/FilterList";
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款"];
@@ -108,7 +109,54 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState("");
   const [billingFilter, setBillingFilter] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilters, setSelectedFilters] = useState([]);
+  const filterOptions = ["專案名稱", "客戶名稱", "施工地址"];
+
+  const filteredProjects = (projects || [])
+  .filter((project) => {
+    // 搜索邏輯
+    if (searchQuery.trim() !== "") {
+      const searchLower = searchQuery.toLowerCase();
+
+      if (selectedFilters.length === 0) {
+        return (
+          project.project_name?.toLowerCase().includes(searchLower) ||
+          project.customer_database?.customer_name?.toLowerCase().includes(searchLower) ||
+          `${project.site_city}${project.site_district}${project.site_address}`
+            .toLowerCase()
+            .includes(searchLower)
+        );
+      }
+
+      const matchesAnyField = selectedFilters.some((filter) => {
+        switch (filter) {
+          case "專案名稱":
+            return project.project_name?.toLowerCase().includes(searchLower);
+          case "客戶名稱":
+            return project.customer_database?.customer_name?.toLowerCase().includes(searchLower);
+          case "施工地址":
+            return `${project.site_city}${project.site_district}${project.site_address}`
+              .toLowerCase()
+              .includes(searchLower);
+          default:
+            return false;
+        }
+      });
+
+      if (!matchesAnyField) return false;
+    }
+
+    return true;
+  })
+  .sort((a, b) => {
+    if (sortOrder === "asc") {
+      return new Date(a.start_date) - new Date(b.start_date);
+    } else {
+      return new Date(b.start_date) - new Date(a.start_date);
+    }
+  });
+
   // Dialog 控制
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -145,7 +193,25 @@ export default function Orders() {
     ],
   });
   
-
+  const [statusAnchorEl, setStatusAnchorEl] = useState(null);
+  const [billingAnchorEl, setBillingAnchorEl] = useState(null);
+  const handleStatusFilterClick = (event) => {
+    setStatusAnchorEl(event.currentTarget);
+  };
+  
+  const handleBillingFilterClick = (event) => {
+    setBillingAnchorEl(event.currentTarget);
+  };
+  
+  const handleStatusFilterClose = (status) => {
+    setStatusAnchorEl(null);
+    if (status !== undefined) setStatusFilter(status);
+  };
+  
+  const handleBillingFilterClose = (billing) => {
+    setBillingAnchorEl(null);
+    if (billing !== undefined) setBillingFilter(billing);
+  };
   // 獲取數據
   useEffect(() => {
     const fetchData = async () => {
@@ -158,9 +224,7 @@ export default function Orders() {
           .select(`
             *,
             customer_database (
-              customer_name,
-              contact_person_1,
-              contact_phone_1
+              customer_name
             )
           `)
           .order('created_at', { ascending: false });
@@ -170,7 +234,7 @@ export default function Orders() {
         // 獲取客戶列表（用於新增專案時選擇）
         const { data: customersData, error: customersError } = await supabase
           .from('customer_database')
-          .select('customer_id, customer_name, contact_person_1, contact_phone_1');
+          .select('customer_id, customer_name');
 
         if (customersError) throw customersError;
 
@@ -311,14 +375,31 @@ export default function Orders() {
         新增專案
       </Button>
 
-      <TextField 
-        label="搜尋專案" 
-        variant="outlined" 
-        value={search} 
-        onChange={(e) => setSearch(e.target.value)}
-        fullWidth
-        margin="normal"
-      />
+      {/* 搜尋與篩選條件 */}
+      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: 20 }}>
+        <TextField
+          label="搜尋專案"
+          fullWidth
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <FormControl style={{ minWidth: 200 }}>
+          <InputLabel>篩選條件</InputLabel>
+          <Select
+            multiple
+            value={selectedFilters}
+            onChange={(e) => setSelectedFilters(e.target.value)}
+            renderValue={(selected) => selected.join(", ")}
+          >
+            {filterOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                <Checkbox checked={selectedFilters.indexOf(option) > -1} />
+                <ListItemText primary={option} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </div>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth >
         <DialogTitle>新增專案</DialogTitle>
@@ -675,44 +756,80 @@ export default function Orders() {
       </Dialog>
 
       <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>專案名稱</TableCell>
-            <TableCell>客戶名稱</TableCell>
-            <TableCell>負責人</TableCell>
-            <TableCell>
-              開始日期
-              <TableSortLabel
-                active
-                direction={sortOrder}
-                onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              />
-            </TableCell>
-            <TableCell>結束日期</TableCell>
-            <TableCell>施工狀態</TableCell>
-            <TableCell>請款狀態</TableCell>
-            <TableCell>施工金額</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {projects
-            .filter(project => 
-              project.project_name?.toLowerCase().includes(search.toLowerCase()) ||
-              project.project_leader?.toLowerCase().includes(search.toLowerCase())
-            )
-            .map((project) => (
-              <TableRow key={project.project_id}>
-                <TableCell>{project.project_name}</TableCell>
-                <TableCell>{project.customer_database?.customer_name}</TableCell>
-                <TableCell>{project.project_leader}</TableCell>
-                <TableCell>{project.start_date}</TableCell>
-                <TableCell>{project.end_date}</TableCell>
-                <TableCell>{project.construction_status}</TableCell>
-                <TableCell>{project.billing_status}</TableCell>
-                <TableCell>{project.construction_fee}</TableCell>
-              </TableRow>
-            ))}
-        </TableBody>
+      <TableHead>
+        <TableRow>
+          <TableCell style={{ width: "15%" }}>專案名稱</TableCell>
+          <TableCell style={{ width: "21%" }}>客戶名稱</TableCell>
+          <TableCell style={{ width: "28%" }}>施工地址</TableCell>
+          <TableCell style={{ width: "12%" }}>
+            開始日期
+            <TableSortLabel
+              active
+              direction={sortOrder}
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            />
+          </TableCell>
+          <TableCell style={{ width: "12%" }}>
+            施工狀態
+            <IconButton onClick={handleStatusFilterClick}>
+              <FilterListIcon />
+            </IconButton>
+            <Menu
+              anchorEl={statusAnchorEl}
+              open={Boolean(statusAnchorEl)}
+              onClose={() => handleStatusFilterClose()}
+            >
+              <MenuItem onClick={() => handleStatusFilterClose("")}>全部</MenuItem>
+              {constructionStatusOptions.map((status) => (
+                <MenuItem key={status} onClick={() => handleStatusFilterClose(status)}>
+                  {status}
+                </MenuItem>
+              ))}
+            </Menu>
+          </TableCell>
+          <TableCell style={{ width: "12%" }}>
+            請款狀態
+            <IconButton onClick={handleBillingFilterClick}>
+              <FilterListIcon />
+            </IconButton>
+            <Menu
+              anchorEl={billingAnchorEl}
+              open={Boolean(billingAnchorEl)}
+              onClose={() => handleBillingFilterClose()}
+            >
+              <MenuItem onClick={() => handleBillingFilterClose("")}>全部</MenuItem>
+              {billingStatusOptions.map((status) => (
+                <MenuItem key={status} onClick={() => handleBillingFilterClose(status)}>
+                  {status}
+                </MenuItem>
+              ))}
+            </Menu>
+          </TableCell>
+        </TableRow>
+      </TableHead>
+
+      <TableBody>
+        {filteredProjects
+          .filter((project) => {
+            // 施工狀態篩選
+            if (statusFilter && project.construction_status !== statusFilter) return false;
+
+            // 請款狀態篩選
+            if (billingFilter && project.billing_status !== billingFilter) return false;
+
+            return true;
+          })
+          .map((project) => (
+            <TableRow key={project.project_id}>
+              <TableCell style={{ width: "15%" }}>{project.project_name}</TableCell>
+              <TableCell style={{ width: "21%" }}>{project.customer_database?.customer_name}</TableCell>
+              <TableCell style={{ width: "28%" }}>{`${project.site_city}${project.site_district}${project.site_address}`}</TableCell>
+              <TableCell style={{ width: "12%" }}>{project.start_date}</TableCell>
+              <TableCell style={{ width: "12%" }}>{project.construction_status}</TableCell>
+              <TableCell style={{ width: "12%" }}>{project.billing_status}</TableCell>
+            </TableRow>
+          ))}
+      </TableBody>
       </Table>
     </div>
   );

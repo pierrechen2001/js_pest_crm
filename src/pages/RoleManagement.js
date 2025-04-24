@@ -94,7 +94,7 @@ const RoleManagement = () => {
   // 模組名稱對應
   const moduleNames = {
     customers: "客戶管理",
-    orders: "訂單管理",
+    orders: "專案管理",
     inventory: "庫存管理",
     calendar: "行事曆",
     userManagement: "使用者管理",
