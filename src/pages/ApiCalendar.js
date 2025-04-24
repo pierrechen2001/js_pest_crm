@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Typography, Container, Button, CircularProgress } from "@mui/material";
 import { gapi } from "gapi-script";
+// const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+// const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const ApiCalendar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -9,20 +11,40 @@ const ApiCalendar = () => {
 
   // 初始化 Google API 客戶端
   useEffect(() => {
+    // 首先確保 gapi 已經載入
+    const loadGapiAndInitClient = () => {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        // 載入 auth2 和 client 庫
+        window.gapi.load('client:auth2', initClient);
+      };
+      script.onerror = (error) => {
+        console.error('Error loading GAPI script:', error);
+      };
+      document.body.appendChild(script);
+    };
+  
     const initClient = () => {
-      gapi.client.init({
-        apiKey: "AIzaSyBGfyjDedMPiZlTqhO-ByPHY1ZC_Ax_RGA", // 您的 API 金鑰
-        clientId: "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com", // 您的 OAuth Client ID
+      window.gapi.client.init({
+        apiKey: "AIzaSyBGfyjDedMPiZlTqhO-ByPHY1ZC_Ax_RGA",
+        clientId: "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com",
         discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
         scope: "https://www.googleapis.com/auth/calendar.readonly",
-      }).then(() => {
-        const authInstance = gapi.auth2.getAuthInstance();
+      })
+      .then(() => {
+        const authInstance = window.gapi.auth2.getAuthInstance();
         setIsAuthenticated(authInstance.isSignedIn.get());
-        authInstance.isSignedIn.listen(setIsAuthenticated); // 監聽認證狀態變化
+        authInstance.isSignedIn.listen(setIsAuthenticated);
+      })
+      .catch(error => {
+        console.error("Error initializing GAPI client:", error);
       });
     };
-
-    gapi.load("client:auth2", initClient);
+  
+    loadGapiAndInitClient();
   }, []);
 
   // 登入處理
