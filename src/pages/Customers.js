@@ -582,20 +582,31 @@ const Customers = ({
               const updatedContacts = customerData.contacts.filter((_, i) => i !== index);
               setCustomerData({ ...customerData, contacts: updatedContacts });
             }}
-          >
+            >
             刪除
-          </Button>
-        </div>
-      ))}
-      <Button
-        variant="outlined"
-        onClick={() => {
+            </Button>
+          </div>
+          
+          ))}
+          
+          <Button
+          variant="outlined"
+          onClick={() => {
           const updatedContacts = [...(customerData.contacts || []), { role: "", name: "", contactType: "", contact: "" }];
           setCustomerData({ ...customerData, contacts: updatedContacts });
         }}
       >
         新增聯絡人
       </Button>
+      <TextField
+          label="注意事項"
+          fullWidth
+          multiline
+          rows={2}
+          value={customerData.notes || ""}
+          onChange={(e) => setCustomerData({ ...customerData, notes: e.target.value })}
+          style={{ marginBottom: "20px" }}
+          />
     </div>
   </div>
 )}
@@ -611,49 +622,6 @@ const Customers = ({
 </Dialog>
 
       {/* 客戶列表 */}
-      {/* <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>列數</TableCell>
-              <TableCell>客戶分類</TableCell>
-              <TableCell>客戶名稱</TableCell>
-              <TableCell>聯絡人</TableCell>
-              <TableCell>聯絡電話</TableCell>
-              <TableCell>地址</TableCell>
-              <TableCell>統編</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredCustomers.map((customer, index) => (
-              <TableRow 
-                key={customer.customer_id} 
-                hover 
-                style={{ cursor: "pointer" }} 
-                onClick={() => navigate(`/customer/${customer.customer_id}`)}
-              >
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{customer.customer_type}</TableCell>
-                <TableCell>{customer.customer_name}</TableCell>
-                <TableCell>
-                  {customer.contact_person_1}
-                  {customer.contact_person_2 && <br />}
-                  {customer.contact_person_2}
-                </TableCell>
-                <TableCell>
-                  {customer.contact_phone_1}
-                  {customer.contact_phone_2 && <br />}
-                  {customer.contact_phone_2}
-                </TableCell>
-                <TableCell>
-                  {`${customer.contact_city}${customer.contact_district}${customer.contact_address}`}
-                </TableCell>
-                <TableCell>{customer.tax_id}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer> */}
       <TableContainer component={Paper}>
   <Table>
     <TableHead>

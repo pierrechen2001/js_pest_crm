@@ -29,7 +29,7 @@ const App = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('customer_database')
-        .select('*')
+        .select("*")
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -113,6 +113,22 @@ const App = () => {
     }
   };
 
+  const fetchProjectsByCustomerId = async (customerId) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('customer_id', customerId);
+  
+      if (error) throw error;
+  
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      return [];
+    }
+  };
+
   // 初始加載數據
   useEffect(() => {
     fetchCustomers();
@@ -128,13 +144,14 @@ const App = () => {
         updateCustomer={updateCustomer}
         deleteCustomer={deleteCustomer}
         refetchCustomers={fetchCustomers}
+        fetchProjectsByCustomerId={fetchProjectsByCustomerId}
       />
     </Router>
   );
 };
 
 // 子組件，包含需要 router hooks 的邏輯
-function AppContent({ customers, loading, error, addCustomer, updateCustomer, deleteCustomer, refetchCustomers }) {
+function AppContent({ customers, loading, error, addCustomer, updateCustomer, deleteCustomer, refetchCustomers, fetchProjectsByCustomerId }) {
   // 在 Router 環境中使用 useLocation
   const location = useLocation();
   const nodeRef = useRef(null);
@@ -230,6 +247,19 @@ function AppContent({ customers, loading, error, addCustomer, updateCustomer, de
                   path="/customers"
                   element={
                     isAuthenticated ? <Customers customers={customers} /> : <Navigate to="/login" />
+                  }
+                />
+                <Route
+                  path="/customer/:customerId"
+                  element={
+                    isAuthenticated ? (
+                      <CustomerDetailPage
+                        customers={customers}
+                        fetchProjectsByCustomerId={fetchProjectsByCustomerId}
+                      />
+                    ) : (
+                      <Navigate to="/login" />
+                    )
                   }
                 />
                 <Route
