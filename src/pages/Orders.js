@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Paper, Autocomplete, Checkbox, ListItemText, ToggleButton, ToggleButtonGroup, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton} from "@mui/material";
 import { Add } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
+import { useNavigate } from 'react-router-dom';
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款"];
@@ -99,6 +100,7 @@ const taiwanDistricts = {
 
 export default function Orders() {
   // 狀態管理
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +125,7 @@ export default function Orders() {
         return (
           project.project_name?.toLowerCase().includes(searchLower) ||
           project.customer_database?.customer_name?.toLowerCase().includes(searchLower) ||
-          `${project.site_city}${project.site_district}${project.site_address}`
+          `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
             .toLowerCase()
             .includes(searchLower)
         );
@@ -136,7 +138,7 @@ export default function Orders() {
           case "客戶名稱":
             return project.customer_database?.customer_name?.toLowerCase().includes(searchLower);
           case "施工地址":
-            return `${project.site_city}${project.site_district}${project.site_address}`
+            return `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
               .toLowerCase()
               .includes(searchLower);
           default:
@@ -151,9 +153,9 @@ export default function Orders() {
   })
   .sort((a, b) => {
     if (sortOrder === "asc") {
-      return new Date(a.start_date) - new Date(b.start_date);
+      return new Date(a.start_date || "") - new Date(b.start_date || "");
     } else {
-      return new Date(b.start_date) - new Date(a.start_date);
+      return new Date(b.start_date || "") - new Date(a.start_date || "");
     }
   });
 
@@ -179,18 +181,18 @@ export default function Orders() {
     billing_status: "未請款",
     contacts: [
       {
+        role: "",
         name: "",
-        title: "",
         contactType: "",
-        contactValue: "",
+        contact: "",
       },
       {
+        role: "",
         name: "",
-        title: "",
         contactType: "",
-        contactValue: "",
-      },
-    ],
+        contact: "",
+      }
+    ]
   });
   
   const [statusAnchorEl, setStatusAnchorEl] = useState(null);
@@ -224,6 +226,7 @@ export default function Orders() {
           .select(`
             *,
             customer_database (
+              customer_id,
               customer_name
             )
           `)
@@ -254,27 +257,6 @@ export default function Orders() {
   // 處理新增專案
   const handleSaveProject = async () => {
     try {
-      const allContacts = [
-        {
-          role: projectData.contacts[0]?.role || "",
-          name: projectData.contacts[0]?.name || "",
-          contactType: projectData.contacts[0]?.contactType || "",
-          contact: projectData.contacts[0]?.contact || "",
-        },
-        {
-          role: projectData.contacts[1]?.role || "",
-          name: projectData.contacts[1]?.name || "",
-          contactType: projectData.contacts[1]?.contactType || "",
-          contact: projectData.contacts[1]?.contact || "",
-        },
-        ...projectData.additionalContacts.map(contact => ({
-          role: contact.role || "",
-          name: contact.name || "",
-          contactType: contact.contactType || "",
-          contact: contact.contact || "",
-        })),
-      ];
-
       const { data, error } = await supabase
         .from('project')
         .insert([{
@@ -287,14 +269,21 @@ export default function Orders() {
           construction_fee: parseFloat(projectData.construction_fee),
           start_date: projectData.start_date,
           end_date: projectData.end_date,
-          construction_days: projectData.construction_days, // 新增施工天數
-          construction_scope: projectData.construction_scope, // 新增施工範圍
-          construction_notes: projectData.construction_notes, // 新增注意事項
-          payment_method: projectData.payment_method, // 新增收款方式
-          payment_date: projectData.payment_date, // 新增收款日期
+          construction_days: projectData.construction_days,
+          construction_scope: projectData.construction_scope,
+          project_notes: projectData.construction_notes,
+          payment_method: projectData.payment_method,
+          payment_date: projectData.payment_date,
           construction_status: projectData.construction_status,
           billing_status: projectData.billing_status,
-          contacts: allContacts,
+          contact1_role: projectData.contacts[0]?.role || "",
+          contact1_name: projectData.contacts[0]?.name || "",
+          contact1_type: projectData.contacts[0]?.contactType || "",
+          contact1_contact: projectData.contacts[0]?.contact || "",
+          contact2_role: projectData.contacts[1]?.role || "",
+          contact2_name: projectData.contacts[1]?.name || "",
+          contact2_type: projectData.contacts[1]?.contactType || "",
+          contact2_contact: projectData.contacts[1]?.contact || ""
         }])
         .select();
   
@@ -319,9 +308,9 @@ export default function Orders() {
         payment_date: "",
         construction_status: "未開始",
         billing_status: "未請款",
-        contacts: [ // 初始兩位聯絡人
-          { name: "", title: "", contactType: "", contactValue: "" },
-          { name: "", title: "", contactType: "", contactValue: "" }
+        contacts: [
+          { role: "", name: "", contactType: "", contact: "" },
+          { role: "", name: "", contactType: "", contact: "" }
         ]
     });
     } catch (error) {
@@ -432,7 +421,7 @@ export default function Orders() {
 
           <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
           <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
-            {/* 預設聯絡人 1 */}
+            {/* 聯絡人 1 */}
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
               <FormControl fullWidth>
                 <InputLabel>職位</InputLabel>
@@ -487,7 +476,7 @@ export default function Orders() {
               />
             </div>
 
-            {/* 預設聯絡人 2 */}
+            {/* 聯絡人 2 */}
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
               <FormControl fullWidth>
                 <InputLabel>職位</InputLabel>
@@ -538,99 +527,9 @@ export default function Orders() {
                   const newContacts = [...projectData.contacts];
                   newContacts[1] = { ...newContacts[1], contact: formattedValue };
                   setProjectData({ ...projectData, contacts: newContacts });
-
                 }}
               />
             </div>
-
-            {/* 動態新增聯絡人 */}
-            {projectData.additionalContacts?.map((contact, index) => (
-              <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                <FormControl fullWidth>
-                  <InputLabel>角色</InputLabel>
-                  <Select
-                    value={contact.role || ""}
-                    onChange={(e) => {
-                      const updatedContacts = [...projectData.additionalContacts];
-                      updatedContacts[index].role = e.target.value;
-                      setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                    }}
-                  >
-                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                      <MenuItem key={role} value={role}>{role}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  label="名字"
-                  fullWidth
-                  value={contact.name || ""}
-                  onChange={(e) => {
-                    const updatedContacts = [...projectData.additionalContacts];
-                    updatedContacts[index].name = e.target.value;
-                    setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                  }}
-                />
-                <FormControl fullWidth>
-                  <InputLabel>聯絡方式類型</InputLabel>
-                  <Select
-                    value={contact.contactType || ""}
-                    onChange={(e) => {
-                      const updatedContacts = [...projectData.additionalContacts];
-                      updatedContacts[index].contactType = e.target.value;
-                      updatedContacts[index].contact = ""; // 清空聯絡方式
-                      setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                    }}
-                  >
-                    {["電話", "市話", "LineID", "Email"].map((type) => (
-                      <MenuItem key={type} value={type}>{type}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  label={contact.contactType || "聯絡方式"}
-                  fullWidth
-                  value={contact.contact || ""}
-                  onChange={(e) => {
-                    const updatedContacts = [...projectData.additionalContacts];
-                    let formattedValue = e.target.value;
-
-                    // 自動格式化電話號碼
-                    if (contact.contactType === "電話") {
-                      formattedValue = formattedValue
-                        .replace(/[^\d]/g, "")
-                        .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                    } else if (contact.contactType === "市話") {
-                      formattedValue = formattedValue
-                        .replace(/[^\d]/g, "")
-                        .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                    }
-
-                    updatedContacts[index].contact = formattedValue;
-                    setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => {
-                    const updatedContacts = projectData.additionalContacts.filter((_, i) => i !== index);
-                    setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                  }}
-                >
-                  刪除
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="outlined"
-              onClick={() => {
-                const updatedContacts = [...(projectData.additionalContacts || []), { role: "", name: "", contactType: "", contact: "" }];
-                setProjectData({ ...projectData, additionalContacts: updatedContacts });
-              }}
-            >
-              新增聯絡人
-            </Button>
           </div>
 
           <Divider sx={{ my: 2 }} />
@@ -820,10 +719,15 @@ export default function Orders() {
             return true;
           })
           .map((project) => (
-            <TableRow key={project.project_id}>
+            <TableRow 
+              key={project.project_id}
+              hover
+              style={{ cursor: 'pointer' }}
+              onClick={() => navigate(`/order/${project.project_id}`)}
+            >
               <TableCell style={{ width: "15%" }}>{project.project_name}</TableCell>
               <TableCell style={{ width: "21%" }}>{project.customer_database?.customer_name}</TableCell>
-              <TableCell style={{ width: "28%" }}>{`${project.site_city}${project.site_district}${project.site_address}`}</TableCell>
+              <TableCell style={{ width: "28%" }}>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
               <TableCell style={{ width: "12%" }}>{project.start_date}</TableCell>
               <TableCell style={{ width: "12%" }}>{project.construction_status}</TableCell>
               <TableCell style={{ width: "12%" }}>{project.billing_status}</TableCell>

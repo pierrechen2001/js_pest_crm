@@ -145,17 +145,27 @@ const Customers = ({
       await addCustomer({
         customer_type: newCustomerType,
         customer_name: customerData.name,
-        contact_person_1: customerData.contact1,
-        contact_phone_1: customerData.cellphone1,
-        contact_person_2: customerData.contact2,
-        contact_phone_2: customerData.cellphone2,
         contact_city: customerData.city,
         contact_district: customerData.district,
         contact_address: customerData.road,
         email: customerData.email,
         tax_id: customerData.TaxID,
         invoice_title: customerData.Title,
-        notes: customerData.notes
+        notes: customerData.notes,
+        company_phone: customerData.companyPhone,
+        fax: customerData.fax,
+        contact1_role: customerData.contact1?.role,
+        contact1_name: customerData.contact1?.name,
+        contact1_type: customerData.contact1?.contactType,
+        contact1_contact: customerData.contact1?.contact,
+        contact2_role: customerData.contact2?.role,
+        contact2_name: customerData.contact2?.name,
+        contact2_type: customerData.contact2?.contactType,
+        contact2_contact: customerData.contact2?.contact,
+        contact3_role: customerData.contacts?.[0]?.role,
+        contact3_name: customerData.contacts?.[0]?.name,
+        contact3_type: customerData.contacts?.[0]?.contactType,
+        contact3_contact: customerData.contacts?.[0]?.contact
       });
       handleClose();
     } catch (error) {
@@ -197,8 +207,10 @@ const Customers = ({
       if (selectedFilters.length === 0) {
         return (
           customer.customer_name?.toLowerCase().includes(searchLower) ||
-          customer.contact_person_1?.toLowerCase().includes(searchLower) ||
-          customer.contact_phone_1?.includes(searchLower) ||
+          customer.contact1_name?.toLowerCase().includes(searchLower) ||
+          customer.contact1_contact?.includes(searchLower) ||
+          customer.contact2_name?.toLowerCase().includes(searchLower) ||
+          customer.contact2_contact?.includes(searchLower) ||
           `${customer.contact_city}${customer.contact_district}${customer.contact_address}`
             .toLowerCase()
             .includes(searchLower)
@@ -211,9 +223,18 @@ const Customers = ({
           case "客戶名稱":
             return customer.customer_name?.toLowerCase().includes(searchLower);
           case "聯絡人姓名":
-            return customer.contact_person_1?.toLowerCase().includes(searchLower);
+            return (
+              customer.contact1_name?.toLowerCase().includes(searchLower) ||
+              customer.contact2_name?.toLowerCase().includes(searchLower) ||
+              customer.contact3_name?.toLowerCase().includes(searchLower)
+            );
           case "聯絡電話":
-            return customer.contact_phone_1?.includes(searchLower);
+            return (
+              customer.contact1_contact?.includes(searchLower) ||
+              customer.contact2_contact?.includes(searchLower) ||
+              customer.contact3_contact?.includes(searchLower) ||
+              customer.company_phone?.includes(searchLower)
+            );
           case "地址":
             return `${customer.contact_city}${customer.contact_district}${customer.contact_address}`
               .toLowerCase()
@@ -646,14 +667,14 @@ const Customers = ({
           <TableCell style={{ width: "12%" }}>{customer.customer_type}</TableCell>
           <TableCell style={{ width: "20%" }}>{customer.customer_name}</TableCell>
           <TableCell style={{ width: "13%" }}>
-            {customer.contact_person_1}
-            {customer.contact_person_2 && <br />}
-            {customer.contact_person_2}
+            {customer.contact1_name && <div>{customer.contact1_name}</div>}
+            {customer.contact2_name && <div>{customer.contact2_name}</div>}
+            {customer.contact3_name && <div>{customer.contact3_name}</div>}
           </TableCell>
           <TableCell style={{ width: "13%" }}>
-            {customer.contact_phone_1}
-            {customer.contact_phone_2 && <br />}
-            {customer.contact_phone_2}
+            {customer.contact1_contact && <div>{customer.contact1_contact}</div>}
+            {customer.contact2_contact && <div>{customer.contact2_contact}</div>}
+            {customer.contact3_contact && <div>{customer.contact3_contact}</div>}
           </TableCell>
           <TableCell style={{ width: "35%" }}>
             {`${customer.contact_city}${customer.contact_district}${customer.contact_address}`}

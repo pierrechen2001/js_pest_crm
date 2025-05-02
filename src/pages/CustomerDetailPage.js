@@ -309,7 +309,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   const [openDialog, setOpenDialog] = useState(false);
   const [projectData, setProjectData] = useState({
     project_name: "",
-    customer_id: null,
+    customer_id: customerId,
     site_city: "",
     site_district: "",
     site_address: "",
@@ -324,20 +324,14 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     payment_date: "",
     construction_status: "未開始",
     billing_status: "未請款",
-    contacts: [
-      {
-        name: "",
-        title: "",
-        contactType: "",
-        contactValue: "",
-      },
-      {
-        name: "",
-        title: "",
-        contactType: "",
-        contactValue: "",
-      },
-    ],
+    contact1_role: "",
+    contact1_name: "",
+    contact1_type: "",
+    contact1_contact: "",
+    contact2_role: "",
+    contact2_name: "",
+    contact2_type: "",
+    contact2_contact: ""
   });
 
   const customer = customers.find((c) => c.customer_id === customerId);
@@ -345,8 +339,13 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const data = await fetchProjectsByCustomerId(customerId);
-        setProjects(data);
+        const { data, error } = await supabase
+          .from('project')
+          .select('*')
+          .eq('customer_id', customerId);
+  
+        if (error) throw error;
+        setProjects(data || []);
       } catch (error) {
         console.error("Error fetching projects:", error);
       }
@@ -358,32 +357,11 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   // 處理新增專案
   const handleSaveProject = async () => {
     try {
-      const allContacts = [
-        {
-          role: projectData.contacts[0]?.role || "",
-          name: projectData.contacts[0]?.name || "",
-          contactType: projectData.contacts[0]?.contactType || "",
-          contact: projectData.contacts[0]?.contact || "",
-        },
-        {
-          role: projectData.contacts[1]?.role || "",
-          name: projectData.contacts[1]?.name || "",
-          contactType: projectData.contacts[1]?.contactType || "",
-          contact: projectData.contacts[1]?.contact || "",
-        },
-        ...projectData.additionalContacts.map(contact => ({
-          role: contact.role || "",
-          name: contact.name || "",
-          contactType: contact.contactType || "",
-          contact: contact.contact || "",
-        })),
-      ];
-
       const { data, error } = await supabase
         .from('project')
         .insert([{
           project_name: projectData.project_name,
-          customer_id: projectData.customer_id,
+          customer_id: customerId,
           site_city: projectData.site_city,
           site_district: projectData.site_district,
           site_address: projectData.site_address,
@@ -391,14 +369,21 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
           construction_fee: parseFloat(projectData.construction_fee),
           start_date: projectData.start_date,
           end_date: projectData.end_date,
-          construction_days: projectData.construction_days, // 新增施工天數
-          construction_scope: projectData.construction_scope, // 新增施工範圍
-          construction_notes: projectData.construction_notes, // 新增注意事項
-          payment_method: projectData.payment_method, // 新增收款方式
-          payment_date: projectData.payment_date, // 新增收款日期
+          construction_days: projectData.construction_days,
+          construction_scope: projectData.construction_scope,
+          project_notes: projectData.construction_notes,
+          payment_method: projectData.payment_method,
+          payment_date: projectData.payment_date,
           construction_status: projectData.construction_status,
           billing_status: projectData.billing_status,
-          contacts: allContacts,
+          contact1_role: projectData.contact1_role,
+          contact1_name: projectData.contact1_name,
+          contact1_type: projectData.contact1_type,
+          contact1_contact: projectData.contact1_contact,
+          contact2_role: projectData.contact2_role,
+          contact2_name: projectData.contact2_name,
+          contact2_type: projectData.contact2_type,
+          contact2_contact: projectData.contact2_contact
         }])
         .select();
   
@@ -408,7 +393,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       setOpenDialog(false);
       setProjectData({
         project_name: "",
-        customer_id: null,
+        customer_id: customerId,
         site_city: "",
         site_district: "",
         site_address: "",
@@ -423,11 +408,15 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
         payment_date: "",
         construction_status: "未開始",
         billing_status: "未請款",
-        contacts: [ // 初始兩位聯絡人
-          { name: "", title: "", contactType: "", contactValue: "" },
-          { name: "", title: "", contactType: "", contactValue: "" }
-        ]
-    });
+        contact1_role: "",
+        contact1_name: "",
+        contact1_type: "",
+        contact1_contact: "",
+        contact2_role: "",
+        contact2_name: "",
+        contact2_type: "",
+        contact2_contact: ""
+      });
     } catch (error) {
       console.error('Error saving project:', error);
       // 可以添加錯誤提示
@@ -443,12 +432,6 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     }));
   };
   
-  const updateContact = (index, field, value) => {
-    const updatedContacts = [...projectData.contacts];
-    updatedContacts[index] = { ...updatedContacts[index], [field]: value };
-    setProjectData({ ...projectData, contacts: updatedContacts });
-  };
-
   const handleCityChange = (newValue) => {
     setProjectData((prev) => ({
       ...prev,
@@ -478,21 +461,47 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
           <Typography variant="h6" gutterBottom>聯絡資訊</Typography>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <Typography>聯絡人 1：{customer.contact_person_1 }</Typography>
-              <Typography>聯絡人 2：{customer.contact_person_2 }</Typography>
+              {customer.contact1_name && (
+                <Typography>
+                  {customer.contact1_role && `${customer.contact1_role}：`}{customer.contact1_name}
+                </Typography>
+              )}
+              {customer.contact2_name && (
+                <Typography>
+                  {customer.contact2_role && `${customer.contact2_role}：`}{customer.contact2_name}
+                </Typography>
+              )}
+              {customer.contact3_name && (
+                <Typography>
+                  {customer.contact3_role && `${customer.contact3_role}：`}{customer.contact3_name}
+                </Typography>
+              )}
               <Typography>地址：{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
-              </Grid>
+            </Grid>
             <Grid item xs={12} md={6}>
-              <Typography>手機1：{customer.contact_phone_1}</Typography>
-              <Typography>手機2：{customer.contact_phone_2}</Typography>
+              {customer.contact1_contact && (
+                <Typography>
+                  {customer.contact1_type && `${customer.contact1_type}：`}{customer.contact1_contact}
+                </Typography>
+              )}
+              {customer.contact2_contact && (
+                <Typography>
+                  {customer.contact2_type && `${customer.contact2_type}：`}{customer.contact2_contact}
+                </Typography>
+              )}
+              {customer.contact3_contact && (
+                <Typography>
+                  {customer.contact3_type && `${customer.contact3_type}：`}{customer.contact3_contact}
+                </Typography>
+              )}
             </Grid>
           </Grid>
         <Grid container spacing={2}>
           <Grid item xs={12}>
-              <Typography>電話（公）：{customer.contact_number_1}</Typography>
-              <Typography>傳真號碼：{customer.tax_idID}</Typography>
+              <Typography>電話（公）：{customer.company_phone}</Typography>
+              <Typography>傳真號碼：{customer.fax}</Typography>
               <Typography>統一編號：{customer.tax_id}</Typography>
-              <Typography>抬頭：{customer.title}</Typography>
+              <Typography>抬頭：{customer.invoice_title}</Typography>
               <Typography>注意事項：{customer.notes}</Typography>
             </Grid>
           </Grid>
@@ -533,8 +542,8 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
               <FormControl fullWidth>
                 <InputLabel>職位</InputLabel>
                 <Select
-                  value={projectData.contacts[0]?.role || ""}
-                  onChange={(e) => updateContact(0, "role", e.target.value)}
+                  value={projectData.contact1_role || ""}
+                  onChange={(e) => setProjectData({ ...projectData, contact1_role: e.target.value })}
                 >
                   {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
                     <MenuItem key={role} value={role}>{role}</MenuItem>
@@ -544,14 +553,14 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
               <TextField
                 label="名字"
                 fullWidth
-                value={projectData.contacts[0]?.name || ""}
-                onChange={(e) => updateContact(0, "name", e.target.value)}
+                value={projectData.contact1_name || ""}
+                onChange={(e) => setProjectData({ ...projectData, contact1_name: e.target.value })}
               />
               <FormControl fullWidth>
                 <InputLabel>聯絡方式類型</InputLabel>
                 <Select
-                  value={projectData.contacts[0]?.contactType || ""}
-                  onChange={(e) => updateContact(0, "contactType", e.target.value)}
+                  value={projectData.contact1_type || ""}
+                  onChange={(e) => setProjectData({ ...projectData, contact1_type: e.target.value })}
                 >
                   {["電話", "市話", "LineID", "Email"].map((type) => (
                     <MenuItem key={type} value={type}>{type}</MenuItem>
@@ -559,26 +568,24 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
                 </Select>
               </FormControl>
               <TextField
-                label={projectData.contacts[0]?.contactType || "聯絡方式"}
+                label={projectData.contact1_type || "聯絡方式"}
                 fullWidth
-                value={projectData.contacts[0]?.contact || ""}
+                value={projectData.contact1_contact || ""}
                 onChange={(e) => {
                   let formattedValue = e.target.value;
 
                   // 自動格式化電話號碼
-                  if (projectData.contacts[0]?.contactType === "電話") {
+                  if (projectData.contact1_type === "電話") {
                     formattedValue = formattedValue
                       .replace(/[^\d]/g, "")
                       .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                  } else if (projectData.contacts[0]?.contactType === "市話") {
+                  } else if (projectData.contact1_type === "市話") {
                     formattedValue = formattedValue
                       .replace(/[^\d]/g, "")
                       .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
                   }
 
-                  const newContacts = [...projectData.contacts];
-                  newContacts[0] = { ...newContacts[0], contact: formattedValue };
-                  setProjectData({ ...projectData, contacts: newContacts });
+                  setProjectData({ ...projectData, contact1_contact: formattedValue });
                 }}
               />
             </div>
@@ -588,8 +595,8 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
               <FormControl fullWidth>
                 <InputLabel>職位</InputLabel>
                 <Select
-                  value={projectData.contacts[1]?.role || ""}
-                  onChange={(e) => updateContact(1, "role", e.target.value)}
+                  value={projectData.contact2_role || ""}
+                  onChange={(e) => setProjectData({ ...projectData, contact2_role: e.target.value })}
                 >
                   {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
                     <MenuItem key={role} value={role}>{role}</MenuItem>
@@ -599,14 +606,14 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
               <TextField
                 label="名字"
                 fullWidth
-                value={projectData.contacts[1]?.name || ""}
-                onChange={(e) => updateContact(1, "name", e.target.value)}
+                value={projectData.contact2_name || ""}
+                onChange={(e) => setProjectData({ ...projectData, contact2_name: e.target.value })}
               />
               <FormControl fullWidth>
                 <InputLabel>聯絡方式類型</InputLabel>
                 <Select
-                  value={projectData.contacts[1]?.contactType || ""}
-                  onChange={(e) => updateContact(1, "contactType", e.target.value)}
+                  value={projectData.contact2_type || ""}
+                  onChange={(e) => setProjectData({ ...projectData, contact2_type: e.target.value })}
                 >
                   {["電話", "市話", "LineID", "Email"].map((type) => (
                     <MenuItem key={type} value={type}>{type}</MenuItem>
@@ -614,119 +621,27 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
                 </Select>
               </FormControl>
               <TextField
-                label={projectData.contacts[1]?.contactType || "聯絡方式"}
+                label={projectData.contact2_type || "聯絡方式"}
                 fullWidth
-                value={projectData.contacts[1]?.contact || ""}
+                value={projectData.contact2_contact || ""}
                 onChange={(e) => {
                   let formattedValue = e.target.value;
 
                   // 自動格式化電話號碼
-                  if (projectData.contacts[1]?.contactType === "電話") {
+                  if (projectData.contact2_type === "電話") {
                     formattedValue = formattedValue
                       .replace(/[^\d]/g, "")
                       .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                  } else if (projectData.contacts[1]?.contactType === "市話") {
+                  } else if (projectData.contact2_type === "市話") {
                     formattedValue = formattedValue
                       .replace(/[^\d]/g, "")
                       .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
                   }
 
-                  const newContacts = [...projectData.contacts];
-                  newContacts[1] = { ...newContacts[1], contact: formattedValue };
-                  setProjectData({ ...projectData, contacts: newContacts });
-
+                  setProjectData({ ...projectData, contact2_contact: formattedValue });
                 }}
               />
             </div>
-
-            {/* 動態新增聯絡人 */}
-            {projectData.additionalContacts?.map((contact, index) => (
-              <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                <FormControl fullWidth>
-                  <InputLabel>角色</InputLabel>
-                  <Select
-                    value={contact.role || ""}
-                    onChange={(e) => {
-                      const updatedContacts = [...projectData.additionalContacts];
-                      updatedContacts[index].role = e.target.value;
-                      setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                    }}
-                  >
-                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                      <MenuItem key={role} value={role}>{role}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  label="名字"
-                  fullWidth
-                  value={contact.name || ""}
-                  onChange={(e) => {
-                    const updatedContacts = [...projectData.additionalContacts];
-                    updatedContacts[index].name = e.target.value;
-                    setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                  }}
-                />
-                <FormControl fullWidth>
-                  <InputLabel>聯絡方式類型</InputLabel>
-                  <Select
-                    value={contact.contactType || ""}
-                    onChange={(e) => {
-                      const updatedContacts = [...projectData.additionalContacts];
-                      updatedContacts[index].contactType = e.target.value;
-                      updatedContacts[index].contact = ""; // 清空聯絡方式
-                      setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                    }}
-                  >
-                    {["電話", "市話", "LineID", "Email"].map((type) => (
-                      <MenuItem key={type} value={type}>{type}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  label={contact.contactType || "聯絡方式"}
-                  fullWidth
-                  value={contact.contact || ""}
-                  onChange={(e) => {
-                    const updatedContacts = [...projectData.additionalContacts];
-                    let formattedValue = e.target.value;
-
-                    // 自動格式化電話號碼
-                    if (contact.contactType === "電話") {
-                      formattedValue = formattedValue
-                        .replace(/[^\d]/g, "")
-                        .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                    } else if (contact.contactType === "市話") {
-                      formattedValue = formattedValue
-                        .replace(/[^\d]/g, "")
-                        .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                    }
-
-                    updatedContacts[index].contact = formattedValue;
-                    setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => {
-                    const updatedContacts = projectData.additionalContacts.filter((_, i) => i !== index);
-                    setProjectData({ ...projectData, additionalContacts: updatedContacts });
-                  }}
-                >
-                  刪除
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="outlined"
-              onClick={() => {
-                const updatedContacts = [...(projectData.additionalContacts || []), { role: "", name: "", contactType: "", contact: "" }];
-                setProjectData({ ...projectData, additionalContacts: updatedContacts });
-              }}
-            >
-              新增聯絡人
-            </Button>
           </div>
 
           <Divider sx={{ my: 2 }} />
@@ -866,15 +781,21 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredProjects.map((project, index) => (
-              <TableRow key={index}>
-                <TableCell>{project.name}</TableCell>
-                <TableCell>{`${project.site_city}${project.site_district}${project.site_address}`}</TableCell>
-                <TableCell>{project.start_date}</TableCell>
-                <TableCell>{project.construction_status}</TableCell>
-                <TableCell>{project.billing_status}</TableCell>
+            {filteredProjects.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center">目前無專案資料</TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredProjects.map((project, index) => (
+                <TableRow key={project.project_id || index}>
+                  <TableCell>{project.project_name}</TableCell>
+                  <TableCell>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
+                  <TableCell>{project.start_date}</TableCell>
+                  <TableCell>{project.construction_status}</TableCell>
+                  <TableCell>{project.billing_status}</TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
