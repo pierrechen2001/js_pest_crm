@@ -232,6 +232,29 @@ const Sidebar = ({ onLogout }) => {
             <ListItemText primary="API行事曆" />
           </ListItemButton>
         </ListItem>
+
+        <ListItem disablePadding>
+          <ListItemButton 
+            component={Link} 
+            to="/map"
+            selected={isActivePage("/map")}
+            sx={{ 
+              borderRadius: 1,
+              mb: 0.5,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.light',
+                '&:hover': {
+                  backgroundColor: 'primary.light',
+                },
+              }
+            }}
+          >
+            <ListItemIcon>
+              <CalendarMonthIcon color={isActivePage("/map") ? "primary" : "inherit"} />
+            </ListItemIcon>
+            <ListItemText primary="Map" />
+          </ListItemButton>
+        </ListItem>
       </List>
       
       <Divider sx={{ mx: 2 }} />

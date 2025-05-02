@@ -1,58 +1,159 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { gapi } from "gapi-script";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import {
   Typography, Container, Button, Dialog, DialogTitle, DialogContent,
-  TextField, DialogActions, FormControlLabel, Checkbox
+  TextField, DialogActions, CircularProgress
 } from "@mui/material";
 
 const localizer = momentLocalizer(moment);
 
 const InventoryCalendar = () => {
-  const [events, setEvents] = useState([
-    {
-      title: "庫存盤點",
-      start: new Date(),
-      end: new Date(),
-      detail: "看看材料剩下多少",
-      allDay: true,
-    },
-  ]);
+  const [events, setEvents] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);  // 存儲當前選中的事件
+  const [openEditDialog, setOpenEditDialog] = useState(false);  // 編輯事件對話框
+  const [openAddDialog, setOpenAddDialog] = useState(false);  // 新增事件對話框
+  const [eventDetails, setEventDetails] = useState({
+    title: '',
+    start: '',
+    end: '',
+    detail: ''
+  });  // 用於存儲編輯或新增事件的詳細信息
 
-  const [open, setOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState({
-    title: "",
-    start: moment().format("YYYY-MM-DDTHH:mm"),
-    end: moment().add(1, "hour").format("YYYY-MM-DDTHH:mm"),
-    detail: "",
-    allDay: false,
-  });
-  const [selectedEvent, setSelectedEvent] = useState(null);
-
-  const handleAddEvent = () => {
-    const eventToAdd = {
-      ...newEvent,
-      start: newEvent.allDay
-        ? new Date(moment(newEvent.start).format("YYYY-MM-DD"))
-        : new Date(newEvent.start),
-      end: newEvent.allDay
-        ? new Date(moment(newEvent.end).format("YYYY-MM-DD"))
-        : new Date(newEvent.end),
+  useEffect(() => {
+    const loadGoogleAPI = () => {
+      gapi.load("client:auth2", () => {
+        gapi.client.init({
+          apiKey: "AIzaSyBGfyjDedMPiZlTqhO-ByPHY1ZC_Ax_RGA",  // 使用你在 Google Cloud Console 中獲得的 API 密鑰
+          clientId: "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com", // 使用你在 Google Cloud Console 中獲得的 Client ID
+          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+          scope: "https://www.googleapis.com/auth/calendar.readonly",
+        }).then(() => {
+          const authInstance = gapi.auth2.getAuthInstance();
+          setIsAuthenticated(authInstance.isSignedIn.get());
+          authInstance.isSignedIn.listen(setIsAuthenticated);
+        });
+      });
     };
-    setEvents([...events, eventToAdd]);
-    setOpen(false);
+
+    loadGoogleAPI();
+  }, []);
+
+  const handleLogin = () => {
+    gapi.auth2.getAuthInstance().signIn();
   };
 
-  const handleSelectEvent = (event) => {
+  const handleLogout = () => {
+    gapi.auth2.getAuthInstance().signOut();
+  };
+
+  const handleGetGoogleEvents = () => {
+    setLoading(true);
+    gapi.client.calendar.events.list({
+      calendarId: "primary", 
+      timeMin: new Date().toISOString(), 
+      showDeleted: false,
+      singleEvents: true,
+      maxResults: 50,
+      orderBy: "startTime",
+    }).then((response) => {
+      const googleEvents = response.result.items.map(event => ({
+        id: event.id,  
+        title: event.summary,
+        start: new Date(event.start.dateTime || event.start.date),
+        end: new Date(event.end.dateTime || event.end.date),
+        detail: event.description || "",
+        allDay: !event.start.dateTime,
+      }));
+      setEvents(googleEvents);
+      setLoading(false);
+    }).catch((error) => {
+      console.error("Error fetching events from Google Calendar:", error);
+      setLoading(false);
+    });
+  };
+
+  const handleEventClick = (event) => {
     setSelectedEvent(event);
-    setDetailOpen(true);
+    setEventDetails({
+      title: event.title,
+      start: moment(event.start).format('YYYY-MM-DDTHH:mm'),
+      end: moment(event.end).format('YYYY-MM-DDTHH:mm'),
+      detail: event.detail
+    });
+    setOpenEditDialog(true);
   };
 
-  const handleDeleteEvent = () => {
-    setEvents(events.filter((event) => event !== selectedEvent));
-    setDetailOpen(false);
+  const handleSaveEvent = () => {
+    const updatedEvent = {
+      ...selectedEvent,
+      summary: eventDetails.title,
+      start: {
+        dateTime: new Date(eventDetails.start),
+        timeZone: "Asia/Taipei",
+      },
+      end: {
+        dateTime: new Date(eventDetails.end),
+        timeZone: "Asia/Taipei",
+      },
+      description: eventDetails.detail,
+    };
+
+    gapi.client.calendar.events.update({
+      calendarId: "primary",
+      eventId: selectedEvent.id,
+      resource: updatedEvent,
+    }).then(() => {
+      const updatedEvents = events.map(event => 
+        event.id === selectedEvent.id ? { ...event, ...updatedEvent } : event
+      );
+      setEvents(updatedEvents);
+      setOpenEditDialog(false);
+    }).catch((error) => {
+      console.error("Error updating event:", error);
+    });
+  };
+
+  const handleAddNewEvent = () => {
+    const newEvent = {
+      summary: eventDetails.title,
+      start: {
+        dateTime: new Date(eventDetails.start),
+        timeZone: "Asia/Taipei",
+      },
+      end: {
+        dateTime: new Date(eventDetails.end),
+        timeZone: "Asia/Taipei",
+      },
+      description: eventDetails.detail,
+    };
+
+    gapi.client.calendar.events.insert({
+      calendarId: "primary",
+      resource: newEvent,
+    }).then((response) => {
+      const createdEvent = response.result;
+      setEvents([...events, {
+        id: createdEvent.id,
+        title: createdEvent.summary,
+        start: new Date(createdEvent.start.dateTime),
+        end: new Date(createdEvent.end.dateTime),
+        detail: createdEvent.description,
+        allDay: false,
+      }]);
+      setOpenAddDialog(false);
+    }).catch((error) => {
+      console.error("Error adding new event:", error);
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setOpenEditDialog(false);
+    setOpenAddDialog(false);
   };
 
   return (
@@ -60,85 +161,128 @@ const InventoryCalendar = () => {
       <Typography variant="h4" gutterBottom>
         庫存行事曆
       </Typography>
-      <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
-        新增事項
-      </Button>
-      <Calendar
-        localizer={localizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: 670, marginTop: 20 }}
-        onSelectEvent={handleSelectEvent}
-      />
+      {!isAuthenticated ? (
+        <Button variant="contained" color="primary" onClick={handleLogin}>
+          登入 Google 帳號
+        </Button>
+      ) : (
+        <div>
+          <Button variant="contained" color="secondary" onClick={handleLogout}>
+            登出
+          </Button>
+          <Button variant="contained" onClick={handleGetGoogleEvents}>
+            獲取 Google Calendar 事件
+          </Button>
+          <Button variant="contained" color="primary" onClick={() => setOpenAddDialog(true)}>
+            新增事件
+          </Button>
+        </div>
+      )}
+      
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <Calendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: 670, marginTop: 20 }}
+          onSelectEvent={handleEventClick}
+        />
+      )}
 
-      {/* 新增事項對話框 */}
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>新增事項</DialogTitle>
+      {/* 編輯事件對話框 */}
+      <Dialog open={openEditDialog} onClose={handleCloseDialog}>
+        <DialogTitle>編輯事件</DialogTitle>
         <DialogContent>
           <TextField
-            fullWidth
             label="標題"
-            value={newEvent.title}
-            onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-            margin="dense"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={newEvent.allDay}
-                onChange={(e) => setNewEvent({ ...newEvent, allDay: e.target.checked })}
-              />
-            }
-            label="整天"
+            fullWidth
+            value={eventDetails.title}
+            onChange={(e) => setEventDetails({ ...eventDetails, title: e.target.value })}
+            margin="normal"
           />
           <TextField
-            fullWidth
             label="開始時間"
-            type={newEvent.allDay ? "date" : "datetime-local"}
-            value={newEvent.start}
-            onChange={(e) => setNewEvent({ ...newEvent, start: e.target.value })}
-            margin="dense"
+            type="datetime-local"
+            fullWidth
+            value={eventDetails.start}
+            onChange={(e) => setEventDetails({ ...eventDetails, start: e.target.value })}
+            margin="normal"
           />
           <TextField
-            fullWidth
             label="結束時間"
-            type={newEvent.allDay ? "date" : "datetime-local"}
-            value={newEvent.end}
-            onChange={(e) => setNewEvent({ ...newEvent, end: e.target.value })}
-            margin="dense"
+            type="datetime-local"
+            fullWidth
+            value={eventDetails.end}
+            onChange={(e) => setEventDetails({ ...eventDetails, end: e.target.value })}
+            margin="normal"
           />
           <TextField
+            label="詳細信息"
             fullWidth
-            label="詳細資訊"
-            value={newEvent.detail}
-            onChange={(e) => setNewEvent({ ...newEvent, detail: e.target.value })}
-            margin="dense"
+            multiline
+            rows={4}
+            value={eventDetails.detail}
+            onChange={(e) => setEventDetails({ ...eventDetails, detail: e.target.value })}
+            margin="normal"
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)} color="secondary">取消</Button>
-          <Button onClick={handleAddEvent} color="primary">新增</Button>
+          <Button onClick={handleCloseDialog} color="primary">
+            取消
+          </Button>
+          <Button onClick={handleSaveEvent} color="primary">
+            保存
+          </Button>
         </DialogActions>
       </Dialog>
 
-      {/* 事件詳情對話框 */}
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
-        <DialogTitle>事件詳情</DialogTitle>
+      {/* 新增事件對話框 */}
+      <Dialog open={openAddDialog} onClose={handleCloseDialog}>
+        <DialogTitle>新增事件</DialogTitle>
         <DialogContent>
-          {selectedEvent && (
-            <>
-              <Typography>標題: {selectedEvent.title}</Typography>
-              <Typography>開始時間: {moment(selectedEvent.start).format("YYYY-MM-DD HH:mm")}</Typography>
-              <Typography>結束時間: {moment(selectedEvent.end).format("YYYY-MM-DD HH:mm")}</Typography>
-              <Typography>詳細資訊: {selectedEvent.detail}</Typography>
-              <Typography>整天: {selectedEvent.allDay ? "是" : "否"}</Typography>
-            </>
-          )}
+          <TextField
+            label="標題"
+            fullWidth
+            value={eventDetails.title}
+            onChange={(e) => setEventDetails({ ...eventDetails, title: e.target.value })}
+            margin="normal"
+          />
+          <TextField
+            label="開始時間"
+            type="datetime-local"
+            fullWidth
+            value={eventDetails.start}
+            onChange={(e) => setEventDetails({ ...eventDetails, start: e.target.value })}
+            margin="normal"
+          />
+          <TextField
+            label="結束時間"
+            type="datetime-local"
+            fullWidth
+            value={eventDetails.end}
+            onChange={(e) => setEventDetails({ ...eventDetails, end: e.target.value })}
+            margin="normal"
+          />
+          <TextField
+            label="詳細信息"
+            fullWidth
+            multiline
+            rows={4}
+            value={eventDetails.detail}
+            onChange={(e) => setEventDetails({ ...eventDetails, detail: e.target.value })}
+            margin="normal"
+          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDetailOpen(false)} color="secondary">關閉</Button>
-          <Button onClick={handleDeleteEvent} color="error">刪除</Button>
+          <Button onClick={handleCloseDialog} color="primary">
+            取消
+          </Button>
+          <Button onClick={handleAddNewEvent} color="primary">
+            保存
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>
