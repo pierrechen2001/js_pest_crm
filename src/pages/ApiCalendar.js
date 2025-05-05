@@ -12,7 +12,7 @@ const FALLBACK_API_KEY = "AIzaSyBGfyjDedMPiZlTqhO-ByPHY1ZC_Ax_RGA";
 const FALLBACK_CLIENT_ID = "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com";
 
 const ApiCalendar = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -152,7 +152,7 @@ const ApiCalendar = () => {
     } finally {
       setGapiLoading(false);
     }
-  }, [gapiInitialized, gapiLoading, useCustomCredentials, customApiKey, customClientId]);
+  }, [gapiInitialized, gapiLoading, useCustomCredentials, customApiKey, customClientId, fetchEvents]);
 
   // Fetch calendar events
   const fetchEvents = async () => {

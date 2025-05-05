@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
 const Login = () => {
-  const { login, googleLogin, signUp } = useAuth();
+  const { login, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -115,13 +115,13 @@ const Login = () => {
       console.log("Login: Google sign-in successful");
       
       // Get user profile and ID token
-      const profile = googleUser.getBasicProfile();
+      // const profile = googleUser.getBasicProfile();
       const id_token = googleUser.getAuthResponse().id_token;
       
       console.log("Login: Using Supabase to sign in with ID token");
       
       // Sign in with Supabase
-      const { data, error: supabaseError } = await supabase.auth.signInWithIdToken({
+      const { error: supabaseError } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: id_token,
       });
