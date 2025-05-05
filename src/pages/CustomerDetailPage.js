@@ -1,190 +1,6 @@
-// import React, { useEffect, useState } from "react";
-// import { useParams } from "react-router-dom";
-// import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
-
-// const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
-//   const { customerId } = useParams(); // 獲取路由參數
-//   const [projects, setProjects] = useState([]);
-//   const customer = customers.find((c) => c.customer_id === customerId);
-  
-//   useEffect(() => {
-//     const fetchProjects = async () => {
-//       try {
-//         const data = await fetchProjectsByCustomerId(customerId);
-//         setProjects(data);
-//       } catch (error) {
-//         console.error("Error fetching projects:", error);
-//       }
-//     };
-
-//     fetchProjects();
-//   }, [customerId, fetchProjectsByCustomerId]);
-
-//   if (!customer) return <Typography color="error">無法找到該客戶</Typography>;
-//   const filteredProjects = projects?.filter((project) => project.customer_id === customerId) || [];
-
-//   // 根據 customerId 過濾出對應的專案
-//   return (
-//     <div style={{ padding: 20 }}>
-//       <Typography variant="h4" gutterBottom>
-//         {customer.customer_name} 詳細資訊
-//       </Typography>
-//       <Typography variant="h6">聯絡資訊</Typography>
-//       <Typography>聯絡人 1: {customer.contact_person_1} ({customer.contact_phone_1})</Typography>
-//       <Typography>聯絡人 2: {customer.contact_person_2} ({customer.contact_phone_2})</Typography>
-//       <Typography>地址: {`${customer.contact_city}${customer.contact_district}${customer.contact_address}`}</Typography>
-//       <Typography>統一編號: {customer.tax_id}</Typography>
-//       <Typography>抬頭: {customer.invoice_title}</Typography>
-//       <Typography>備註: {customer.notes}</Typography>
-
-//       <Typography variant="h6" style={{ marginTop: 20 }}>對應專案</Typography>
-//       <TableContainer component={Paper}>
-//         <Table>
-//           <TableHead>
-//             <TableRow>
-//               <TableCell>專案名稱</TableCell>
-//               <TableCell>施工地址</TableCell>
-//               <TableCell>開始日期</TableCell>
-//               <TableCell>施工狀態</TableCell>
-//             </TableRow>
-//           </TableHead>
-//           <TableBody>
-//             {filteredProjects.length > 0 ? (
-//               filteredProjects.map((project) => (
-//                 <TableRow key={project.project_id}>
-//                   <TableCell>{project.project_name}</TableCell>
-//                   <TableCell>{`${project.site_city}${project.site_district}${project.site_address}`}</TableCell>
-//                   <TableCell>{project.start_date}</TableCell>
-//                   <TableCell>{project.construction_status}</TableCell>
-//                 </TableRow>
-//               ))
-//             ) : (
-//               <TableRow>
-//                 <TableCell colSpan={4} align="center">
-//                   無專案資料
-//                 </TableCell>
-//               </TableRow>
-//             )}
-//           </TableBody>
-//         </Table>
-//       </TableContainer>
-//     </div>
-//   );
-// };
-
-// export default CustomerDetails;
-
-// import React, { useEffect, useState } from "react";
-// import { useParams } from "react-router-dom";
-// import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, Divider } from "@mui/material";
-
-// const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
-//   const { customerId } = useParams(); // 獲取路由參數
-//   const [projects, setProjects] = useState([]);
-//   const customer = customers.find((c) => c.customer_id === customerId);
-
-//   useEffect(() => {
-//     const fetchProjects = async () => {
-//       try {
-//         const data = await fetchProjectsByCustomerId(customerId);
-//         setProjects(data);
-//       } catch (error) {
-//         console.error("Error fetching projects:", error);
-//       }
-//     };
-
-//     fetchProjects();
-//   }, [customerId, fetchProjectsByCustomerId]);
-
-//   if (!customer) return <Typography color="error">無法找到該客戶</Typography>;
-
-//   const filteredProjects = projects?.filter((project) => project.customer_id === customerId) || [];
-
-//   return (
-//     <Box sx={{ padding: 4 }}>
-//       {/* 客戶詳細資訊區塊 */}
-//       <Box sx={{ marginBottom: 4 }}>
-//         <Typography variant="h4" gutterBottom>
-//           {customer.customer_name} 詳細資訊
-//         </Typography>
-//         <Divider sx={{ marginBottom: 2 }} />
-//         <Typography variant="h6" gutterBottom>
-//           聯絡資訊
-//         </Typography>
-//         <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-//           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//             <Typography>聯絡人 1:</Typography>
-//             <Typography>{customer.contact_person_1 || "無"} ({customer.contact_phone_1 || "無"})</Typography>
-//           </Box>
-//           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//             <Typography>聯絡人 2:</Typography>
-//             <Typography>{customer.contact_person_2 || "無"} ({customer.contact_phone_2 || "無"})</Typography>
-//           </Box>
-//           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//             <Typography>地址:</Typography>
-//             <Typography>{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
-//           </Box>
-//           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//             <Typography>統一編號:</Typography>
-//             <Typography>{customer.tax_id || "無"}</Typography>
-//           </Box>
-//           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//             <Typography>抬頭:</Typography>
-//             <Typography>{customer.invoice_title || "無"}</Typography>
-//           </Box>
-//           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//             <Typography>備註:</Typography>
-//             <Typography>{customer.notes || "無"}</Typography>
-//           </Box>
-//         </Box>
-//       </Box>
-
-//       {/* 對應專案區塊 */}
-//       <Box>
-//         <Typography variant="h6" gutterBottom>
-//           對應專案
-//         </Typography>
-//         <Divider sx={{ marginBottom: 2 }} />
-//         <TableContainer component={Paper}>
-//           <Table>
-//             <TableHead>
-//               <TableRow>
-//                 <TableCell>專案名稱</TableCell>
-//                 <TableCell>施工地址</TableCell>
-//                 <TableCell>開始日期</TableCell>
-//                 <TableCell>施工狀態</TableCell>
-//               </TableRow>
-//             </TableHead>
-//             <TableBody>
-//               {filteredProjects.length > 0 ? (
-//                 filteredProjects.map((project) => (
-//                   <TableRow key={project.project_id}>
-//                     <TableCell>{project.project_name}</TableCell>
-//                     <TableCell>{`${project.site_city}${project.site_district}${project.site_address}`}</TableCell>
-//                     <TableCell>{project.start_date}</TableCell>
-//                     <TableCell>{project.construction_status}</TableCell>
-//                   </TableRow>
-//                 ))
-//               ) : (
-//                 <TableRow>
-//                   <TableCell colSpan={4} align="center">
-//                     無專案資料
-//                   </TableCell>
-//                 </TableRow>
-//               )}
-//             </TableBody>
-//           </Table>
-//         </TableContainer>
-//       </Box>
-//     </Box>
-//   );
-// };
-
-// export default CustomerDetails;
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -305,6 +121,7 @@ const taiwanDistricts = {
 
 const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   const { customerId } = useParams(); // 從 URL 拿 customerId
+  const navigate = useNavigate(); // 添加 useNavigate hook
   const [projects, setProjects] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [projectData, setProjectData] = useState({
@@ -787,7 +604,12 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
               </TableRow>
             ) : (
               filteredProjects.map((project, index) => (
-                <TableRow key={project.project_id || index}>
+                <TableRow 
+                  key={project.project_id || index}
+                  hover
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/order/${project.project_id}`)}
+                >
                   <TableCell>{project.project_name}</TableCell>
                   <TableCell>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
                   <TableCell>{project.start_date}</TableCell>

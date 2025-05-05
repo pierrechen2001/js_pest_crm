@@ -168,8 +168,13 @@ const Customers = ({
         contact3_contact: customerData.contacts?.[0]?.contact
       });
       handleClose();
+      // 新增成功後重置表單
+      setNewCustomerType("");
+      setCustomerData({});
+      setStep(1);
     } catch (error) {
       console.error('Error saving customer:', error);
+      // 可以在此處添加錯誤提示
     }
   };
 

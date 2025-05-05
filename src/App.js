@@ -4,6 +4,7 @@ import { CssBaseline, CircularProgress, Box, Container } from "@mui/material";
 import Sidebar from "./components/Sidebar";
 import Customers from "./pages/Customers";
 import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 import Inventory from "./pages/Inventory";
 import Calendar from "./pages/Calendar";
 import ApiCalendar from "./pages/ApiCalendar";
@@ -51,17 +52,27 @@ const App = () => {
         .insert([{
           customer_type: customerData.customer_type,
           customer_name: customerData.customer_name,
-          contact_person_1: customerData.contact_person_1,
-          contact_phone_1: customerData.contact_phone_1,
-          contact_person_2: customerData.contact_person_2,
-          contact_phone_2: customerData.contact_phone_2,
           contact_city: customerData.contact_city,
           contact_district: customerData.contact_district,
           contact_address: customerData.contact_address,
           email: customerData.email,
           notes: customerData.notes,
           tax_id: customerData.tax_id,
-          invoice_title: customerData.invoice_title
+          invoice_title: customerData.invoice_title,
+          company_phone: customerData.company_phone,
+          fax: customerData.fax,
+          contact1_role: customerData.contact1_role,
+          contact1_name: customerData.contact1_name,
+          contact1_type: customerData.contact1_type,
+          contact1_contact: customerData.contact1_contact,
+          contact2_role: customerData.contact2_role,
+          contact2_name: customerData.contact2_name,
+          contact2_type: customerData.contact2_type,
+          contact2_contact: customerData.contact2_contact,
+          contact3_role: customerData.contact3_role,
+          contact3_name: customerData.contact3_name,
+          contact3_type: customerData.contact3_type,
+          contact3_contact: customerData.contact3_contact
         }])
         .select();
 
@@ -247,7 +258,14 @@ function AppContent({ customers, loading, error, addCustomer, updateCustomer, de
                 <Route
                   path="/customers"
                   element={
-                    isAuthenticated ? <Customers customers={customers} /> : <Navigate to="/login" />
+                    isAuthenticated ? <Customers 
+                                        customers={customers} 
+                                        loading={loading} 
+                                        error={error} 
+                                        addCustomer={addCustomer} 
+                                        updateCustomer={updateCustomer} 
+                                        deleteCustomer={deleteCustomer} 
+                                      /> : <Navigate to="/login" />
                   }
                 />
                 <Route
@@ -267,6 +285,12 @@ function AppContent({ customers, loading, error, addCustomer, updateCustomer, de
                   path="/orders"
                   element={
                     isAuthenticated ? <Orders /> : <Navigate to="/login" />
+                  }
+                />
+                <Route
+                  path="/order/:projectId"
+                  element={
+                    isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />
                   }
                 />
                 <Route

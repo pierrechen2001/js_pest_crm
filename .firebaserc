@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "js-pest-crm",
+    "pestcrm": "js-pest-crm"
+  },
+  "targets": {},
+  "etags": {}
+}
