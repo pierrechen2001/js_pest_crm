@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Typography, Container, Button, CircularProgress } from "@mui/material";
 import { gapi } from "gapi-script";
-// const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-// const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+// const apiKey = import.meta.env.REACT_APP_GOOGLE_API_KEY;
+// const clientId = import.meta.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 const ApiCalendar = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const calendarId = "jongshingpest@gmail.com";
 
   // 初始化 Google API 客戶端
   useEffect(() => {
@@ -18,8 +19,8 @@ const ApiCalendar = () => {
       script.async = true;
       script.defer = true;
       script.onload = () => {
-        // 載入 auth2 和 client 庫
-        window.gapi.load('client:auth2', initClient);
+        // 載入 client 庫
+        window.gapi.load('client', initClient);
       };
       script.onerror = (error) => {
         console.error('Error loading GAPI script:', error);
@@ -30,14 +31,12 @@ const ApiCalendar = () => {
     const initClient = () => {
       window.gapi.client.init({
         apiKey: "AIzaSyBGfyjDedMPiZlTqhO-ByPHY1ZC_Ax_RGA",
-        clientId: "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com",
         discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-        scope: "https://www.googleapis.com/auth/calendar.readonly",
       })
       .then(() => {
-        const authInstance = window.gapi.auth2.getAuthInstance();
-        setIsAuthenticated(authInstance.isSignedIn.get());
-        authInstance.isSignedIn.listen(setIsAuthenticated);
+        setInitialized(true);
+        // 初始化完成後立即獲取事件
+        getEvents();
       })
       .catch(error => {
         console.error("Error initializing GAPI client:", error);
@@ -47,22 +46,12 @@ const ApiCalendar = () => {
     loadGapiAndInitClient();
   }, []);
 
-  // 登入處理
-  const handleLogin = () => {
-    gapi.auth2.getAuthInstance().signIn();
-  };
-
-  // 登出處理
-  const handleLogout = () => {
-    gapi.auth2.getAuthInstance().signOut();
-  };
-
   // 獲取 Google Calendar 事件
-  const handleGetEvents = () => {
+  const getEvents = () => {
     setLoading(true);
-    gapi.client.calendar.events
+    window.gapi.client.calendar.events
       .list({
-        calendarId: "primary",
+        calendarId: calendarId,
         timeMin: new Date().toISOString(), // 當前時間後的事件
         showDeleted: false,
         singleEvents: true,
@@ -71,6 +60,10 @@ const ApiCalendar = () => {
       })
       .then((response) => {
         setEvents(response.result.items);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Error fetching calendar events:", error);
         setLoading(false);
       });
   };
@@ -81,19 +74,10 @@ const ApiCalendar = () => {
         Google 行事曆
       </Typography>
 
-      {!isAuthenticated ? (
-        <Button variant="contained" color="primary" onClick={handleLogin}>
-          登入 Google 帳號
+      {initialized && (
+        <Button variant="contained" onClick={getEvents}>
+          重新整理行事曆事件
         </Button>
-      ) : (
-        <div>
-          <Button variant="contained" color="secondary" onClick={handleLogout}>
-            登出
-          </Button>
-          <Button variant="contained" onClick={handleGetEvents}>
-            獲取行事曆事件
-          </Button>
-        </div>
       )}
 
       {loading ? (
@@ -104,13 +88,13 @@ const ApiCalendar = () => {
             事件列表：
           </Typography>
           {events.length === 0 ? (
-            <Typography>尚未獲取到事件</Typography>
+            <Typography>尚未獲取到事件或日曆中沒有未來事件</Typography>
           ) : (
             <ul>
               {events.map((event, index) => (
                 <li key={index}>
                   <Typography variant="body1">
-                    {event.summary} ({new Date(event.start.dateTime).toLocaleString()})
+                    {event.summary} ({event.start.dateTime ? new Date(event.start.dateTime).toLocaleString() : new Date(event.start.date).toLocaleDateString()})
                   </Typography>
                 </li>
               ))}
