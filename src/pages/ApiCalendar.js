@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Typography, Container, Button, CircularProgress } from "@mui/material";
-import { gapi } from "gapi-script";
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import zhTWLocale from '@fullcalendar/core/locales/zh-tw';
 // const apiKey = import.meta.env.REACT_APP_GOOGLE_API_KEY;
 // const clientId = import.meta.env.REACT_APP_GOOGLE_CLIENT_ID;
 
@@ -49,17 +53,36 @@ const ApiCalendar = () => {
   // 獲取 Google Calendar 事件
   const getEvents = () => {
     setLoading(true);
+    // 獲取更多事件以顯示在日曆上
+    const timeMin = new Date();
+    timeMin.setFullYear(timeMin.getFullYear() - 5); // 獲取五年前的事件
+    
+    const timeMax = new Date();
+    timeMax.setFullYear(timeMax.getFullYear() + 5); // 獲取五年後的事件
+    
     window.gapi.client.calendar.events
       .list({
         calendarId: calendarId,
-        timeMin: new Date().toISOString(), // 當前時間後的事件
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
         showDeleted: false,
         singleEvents: true,
-        maxResults: 10,
+        maxResults: 250, // 增加事件數量
         orderBy: "startTime",
       })
       .then((response) => {
-        setEvents(response.result.items);
+        // 將 Google Calendar 事件轉換為 FullCalendar 可用的格式
+        const formattedEvents = response.result.items.map(event => ({
+          id: event.id,
+          title: event.summary,
+          start: event.start.dateTime || event.start.date,
+          end: event.end.dateTime || event.end.date,
+          description: event.description,
+          location: event.location,
+          url: event.htmlLink
+        }));
+        
+        setEvents(formattedEvents);
         setLoading(false);
       })
       .catch(error => {
@@ -69,37 +92,46 @@ const ApiCalendar = () => {
   };
 
   return (
-    <Container>
+    <Container maxWidth="lg">
       <Typography variant="h4" gutterBottom>
         Google 行事曆
       </Typography>
 
       {initialized && (
-        <Button variant="contained" onClick={getEvents}>
-          重新整理行事曆事件
+        <Button variant="contained" onClick={getEvents} sx={{ mb: 2 }}>
+          重新整理行事曆
         </Button>
       )}
 
       {loading ? (
-        <CircularProgress />
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+          <CircularProgress />
+        </div>
       ) : (
-        <div>
-          <Typography variant="h6" gutterBottom>
-            事件列表：
-          </Typography>
-          {events.length === 0 ? (
-            <Typography>尚未獲取到事件或日曆中沒有未來事件</Typography>
-          ) : (
-            <ul>
-              {events.map((event, index) => (
-                <li key={index}>
-                  <Typography variant="body1">
-                    {event.summary} ({event.start.dateTime ? new Date(event.start.dateTime).toLocaleString() : new Date(event.start.date).toLocaleDateString()})
-                  </Typography>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div style={{ height: '700px' }}>
+          <FullCalendar
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            }}
+            events={events}
+            locale={zhTWLocale}
+            eventTimeFormat={{
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }}
+            eventClick={(info) => {
+              if (info.event.url) {
+                window.open(info.event.url);
+                info.jsEvent.preventDefault();
+              }
+            }}
+            height="100%"
+          />
         </div>
       )}
     </Container>
