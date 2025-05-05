@@ -121,7 +121,7 @@ const Login = () => {
       console.log("Login: Using Supabase to sign in with ID token");
       
       // Sign in with Supabase
-      const { error: supabaseError } = await supabase.auth.signInWithIdToken({
+      const { data,error: supabaseError } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: id_token,
       });
