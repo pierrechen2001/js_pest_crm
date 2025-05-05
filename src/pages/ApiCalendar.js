@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Typography, Container, Button, CircularProgress } from "@mui/material";
 import { gapi } from "gapi-script";
-// const apiKey = import.meta.env.REACT_APP_GOOGLE_API_KEY;
-// const clientId = import.meta.env.REACT_APP_GOOGLE_CLIENT_ID;
+// const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+// const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const ApiCalendar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
