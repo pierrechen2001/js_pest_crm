@@ -6,9 +6,9 @@ import { gapi } from "gapi-script";
 const GOOGLE_MAPS_API_URL = "https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAP_API_KEY&callback=initMap&libraries=places";
 
 const Map = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [map, setMap] = useState(null);
+  const [setMap] = useState(null);
 
   // 初始化 Google API 客戶端並加載地圖
   useEffect(() => {

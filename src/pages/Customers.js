@@ -124,7 +124,7 @@ const Customers = ({
   // When initialCustomers changes, update customersState
   useEffect(() => {
     setCustomers(customers);
-  }, [customers]);
+  }, [setCustomers]);
 
   // 處理 Dialog 開關
   const handleOpen = () => {
