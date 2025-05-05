@@ -38,7 +38,7 @@ const Map = () => {
     };
 
     loadGoogleMapsScript();
-  }, []);
+  }, [setMap]);
 
   // 登入處理（如果有需要使用帳號驗證）
   const handleLogin = () => {
