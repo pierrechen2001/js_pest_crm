@@ -1,37 +1,93 @@
-create table customer_database (
-  customer_id uuid primary key default gen_random_uuid(), -- 客戶 ID，自動產生
-  customer_type text,           -- 客戶類別
-  customer_name text,           -- 客戶名稱
-  contact_person_1 text,        -- 聯絡人 1
-  contact_phone_1 text,         -- 聯絡電話 1
-  contact_person_2 text,        -- 聯絡人 2
-  contact_phone_2 text,         -- 聯絡電話 2
-  contact_city text,            -- 聯絡 city
-  contact_district text,        -- 聯絡 district
-  contact_address text,         -- 聯絡地址
-  email text,                   -- e-mail
-  notes text,                   -- 備註
-  tax_id text,                  -- 統一編號
-  invoice_title text,           -- 抬頭
-  created_at timestamp with time zone default now()  -- 加入時間
-);
+create table public.customer_database (
+  customer_id uuid not null default gen_random_uuid (),
+  customer_type text null,
+  customer_name text null,
+  contact_city text null,
+  contact_district text null,
+  contact_address text null,
+  email text null,
+  notes text null,
+  tax_id text null,
+  invoice_title text null,
+  created_at timestamp with time zone null default now(),
+  company_phone text null,
+  fax text null,
+  contact1_role text null,
+  contact1_name text null,
+  contact1_type text null,
+  contact1_contact text null,
+  contact2_role text null,
+  contact2_name text null,
+  contact2_type text null,
+  contact2_contact text null,
+  contact3_role text null,
+  contact3_name text null,
+  contact3_type text null,
+  contact3_contact text null,
+  constraint customer_database_pkey primary key (customer_id)
+) TABLESPACE pg_default;
 
-create table project (
-  project_id uuid primary key default gen_random_uuid(),  -- 專案 ID，自動產生
-  project_name text,                 -- 專案名稱
-  customer_id uuid references customer_database(customer_id) on delete set null,  -- 客戶 ID 外鍵
-  project_leader text,              -- 專案負責人
-  leader_phone text,                -- 負責人電話
-  site_city text,                   -- 施工 city
-  site_district text,               -- 施工 district
-  site_address text,                -- 施工地址
-  construction_item text,          -- 施工項目
-  construction_fee numeric,        -- 施工金額
-  start_date date,                 -- 施工開始時間
-  end_date date,                   -- 施工結束時間
-  construction_status text,        -- 施工狀態（例：進行中／已完成／延遲）
-  billing_status text,             -- 請款狀態（例：未請款／已請款／部分請款）
-  project_notes text,              -- 施工備註
-  created_at timestamp with time zone default now()  -- 建立時間
-);
+create table public.project (
+  project_id uuid not null default gen_random_uuid (),
+  project_name text null,
+  customer_id uuid null,
+  site_city text null,
+  site_district text null,
+  site_address text null,
+  construction_item text null,
+  construction_fee numeric null,
+  start_date date null,
+  end_date date null,
+  construction_status text null,
+  billing_status text null,
+  project_notes text null,
+  created_at timestamp with time zone null default now(),
+  construction_days integer null,
+  construction_scope text null,
+  payment_method text null,
+  payment_date date null,
+  contact1_role text null,
+  contact1_name text null,
+  contact1_type text null,
+  contact1_contact text null,
+  contact2_role text null,
+  contact2_name text null,
+  contact2_type text null,
+  contact2_contact text null,
+  constraint project_pkey primary key (project_id),
+  constraint project_customer_id_fkey foreign KEY (customer_id) references customer_database (customer_id) on delete set null
+) TABLESPACE pg_default;
 
+create table public.userpermissions (
+  id serial not null,
+  user_id integer not null,
+  module_id integer not null,
+  permission_id integer not null,
+  constraint userpermissions_pkey primary key (id),
+  constraint userpermissions_user_id_module_id_permission_id_key unique (user_id, module_id, permission_id),
+  constraint userpermissions_module_id_fkey foreign KEY (module_id) references modules (id),
+  constraint userpermissions_permission_id_fkey foreign KEY (permission_id) references permissions (id),
+  constraint userpermissions_user_id_fkey foreign KEY (user_id) references users (id)
+) TABLESPACE pg_default;
+
+create table public.users (
+  id serial not null,
+  email character varying(100) not null,
+  name character varying(100) null,
+  google_id character varying(100) null,
+  picture_url text null,
+  constraint users_pkey primary key (id),
+  constraint users_email_key unique (email)
+) TABLESPACE pg_default;
+
+create table public.modules (
+  id serial not null,
+  name character varying(100) not null,
+  constraint modules_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create table public.permissions (
+  id serial not null,
+  name character varying(50) not null,
+  constraint permissions_pkey primary key (id)
+) TABLESPACE pg_default;
