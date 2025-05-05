@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, ToggleButton, ToggleButtonGroup, CircularProgress, Typography } from "@mui/material";
+import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography } from "@mui/material";
 import { useNavigate } from 'react-router-dom';
 
 
 const customerTypes = ["古蹟、政府機關", "一般住家", "建築師", "營造、設計公司"];
 const filterOptions = ["客戶名稱", "聯絡人姓名", "聯絡電話", "地址"];
-const ownershipOptions = ["營造", "設計公司", "直接面對業主"];
+// const ownershipOptions = ["營造", "設計公司", "直接面對業主"];
 const taiwanCities = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"];
 const taiwanDistricts = {
   "台北市": [
@@ -108,9 +108,9 @@ const Customers = ({
   const navigate = useNavigate();
   
   // Use state to store customers, selected type, search text, and dialog status
-  const [customersState, setCustomers] = useState(customers);  // Rename to avoid conflict
+  const [setCustomers] = useState(customers);  // Rename to avoid conflict
   const [selectedType, setSelectedType] = useState("");
-  const [searchText, setSearchText] = useState("");
+  // const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState([]);
   

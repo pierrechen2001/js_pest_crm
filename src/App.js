@@ -14,7 +14,7 @@ import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import CustomerDetailPage from "./pages/CustomerDetailPage";
-import NotFound from "./pages/NotFound";
+// import NotFound from "./pages/NotFound";
 import { supabase } from './lib/supabaseClient';
 
 

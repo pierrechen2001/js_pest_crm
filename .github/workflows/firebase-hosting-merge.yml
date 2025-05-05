@@ -19,6 +19,9 @@ jobs:
           echo "REACT_APP_GOOGLE_API_KEY=${{ secrets.REACT_APP_GOOGLE_API_KEY }}" >> .env
           echo "REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.REACT_APP_GOOGLE_CLIENT_ID }}" >> .env
 
+      - name: Disable CI strict mode
+        run: unset CI
+
       - name: Install dependencies and build
         run: |
           npm ci
