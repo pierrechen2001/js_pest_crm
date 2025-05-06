@@ -132,7 +132,7 @@ const Login = () => {
       
       // Store user info and redirect
       localStorage.setItem("loginMethod", "google");
-      localStorage.setItem("userRoles", JSON.stringify(["user"]));
+      localStorage.setItem("userRoles", JSON.stringify(["admin"]));
       
       // 移除自動導航到 /customers
       // navigate("/customers");
