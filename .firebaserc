@@ -1,7 +1,7 @@
 {
   "projects": {
-    "default": "js-pest-crm",
-    "pestcrm": "js-pest-crm",
+    "default": "jongshingpest",
+    "pestcrm": "jongshingpest",
     "production": "jongshingpest"
   },
   "targets": {},
