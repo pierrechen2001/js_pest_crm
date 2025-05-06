@@ -8,7 +8,7 @@ const GOOGLE_MAPS_API_URL = "https://maps.googleapis.com/maps/api/js?key=YOUR_GO
 const Map = () => {
   const [isAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [setMap] = useState(null);
+  const [map, setMap] = useState(null);
 
   // 初始化 Google API 客戶端並加載地圖
   useEffect(() => {

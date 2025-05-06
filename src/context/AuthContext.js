@@ -49,7 +49,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("loginMethod", "google");
       localStorage.setItem("userRoles", JSON.stringify(["user"]));
       
-      navigate("/customers");
+      // 移除自動導航到 /customers
+      // navigate("/customers");
     } catch (error) {
       console.error("Error signing in with Google:", error);
       setError(error.message);
@@ -234,7 +235,6 @@ export const AuthProvider = ({ children }) => {
           roles: JSON.parse(localStorage.getItem("userRoles") || '["user"]'),
           loginMethod: localStorage.getItem("loginMethod") || "email"
         });
-        navigate('/customers');
       } else if (event === 'SIGNED_OUT') {
         debugLog('User signed out');
         setUser(null);
@@ -266,7 +266,7 @@ export const AuthProvider = ({ children }) => {
       debugLog('Login successful:', data.user);
 
       // Set user roles based on email
-      const roles = email === "admin@example.com" ? ["admin"] : ["user"];
+      const roles = (email === "admin@example.com" || email === "b12705058@g.ntu.edu.tw") ? ["admin"] : ["user"];
       
       setUser({
         id: data.user.id,
@@ -278,7 +278,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("loginMethod", "email");
       localStorage.setItem("userRoles", JSON.stringify(roles));
       
-      navigate("/customers");
+      // 移除自動導航到 /customers
+      // navigate("/customers");
     } catch (error) {
       console.error("Error logging in:", error);
       setError(error.message);
@@ -307,7 +308,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("loginMethod", "email");
       localStorage.setItem("userRoles", JSON.stringify(["user"]));
       
-      navigate("/customers");
+      // 移除自動導航到 /customers
+      // navigate("/customers");
     } catch (error) {
       console.error("Error signing up:", error);
       throw error;

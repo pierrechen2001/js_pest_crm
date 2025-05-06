@@ -94,14 +94,14 @@ const Login = () => {
         if (!authInstance) {
           console.log("Login: Creating auth instance");
           authInstance = await window.gapi.auth2.init({
-            client_id: "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com",
+            client_id: "516194420420-7oatcqmd1kc9h37nk4m2pe08aqfmd180.apps.googleusercontent.com",
             scope: "profile email https://www.googleapis.com/auth/calendar.readonly"
           });
         }
       } catch (err) {
         console.log("Login: Creating new auth instance");
         authInstance = await window.gapi.auth2.init({
-          client_id: "334720277647-7fn06j5okaepfisp3qq2qhlahkiev8uo.apps.googleusercontent.com",
+          client_id: "516194420420-7oatcqmd1kc9h37nk4m2pe08aqfmd180.apps.googleusercontent.com",
           scope: "profile email https://www.googleapis.com/auth/calendar.readonly"
         });
       }
@@ -134,8 +134,8 @@ const Login = () => {
       localStorage.setItem("loginMethod", "google");
       localStorage.setItem("userRoles", JSON.stringify(["user"]));
       
-      // Navigate to protected route
-      navigate("/customers");
+      // 移除自動導航到 /customers
+      // navigate("/customers");
       
     } catch (error) {
       console.error("Login: Error during Google login:", error);

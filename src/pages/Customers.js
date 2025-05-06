@@ -99,6 +99,7 @@ const taiwanDistricts = {
 
 const Customers = ({ 
   customers, 
+  setCustomers,
   loading, 
   error, 
   addCustomer, 
@@ -108,7 +109,6 @@ const Customers = ({
   const navigate = useNavigate();
   
   // Use state to store customers, selected type, search text, and dialog status
-  const [setCustomers] = useState(customers);  // Rename to avoid conflict
   const [selectedType, setSelectedType] = useState("");
   // const [searchText, setSearchText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");

@@ -34,9 +34,9 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && !hasRole(requiredRole)) {
-    return <Navigate to="/customers" replace />;
-  }
+  // if (requiredRole && !hasRole(requiredRole)) {
+  //   return <Navigate to="/customers" replace />;
+  // }
 
   return children;
 };
@@ -63,7 +63,7 @@ const AppContent = () => {
         console.log("Fetching customers data...");
         
         const { data, error } = await supabase
-          .from('customers')
+          .from('customer_database')
           .select('*');
 
         if (error) throw error;
@@ -128,7 +128,7 @@ const AppContent = () => {
   const addCustomer = async (customerData) => {
     try {
       const { data, error } = await supabase
-        .from('customers')
+        .from('customer_database')
         .insert([customerData])
         .select();
 
@@ -144,13 +144,13 @@ const AppContent = () => {
   const updateCustomer = async (id, updates) => {
     try {
       const { data, error } = await supabase
-        .from('customers')
+        .from('customer_database')
         .update(updates)
-        .eq('id', id)
+        .eq('customer_id', id)
         .select();
 
       if (error) throw error;
-      setCustomers(prev => prev.map(c => c.id === id ? data[0] : c));
+      setCustomers(prev => prev.map(c => c.customer_id === id ? data[0] : c));
       return data[0];
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -161,12 +161,12 @@ const AppContent = () => {
   const deleteCustomer = async (id) => {
     try {
       const { error } = await supabase
-        .from('customers')
+        .from('customer_database')
         .delete()
-        .eq('id', id);
+        .eq('customer_id', id);
 
       if (error) throw error;
-      setCustomers(prev => prev.filter(c => c.id !== id));
+      setCustomers(prev => prev.filter(c => c.customer_id !== id));
     } catch (error) {
       console.error('Error deleting customer:', error);
       throw error;
@@ -220,6 +220,7 @@ const AppContent = () => {
                     <ProtectedRoute>
                       <Customers 
                         customers={customers} 
+                        setCustomers={setCustomers}
                         loading={loadingCustomers} 
                         error={error} 
                         addCustomer={addCustomer} 
