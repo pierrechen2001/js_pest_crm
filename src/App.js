@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { CssBaseline, CircularProgress, Box, Container } from "@mui/material";
+import { CssBaseline, CircularProgress, Box, Container, Typography, Button } from "@mui/material";
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from "./components/Sidebar";
 import Customers from "./pages/Customers";
 import Orders from "./pages/Orders";
@@ -17,63 +18,118 @@ import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from './lib/supabaseClient';
 
+// Protected Route component
+const ProtectedRoute = ({ children, requiredRole = null }) => {
+  const { user, hasRole, loading } = useAuth();
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-// 主應用組件
-const App = () => {
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // if (requiredRole && !hasRole(requiredRole)) {
+  //   return <Navigate to="/customers" replace />;
+  // }
+
+  return children;
+};
+
+// Main App Content
+const AppContent = () => {
+  const { user, loading, error: authError } = useAuth();
+  const location = useLocation();
+  const nodeRef = useRef(null);
   const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [error, setError] = useState(null);
 
-  // 獲取客戶數據
-  const fetchCustomers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('customer_database')
-        .select("*")
-        .order('created_at', { ascending: false });
+  // Fetch customers only when needed
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      // Don't fetch if we're not on a page that needs customers data
+      if (!user || !location.pathname.includes('/customer')) {
+        return;
+      }
 
-      if (error) throw error;
-      setCustomers(data || []);
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
+      try {
+        setLoadingCustomers(true);
+        console.log("Fetching customers data...");
+        
+        const { data, error } = await supabase
+          .from('customer_database')
+          .select('*');
+
+        if (error) throw error;
+        setCustomers(data || []);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        setError(error.message);
+      } finally {
+        setLoadingCustomers(false);
+      }
+    };
+
+    if (user && !loading) {
+      fetchCustomers();
     }
-  };
+  }, [user, loading, location.pathname]);
 
-  // 添加客戶
+  // Display a loading indicator if the auth state is still initializing
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Display any auth errors
+  if (authError) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          p: 3,
+          textAlign: 'center'
+        }}
+      >
+        <Typography variant="h6" color="error" gutterBottom>
+          Authentication Error
+        </Typography>
+        <Typography variant="body1">
+          {authError}
+        </Typography>
+        <Button 
+          variant="contained" 
+          sx={{ mt: 3 }}
+          onClick={() => window.location.href = '/login'}
+        >
+          Go to Login
+        </Button>
+      </Box>
+    );
+  }
+
+  // Customer CRUD operations
   const addCustomer = async (customerData) => {
     try {
       const { data, error } = await supabase
         .from('customer_database')
-        .insert([{
-          customer_type: customerData.customer_type,
-          customer_name: customerData.customer_name,
-          contact_city: customerData.contact_city,
-          contact_district: customerData.contact_district,
-          contact_address: customerData.contact_address,
-          email: customerData.email,
-          notes: customerData.notes,
-          tax_id: customerData.tax_id,
-          invoice_title: customerData.invoice_title,
-          company_phone: customerData.company_phone,
-          fax: customerData.fax,
-          contact1_role: customerData.contact1_role,
-          contact1_name: customerData.contact1_name,
-          contact1_type: customerData.contact1_type,
-          contact1_contact: customerData.contact1_contact,
-          contact2_role: customerData.contact2_role,
-          contact2_name: customerData.contact2_name,
-          contact2_type: customerData.contact2_type,
-          contact2_contact: customerData.contact2_contact,
-          contact3_role: customerData.contact3_role,
-          contact3_name: customerData.contact3_name,
-          contact3_type: customerData.contact3_type,
-          contact3_contact: customerData.contact3_contact
-        }])
+        .insert([customerData])
         .select();
 
       if (error) throw error;
@@ -85,21 +141,16 @@ const App = () => {
     }
   };
 
-  // 更新客戶
-  const updateCustomer = async (customerId, updates) => {
+  const updateCustomer = async (id, updates) => {
     try {
       const { data, error } = await supabase
         .from('customer_database')
         .update(updates)
-        .eq('customer_id', customerId)
+        .eq('customer_id', id)
         .select();
 
       if (error) throw error;
-      setCustomers(prev => 
-        prev.map(customer => 
-          customer.customer_id === customerId ? data[0] : customer
-        )
-      );
+      setCustomers(prev => prev.map(c => c.customer_id === id ? data[0] : c));
       return data[0];
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -107,18 +158,15 @@ const App = () => {
     }
   };
 
-  // 刪除客戶
-  const deleteCustomer = async (customerId) => {
+  const deleteCustomer = async (id) => {
     try {
       const { error } = await supabase
         .from('customer_database')
         .delete()
-        .eq('customer_id', customerId);
+        .eq('customer_id', id);
 
       if (error) throw error;
-      setCustomers(prev => 
-        prev.filter(customer => customer.customer_id !== customerId)
-      );
+      setCustomers(prev => prev.filter(c => c.customer_id !== id));
     } catch (error) {
       console.error('Error deleting customer:', error);
       throw error;
@@ -131,106 +179,26 @@ const App = () => {
         .from('projects')
         .select('*')
         .eq('customer_id', customerId);
-  
+
       if (error) throw error;
-  
-      return data || [];
+      return data;
     } catch (error) {
       console.error('Error fetching projects:', error);
-      return [];
+      throw error;
     }
   };
-
-  // 初始加載數據
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  return (
-    <Router>
-      <AppContent 
-        customers={customers}
-        loading={loading}
-        error={error}
-        addCustomer={addCustomer}
-        updateCustomer={updateCustomer}
-        deleteCustomer={deleteCustomer}
-        refetchCustomers={fetchCustomers}
-        fetchProjectsByCustomerId={fetchProjectsByCustomerId}
-      />
-    </Router>
-  );
-};
-
-// 子組件，包含需要 router hooks 的邏輯
-function AppContent({ customers, loading, error, addCustomer, updateCustomer, deleteCustomer, refetchCustomers, fetchProjectsByCustomerId }) {
-  // 在 Router 環境中使用 useLocation
-  const location = useLocation();
-  const nodeRef = useRef(null);
-  
-  // 檢查用戶是否已登入
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // 初始化驗證狀態 - 程式啟動時檢查登入狀態
-  useEffect(() => {
-    // 清除所有驗證資訊，確保系統預設為登出狀態
-    if (!localStorage.getItem("isAuthenticated")) {
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userName");
-      localStorage.removeItem("userRoles");
-    }
-    
-    // 檢查是否已登入
-    const checkAuth = () => {
-      const auth = localStorage.getItem("isAuthenticated") === "true";
-      setIsAuthenticated(auth);
-    };
-
-    checkAuth();
-  }, []);
-
-  // 登入處理
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
-
-  // 登出處理
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userRoles");
-    setIsAuthenticated(false);
-  };
-
-  // 加載中顯示
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <>
       <CssBaseline />
-      
-      {isAuthenticated && <Sidebar onLogout={handleLogout} />}
+      {user && <Sidebar />}
       
       <Container
         sx={{
-          marginLeft: isAuthenticated ? "240px" : "0",
+          marginLeft: user ? "240px" : "0",
           padding: "20px",
           transition: "margin 0.3s",
-          width: isAuthenticated ? "calc(100% - 240px)" : "100%",
+          width: user ? "calc(100% - 240px)" : "100%",
         }}
       >
         <TransitionGroup>
@@ -241,109 +209,118 @@ function AppContent({ customers, loading, error, addCustomer, updateCustomer, de
             timeout={300}
           >
             <div ref={nodeRef}>
-              <Routes location={location}>
-                {/* 公開路由 */}
-                <Route
-                  path="/login"
-                  element={
-                    isAuthenticated ? (
-                      <Navigate to="/customers" />
-                    ) : (
-                      <Login onLogin={handleLogin} />
-                    )
-                  }
-                />
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={!user ? <Login /> : <Navigate to="/customers" />} />
 
-                {/* 受保護的路由 */}
+                {/* Protected Routes */}
                 <Route
                   path="/customers"
                   element={
-                    isAuthenticated ? <Customers 
-                                        customers={customers} 
-                                        loading={loading} 
-                                        error={error} 
-                                        addCustomer={addCustomer} 
-                                        updateCustomer={updateCustomer} 
-                                        deleteCustomer={deleteCustomer} 
-                                      /> : <Navigate to="/login" />
+                    <ProtectedRoute>
+                      <Customers 
+                        customers={customers} 
+                        setCustomers={setCustomers}
+                        loading={loadingCustomers} 
+                        error={error} 
+                        addCustomer={addCustomer} 
+                        updateCustomer={updateCustomer} 
+                        deleteCustomer={deleteCustomer} 
+                      />
+                    </ProtectedRoute>
                   }
                 />
+
                 <Route
                   path="/customer/:customerId"
                   element={
-                    isAuthenticated ? (
+                    <ProtectedRoute>
                       <CustomerDetailPage
                         customers={customers}
                         fetchProjectsByCustomerId={fetchProjectsByCustomerId}
                       />
-                    ) : (
-                      <Navigate to="/login" />
-                    )
+                    </ProtectedRoute>
                   }
                 />
+
                 <Route
                   path="/orders"
                   element={
-                    isAuthenticated ? <Orders /> : <Navigate to="/login" />
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
                   }
                 />
+
                 <Route
                   path="/order/:projectId"
                   element={
-                    isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />
+                    <ProtectedRoute>
+                      <OrderDetail />
+                    </ProtectedRoute>
                   }
                 />
+
                 <Route
                   path="/inventory"
                   element={
-                    isAuthenticated ? <Inventory /> : <Navigate to="/login" />
+                    <ProtectedRoute>
+                      <Inventory />
+                    </ProtectedRoute>
                   }
                 />
+
                 <Route
                   path="/calendar"
                   element={
-                    isAuthenticated ? <Calendar /> : <Navigate to="/login" />
+                    <ProtectedRoute>
+                      <Calendar />
+                    </ProtectedRoute>
                   }
                 />
 
                 <Route
                   path="/apicalendar"
                   element={
-                    isAuthenticated ? <ApiCalendar /> : <Navigate to="/login" />
+                    <ProtectedRoute>
+                      <Suspense fallback={<CircularProgress />}>
+                        <ApiCalendar />
+                      </Suspense>
+                    </ProtectedRoute>
                   }
                 />
 
                 <Route
                   path="/map"
                   element={
-                    isAuthenticated ? <Map /> : <Navigate to="/login" />
+                    <ProtectedRoute>
+                      <Map />
+                    </ProtectedRoute>
                   }
                 />
 
-                {/* 管理員路由 */}
+                {/* Admin Routes */}
                 <Route
                   path="/user-management"
                   element={
-                    isAuthenticated ? <UserManagement /> : <Navigate to="/login" />
+                    <ProtectedRoute requiredRole="admin">
+                      <UserManagement />
+                    </ProtectedRoute>
                   }
                 />
+
                 <Route
                   path="/role-management"
                   element={
-                    isAuthenticated ? <RoleManagement /> : <Navigate to="/login" />
+                    <ProtectedRoute requiredRole="admin">
+                      <RoleManagement />
+                    </ProtectedRoute>
                   }
                 />
 
-                {/* 首頁重定向 */}
-                <Route
-                  path="/"
-                  element={
-                    <Navigate to={isAuthenticated ? "/customers" : "/login"} />
-                  }
-                />
-
-                {/* 捕捉不存在的路由 */}
-                <Route path="*" element={<Navigate to="/" />} />
+                {/* Default Routes */}
+                <Route path="/" element={<Navigate to={user ? "/customers" : "/login"} />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
           </CSSTransition>
@@ -351,6 +328,17 @@ function AppContent({ customers, loading, error, addCustomer, updateCustomer, de
       </Container>
     </>
   );
-}
+};
+
+// Main App Component
+const App = () => {
+  return (
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
+  );
+};
 
 export default App;

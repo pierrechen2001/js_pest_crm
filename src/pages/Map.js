@@ -6,7 +6,7 @@ import { gapi } from "gapi-script";
 const GOOGLE_MAPS_API_URL = "https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAP_API_KEY&callback=initMap&libraries=places";
 
 const Map = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [map, setMap] = useState(null);
 
@@ -38,7 +38,7 @@ const Map = () => {
     };
 
     loadGoogleMapsScript();
-  }, []);
+  }, [setMap]);
 
   // 登入處理（如果有需要使用帳號驗證）
   const handleLogin = () => {
