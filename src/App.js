@@ -47,42 +47,48 @@ const AppContent = () => {
   const location = useLocation();
   const nodeRef = useRef(null);
   const [customers, setCustomers] = useState([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(false);
-  const [error, setError] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
-  // Fetch customers only when needed
+  // Fetch customers and projects
   useEffect(() => {
-    const fetchCustomers = async () => {
-      // Don't fetch if we're not on a page that needs customers data
-      if (!user || !location.pathname.includes('/customer')) {
+    const fetchData = async () => {
+      if (!user) {
+        setLoadingData(false);
         return;
       }
 
       try {
-        setLoadingCustomers(true);
-        console.log("Fetching customers data...");
+        setLoadingData(true);
+        console.log("Fetching data in App.js (customers and projects)...");
         
-        const { data, error } = await supabase
-          .from('customer_database')
-          .select('*');
+        const customerPromise = supabase.from('customer_database').select('*');
+        const projectPromise = supabase.from('project').select('*, customer_database(customer_id, customer_name)');
 
-        if (error) throw error;
-        setCustomers(data || []);
+        const [customerResponse, projectResponse] = await Promise.all([customerPromise, projectPromise]);
+
+        if (customerResponse.error) throw customerResponse.error;
+        setCustomers(customerResponse.data || []);
+
+        if (projectResponse.error) throw projectResponse.error;
+        setProjects(projectResponse.data || []);
+
       } catch (error) {
-        console.error('Error fetching customers:', error);
-        setError(error.message);
+        console.error('Error fetching data in App.js:', error);
+        setFetchError(error.message);
       } finally {
-        setLoadingCustomers(false);
+        setLoadingData(false);
       }
     };
 
     if (user && !loading) {
-      fetchCustomers();
+      fetchData();
     }
-  }, [user, loading, location.pathname]);
+  }, [user, loading]);
 
   // Display a loading indicator if the auth state is still initializing
-  if (loading) {
+  if (loading || loadingData) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
@@ -94,7 +100,7 @@ const AppContent = () => {
   }
 
   // Display any auth errors
-  if (authError) {
+  if (authError || fetchError) {
     return (
       <Box 
         sx={{ 
@@ -103,15 +109,13 @@ const AppContent = () => {
           justifyContent: 'center', 
           alignItems: 'center', 
           height: '100vh',
-          p: 3,
-          textAlign: 'center'
         }}
       >
         <Typography variant="h6" color="error" gutterBottom>
-          Authentication Error
+          Error
         </Typography>
         <Typography variant="body1">
-          {authError}
+          {authError || fetchError}
         </Typography>
         <Button 
           variant="contained" 
@@ -221,8 +225,8 @@ const AppContent = () => {
                       <Customers 
                         customers={customers} 
                         setCustomers={setCustomers}
-                        loading={loadingCustomers} 
-                        error={error} 
+                        loading={loadingData} 
+                        error={fetchError} 
                         addCustomer={addCustomer} 
                         updateCustomer={updateCustomer} 
                         deleteCustomer={deleteCustomer} 
@@ -247,7 +251,7 @@ const AppContent = () => {
                   path="/orders"
                   element={
                     <ProtectedRoute>
-                      <Orders />
+                      <Orders projects={projects} customers={customers} />
                     </ProtectedRoute>
                   }
                 />
@@ -294,7 +298,7 @@ const AppContent = () => {
                   path="/map"
                   element={
                     <ProtectedRoute>
-                      <MapComponent />
+                      <MapComponent projects={projects} />
                     </ProtectedRoute>
                   }
                 />
