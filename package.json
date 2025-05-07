@@ -10,6 +10,7 @@
     "@fullcalendar/interaction": "^6.1.17",
     "@fullcalendar/react": "^6.1.17",
     "@fullcalendar/timegrid": "^6.1.17",
+    "@googlemaps/js-api-loader": "^1.16.8",
     "@mui/icons-material": "^7.0.2",
     "@mui/material": "^7.0.2",
     "@supabase/supabase-js": "^2.49.4",

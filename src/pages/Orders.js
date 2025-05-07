@@ -4,6 +4,7 @@ import { Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActio
 import { Add } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
+import MapComponent from './Map'; 
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款"];
@@ -653,6 +654,13 @@ export default function Orders() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <div style={{ marginTop: 20, marginBottom: 20 }}>
+        <Typography variant="h6" gutterBottom>
+          專案地圖位置
+        </Typography>
+        <MapComponent projects={filteredProjects} />
+      </div>
 
       <Table>
       <TableHead>

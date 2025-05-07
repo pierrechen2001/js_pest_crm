@@ -9,7 +9,7 @@ import OrderDetail from "./pages/OrderDetail";
 import Inventory from "./pages/Inventory";
 import Calendar from "./pages/Calendar";
 import ApiCalendar from "./pages/ApiCalendar";
-import Map from "./pages/Map";
+import MapComponent from './pages/Map';
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
@@ -294,7 +294,7 @@ const AppContent = () => {
                   path="/map"
                   element={
                     <ProtectedRoute>
-                      <Map />
+                      <MapComponent />
                     </ProtectedRoute>
                   }
                 />
