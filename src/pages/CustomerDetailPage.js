@@ -264,80 +264,109 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     }));
   };
 
+  const handleDeleteCustomer = async () => {
+    if (window.confirm("確定要刪除此客戶嗎？此操作無法復原！")) {
+      try {
+        const { error } = await supabase
+          .from('customer_database') // 替換為你的客戶資料表名稱
+          .delete()
+          .eq('customer_id', customerId);
+  
+        if (error) throw error;
+  
+        alert("客戶已成功刪除！");
+        navigate('/customers'); // 刪除成功後返回客戶列表頁
+      } catch (error) {
+        console.error("Error deleting customer:", error);
+        alert("刪除客戶失敗，請稍後再試！");
+      }
+    }
+  };
+
   if (!customer) return <Typography color="error">無法找到該客戶</Typography>;
 
   const filteredProjects = projects?.filter((project) => project.customer_id === customerId) || [];
 
   return (
     <Box p={4}>
-      <Typography variant="h5" gutterBottom fontWeight="bold">
-        {customer.customer_name}
-      </Typography>
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>聯絡資訊</Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              {customer.contact1_name && (
-                <Typography>
-                  {customer.contact1_role && `${customer.contact1_role}：`}{customer.contact1_name}
-                </Typography>
-              )}
-              {customer.contact2_name && (
-                <Typography>
-                  {customer.contact2_role && `${customer.contact2_role}：`}{customer.contact2_name}
-                </Typography>
-              )}
-              {customer.contact3_name && (
-                <Typography>
-                  {customer.contact3_role && `${customer.contact3_role}：`}{customer.contact3_name}
-                </Typography>
-              )}
-              <Typography>地址：{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              {customer.contact1_contact && (
-                <Typography>
-                  {customer.contact1_type && `${customer.contact1_type}：`}{customer.contact1_contact}
-                </Typography>
-              )}
-              {customer.contact2_contact && (
-                <Typography>
-                  {customer.contact2_type && `${customer.contact2_type}：`}{customer.contact2_contact}
-                </Typography>
-              )}
-              {customer.contact3_contact && (
-                <Typography>
-                  {customer.contact3_type && `${customer.contact3_type}：`}{customer.contact3_contact}
-                </Typography>
-              )}
-            </Grid>
-          </Grid>
+      {/* 客戶名稱和刪除按鈕 */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Typography variant="h5" gutterBottom fontWeight="bold">
+          {customer.customer_name}
+        </Typography>
+        <Button 
+          variant="outlined" 
+          color="error" 
+          onClick={handleDeleteCustomer}
+        >
+          刪除客戶
+        </Button>
+      </Box>
+    <Card sx={{ mb: 4 }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>聯絡資訊</Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12}>
-              <Typography>電話（公）：{customer.company_phone}</Typography>
-              <Typography>傳真號碼：{customer.fax}</Typography>
-              <Typography>統一編號：{customer.tax_id}</Typography>
-              <Typography>抬頭：{customer.invoice_title}</Typography>
-              <Typography>注意事項：{customer.notes}</Typography>
-            </Grid>
+          <Grid item xs={12} sm={6}>
+            {customer.contact1_name && (
+              <Typography>
+                {customer.contact1_role && `${customer.contact1_role}：`}{customer.contact1_name}
+              </Typography>
+            )}
+            {customer.contact2_name && (
+              <Typography>
+                {customer.contact2_role && `${customer.contact2_role}：`}{customer.contact2_name}
+              </Typography>
+            )}
+            {customer.contact3_name && (
+              <Typography>
+                {customer.contact3_role && `${customer.contact3_role}：`}{customer.contact3_name}
+              </Typography>
+            )}
+            <Typography>地址：{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
           </Grid>
-        </CardContent>
-      </Card>
-
-      {/* 專案資訊卡片 */}
-<Card>
-  <CardContent>
-    <Box display="flex" justifyContent="space-between" alignItems="center">
-      <Typography variant="h6" gutterBottom>對應專案</Typography>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        onClick={() => setOpenDialog(true)}
-      >
-        新增專案
-      </Button>
-    </Box>
+          <Grid item xs={12} md={6}>
+            {customer.contact1_contact && (
+              <Typography>
+                {customer.contact1_type && `${customer.contact1_type}：`}{customer.contact1_contact}
+              </Typography>
+            )}
+            {customer.contact2_contact && (
+              <Typography>
+                {customer.contact2_type && `${customer.contact2_type}：`}{customer.contact2_contact}
+              </Typography>
+            )}
+            {customer.contact3_contact && (
+              <Typography>
+                {customer.contact3_type && `${customer.contact3_type}：`}{customer.contact3_contact}
+              </Typography>
+            )}
+          </Grid>
+        </Grid>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+            <Typography>電話（公）：{customer.company_phone}</Typography>
+            <Typography>傳真號碼：{customer.fax}</Typography>
+            <Typography>統一編號：{customer.tax_id}</Typography>
+            <Typography>抬頭：{customer.invoice_title}</Typography>
+            <Typography>注意事項：{customer.notes}</Typography>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+    
+    {/* 專案資訊卡片 */}
+    <Card>
+      <CardContent>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" gutterBottom>對應專案</Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => setOpenDialog(true)}
+          >
+            新增專案
+          </Button>
+        </Box>
 
     <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth >
       <DialogTitle>新增專案</DialogTitle>
@@ -625,6 +654,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   </CardContent>
 </Card>
     </Box>
+    
   );
 };
 

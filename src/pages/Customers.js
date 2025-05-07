@@ -118,7 +118,26 @@ const Customers = ({
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);  // Make sure step is properly initialized
   const [newCustomerType, setNewCustomerType] = useState("");
-  const [customerData, setCustomerData] = useState({});
+  const initialCustomerData = {
+    customerTypes: "",
+    customer_name: null,
+    contact_city: "",
+    contact_district: "",
+    contact_address: "",
+    email: "",
+    taxid: "",
+    start_date: "",
+    end_date: "",
+    invoice_title: "",
+    note: "",
+    company_phone: "",
+    fax: "",
+    contacts: [
+      { role: "", name: "", contactType: "", contact: "" },
+    ],
+  };
+  
+  const [customerData, setCustomerData] = useState(initialCustomerData);  
   
 
   // When initialCustomers changes, update customersState
@@ -130,7 +149,7 @@ const Customers = ({
   const handleOpen = () => {
     setStep(1);
     setNewCustomerType("");
-    setCustomerData({});
+    setCustomerData(initialCustomerData);
     setOpen(true);
   };
   const handleClose = () => setOpen(false);
@@ -149,55 +168,34 @@ const Customers = ({
         contact_district: customerData.district,
         contact_address: customerData.road,
         email: customerData.email,
-        tax_id: customerData.TaxID,
+        tax_id: customerData.taxid,
         invoice_title: customerData.Title,
-        notes: customerData.notes,
-        company_phone: customerData.companyPhone,
+        notes: customerData.note,
+        company_phone: customerData.company_phone,
         fax: customerData.fax,
-        contact1_role: customerData.contact1?.role,
-        contact1_name: customerData.contact1?.name,
-        contact1_type: customerData.contact1?.contactType,
-        contact1_contact: customerData.contact1?.contact,
-        contact2_role: customerData.contact2?.role,
-        contact2_name: customerData.contact2?.name,
-        contact2_type: customerData.contact2?.contactType,
-        contact2_contact: customerData.contact2?.contact,
-        contact3_role: customerData.contacts?.[0]?.role,
-        contact3_name: customerData.contacts?.[0]?.name,
-        contact3_type: customerData.contacts?.[0]?.contactType,
-        contact3_contact: customerData.contacts?.[0]?.contact
+        contact1_role: customerData.contacts[0]?.role || "",
+        contact1_name: customerData.contacts[0]?.name || "",
+        contact1_type: customerData.contacts[0]?.contactType || "",
+        contact1_contact: customerData.contacts[0]?.contact || "",
+        contact2_role: customerData.contacts[1]?.role || "",
+        contact2_name: customerData.contacts[1]?.name || "",
+        contact2_type: customerData.contacts[1]?.contactType || "",
+        contact2_contact: customerData.contacts[1]?.contact || "",
+        contact3_role: customerData.contacts[2]?.role || "",
+        contact3_name: customerData.contacts[2]?.name || "",
+        contact3_type: customerData.contacts[2]?.contactType || "",
+        contact3_contact: customerData.contacts[2]?.contact || "",
       });
       handleClose();
       // 新增成功後重置表單
       setNewCustomerType("");
-      setCustomerData({});
+      setCustomerData(initialCustomerData);
       setStep(1);
     } catch (error) {
       console.error('Error saving customer:', error);
       // 可以在此處添加錯誤提示
     }
   };
-
-  // const filteredCustomers = customers
-  //   .filter((customer) => {
-  //     // 選擇特定類型的客戶
-  //     if (selectedType && customer.customer_type !== selectedType) return false;
-
-  //     // 搜索邏輯
-  //     if (searchQuery.trim() !== "") {
-  //       const searchLower = searchQuery.toLowerCase();
-  //       const matchesAnyField =
-  //         customer.customer_name?.toLowerCase().includes(searchLower) ||
-  //         customer.contact_person_1?.toLowerCase().includes(searchLower) ||
-  //         customer.contact_phone_1?.includes(searchLower) ||
-  //         `${customer.contact_city}${customer.contact_district}${customer.contact_address}`.includes(searchQuery);
-
-  //       if (!matchesAnyField) return false;
-  //     }
-
-  //     return true;
-  //   })
-  //   .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const filteredCustomers = customers
   .filter((customer) => {
@@ -331,6 +329,7 @@ const Customers = ({
         />
         </div>
     <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div style={{ flex: 1 }}>
         <Autocomplete
           options={taiwanCities}
           renderInput={(params) => (
@@ -348,19 +347,24 @@ const Customers = ({
           value={customerData.city || ""}
           onChange={(event, newValue) => setCustomerData({ ...customerData, city: newValue })}
         />
-      <Autocomplete
-        options={taiwanDistricts[customerData.city] || []}
-        renderInput={(params) => <TextField {...params} label="區域" fullWidth />}
-        value={customerData.district || ""}
-        onChange={(event, newValue) => setCustomerData({ ...customerData, district: newValue })}
-      />
-      <TextField 
-        label="路名/詳細地址" 
-        fullWidth 
-        name="road" 
-        value={customerData.road || ""} 
-        onChange={handleChange} 
-      />
+      </div>
+      <div style={{ flex: 1 }}>
+        <Autocomplete
+          options={taiwanDistricts[customerData.city] || []}
+          renderInput={(params) => <TextField {...params} label="區域" fullWidth />}
+          value={customerData.district || ""}
+          onChange={(event, newValue) => setCustomerData({ ...customerData, district: newValue })}
+        />
+      </div>
+      <div style={{ flex: 3 }}>
+        <TextField 
+          label="路名/詳細地址" 
+          fullWidth 
+          name="road" 
+          value={customerData.road || ""} 
+          onChange={handleChange} 
+        />
+      </div>
     </div>
 
     {/* 統編與抬頭（僅非一般住家顯示） */}
@@ -391,10 +395,10 @@ const Customers = ({
         <TextField
           label="公司電話（市話）"
           fullWidth
-          value={customerData.companyPhone || ""}
+          value={customerData.company_phone || ""}
           onChange={(e) => {
             let formattedValue = e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-            setCustomerData({ ...customerData, companyPhone: formattedValue });
+            setCustomerData({ ...customerData, company_phone: formattedValue });
           }}
         />
         <TextField
@@ -406,44 +410,44 @@ const Customers = ({
             setCustomerData({ ...customerData, fax: formattedValue });
           }}
         />
-      </div>      {/* 預設聯絡人 1 */}
+        <TextField
+          label="公司信箱"
+          fullWidth
+          value={customerData.email || ""}
+          onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+        />
+      </div>      
+
+      {/* 預設聯絡人 1 */}
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <FormControl fullWidth>
-          <InputLabel>角色</InputLabel>
-          <Select
-            value={customerData.contact1?.role || ""}
-            onChange={(e) => {
-              setCustomerData({
-                ...customerData,
-                contact1: { ...customerData.contact1, role: e.target.value },
-              });
-            }}
-          >
-            {["業主", "會計"].map((role) => (
-              <MenuItem key={role} value={role}>{role}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <TextField
+          label="職位"
+          fullWidth
+          value={customerData.contacts[0]?.role || ""}
+          onChange={(e) => {
+            const updatedContacts = [...customerData.contacts];
+            updatedContacts[0].role = e.target.value;
+            setCustomerData({ ...customerData, contacts: updatedContacts });
+          }}
+        />
         <TextField
           label="名字"
           fullWidth
-          value={customerData.contact1?.name || ""}
+          value={customerData.contacts[0]?.name || ""}
           onChange={(e) => {
-            setCustomerData({
-              ...customerData,
-              contact1: { ...customerData.contact1, name: e.target.value },
-            });
+            const updatedContacts = [...customerData.contacts];
+            updatedContacts[0].name = e.target.value;
+            setCustomerData({ ...customerData, contacts: updatedContacts });
           }}
         />
         <FormControl fullWidth>
           <InputLabel>聯絡方式類型</InputLabel>
           <Select
-            value={customerData.contact1?.contactType || ""}
+            value={customerData.contacts[0]?.contactType || ""}
             onChange={(e) => {
-              setCustomerData({
-                ...customerData,
-                contact1: { ...customerData.contact1, contactType: e.target.value, contact: "" },
-              });
+              const updatedContacts = [...customerData.contacts];
+              updatedContacts[0] = { ...updatedContacts[0], contactType: e.target.value, contact: "" };
+              setCustomerData({ ...customerData, contacts: updatedContacts });
             }}
           >
             {["LineID", "市話", "電話", "信箱"].map((type) => (
@@ -452,179 +456,122 @@ const Customers = ({
           </Select>
         </FormControl>
         <TextField
-          label={customerData.contact1?.contactType || "聯絡方式"}
+          label={customerData.contacts[0]?.contactType || "聯絡方式"}
           fullWidth
-          value={customerData.contact1?.contact || ""}
+          value={customerData.contacts[0]?.contact || ""}
           onChange={(e) => {
             let formattedValue = e.target.value;
+            const contactType = customerData.contacts[0]?.contactType;
 
-            // 自動格式化市話和電話
-            if (customerData.contact1?.contactType === "市話") {
-              formattedValue = formattedValue
-                .replace(/[^\d]/g, "")
-                .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-            } else if (customerData.contact1?.contactType === "電話") {
-              formattedValue = formattedValue
-                .replace(/[^\d]/g, "")
-                .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+            if (contactType === "市話") {
+              formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+            } else if (contactType === "電話") {
+              formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
             }
 
-            setCustomerData({
-              ...customerData,
-              contact1: { ...customerData.contact1, contact: formattedValue },
-            });
+            const updatedContacts = [...customerData.contacts];
+            updatedContacts[0].contact = formattedValue;
+            setCustomerData({ ...customerData, contacts: updatedContacts });
           }}
         />
       </div>
 
-      {/* 預設聯絡人 2 */}
-      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <FormControl fullWidth>
-          <InputLabel>角色</InputLabel>
-          <Select
-            value={customerData.contact2?.role || ""}
-            onChange={(e) => {
-              setCustomerData({
-                ...customerData,
-                contact2: { ...customerData.contact2, role: e.target.value },
-              });
-            }}
-          >
-            {["業主", "會計"].map((role) => (
-              <MenuItem key={role} value={role}>{role}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          label="名字"
-          fullWidth
-          value={customerData.contact2?.name || ""}
-          onChange={(e) => {
-            setCustomerData({
-              ...customerData,
-              contact2: { ...customerData.contact2, name: e.target.value },
-            });
-          }}
-        />
-        <FormControl fullWidth>
-          <InputLabel>聯絡方式類型</InputLabel>
-          <Select
-            value={customerData.contact2?.contactType || ""}
-            onChange={(e) => {
-              setCustomerData({
-                ...customerData,
-                contact2: { ...customerData.contact2, contactType: e.target.value, contact: "" },
-              });
-            }}
-          >
-            {["LineID", "市話", "電話", "信箱"].map((type) => (
-              <MenuItem key={type} value={type}>{type}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          label={customerData.contact2?.contactType || "聯絡方式"}
-          fullWidth
-          value={customerData.contact2?.contact || ""}
-          onChange={(e) => {
-            let formattedValue = e.target.value;
 
-            // 自動格式化市話和電話
-            if (customerData.contact2?.contactType === "市話") {
-              formattedValue = formattedValue
-                .replace(/[^\d]/g, "")
-                .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-            } else if (customerData.contact2?.contactType === "電話") {
-              formattedValue = formattedValue
-                .replace(/[^\d]/g, "")
-                .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-            }
-
-            setCustomerData({
-              ...customerData,
-              contact2: { ...customerData.contact2, contact: formattedValue },
-            });
-          }}
-        />
-      </div>
-
-      {/* 動態新增聯絡人 */}
-      {customerData.contacts?.map((contact, index) => (
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
+      {customerData.contacts?.map((contact, index) => {
+            if (index === 0) return null; // 跳過預設聯絡人
+            return (
         <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <FormControl fullWidth>
-            <InputLabel>角色</InputLabel>
-            <Select
+        <TextField
+              label="職位"
+              fullWidth
               value={contact.role || ""}
               onChange={(e) => {
                 const updatedContacts = [...customerData.contacts];
                 updatedContacts[index].role = e.target.value;
                 setCustomerData({ ...customerData, contacts: updatedContacts });
               }}
-            >
-              {["業主", "會計"].map((role) => (
-                <MenuItem key={role} value={role}>{role}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            label="名字"
-            fullWidth
-            value={contact.name || ""}
-            onChange={(e) => {
-              const updatedContacts = [...customerData.contacts];
-              updatedContacts[index].name = e.target.value;
-              setCustomerData({ ...customerData, contacts: updatedContacts });
-            }}
-          />
-          <FormControl fullWidth>
-            <InputLabel>聯絡方式類型</InputLabel>
-            <Select
-              value={contact.contactType || ""}
+            />
+            <TextField
+              label="名字"
+              fullWidth
+              value={contact.name || ""}
               onChange={(e) => {
                 const updatedContacts = [...customerData.contacts];
-                updatedContacts[index] = { ...updatedContacts[index], contactType: e.target.value, contact: "" };
+                updatedContacts[index].name = e.target.value;
+                setCustomerData({ ...customerData, contacts: updatedContacts });
+              }}
+            />
+            <FormControl fullWidth>
+              <InputLabel>聯絡方式類型</InputLabel>
+              <Select
+                value={contact.contactType || ""}
+                onChange={(e) => {
+                  const updatedContacts = [...customerData.contacts];
+                  updatedContacts[index] = {
+                    ...updatedContacts[index],
+                    contactType: e.target.value,
+                    contact: "", // 清空原本輸入
+                  };
+                  setCustomerData({ ...customerData, contacts: updatedContacts });
+                }}
+              >
+                {["LineID", "市話", "電話", "信箱"].map((type) => (
+                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label={contact.contactType || "聯絡方式"}
+              fullWidth
+              value={contact.contact || ""}
+              onChange={(e) => {
+                let formattedValue = e.target.value;
+                if (contact.contactType === "市話") {
+                  formattedValue = formattedValue
+                    .replace(/[^\d]/g, "")
+                    .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                } else if (contact.contactType === "電話") {
+                  formattedValue = formattedValue
+                    .replace(/[^\d]/g, "")
+                    .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+                }
+
+                const updatedContacts = [...customerData.contacts];
+                updatedContacts[index].contact = formattedValue;
+                setCustomerData({ ...customerData, contacts: updatedContacts });
+              }}
+            />
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => {
+                const updatedContacts = customerData.contacts.filter((_, i) => i !== index);
                 setCustomerData({ ...customerData, contacts: updatedContacts });
               }}
             >
-              {["LineID", "市話", "電話", "信箱"].map((type) => (
-                <MenuItem key={type} value={type}>{type}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            label={contact.contactType || "聯絡方式"}
-            fullWidth
-            value={contact.contact || ""}
-            onChange={(e) => {
-              const updatedContacts = [...customerData.contacts];
-              updatedContacts[index].contact = e.target.value;
-              setCustomerData({ ...customerData, contacts: updatedContacts });
-            }}
-          />
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={() => {
-              const updatedContacts = customerData.contacts.filter((_, i) => i !== index);
-              setCustomerData({ ...customerData, contacts: updatedContacts });
-            }}
-            >
-            刪除
+              刪除
             </Button>
           </div>
-          
-          ))}
-          
-          <Button
+        )})}
+
+        <Button
           variant="outlined"
           onClick={() => {
-          const updatedContacts = [...(customerData.contacts || []), { role: "", name: "", contactType: "", contact: "" }];
-          setCustomerData({ ...customerData, contacts: updatedContacts });
-        }}
-      >
-        新增聯絡人
-      </Button>
-      <TextField
+            const updatedContacts = [
+              ...(customerData.contacts || []),
+              { role: "", name: "", contactType: "", contact: "" },
+            ];
+            setCustomerData({ ...customerData, contacts: updatedContacts });
+          }}
+          disabled={(customerData.contacts || []).length >= 3}
+        >
+          新增聯絡人
+        </Button>
+      </div>
+
+
+        <TextField
           label="注意事項"
           fullWidth
           multiline
@@ -632,7 +579,7 @@ const Customers = ({
           value={customerData.notes || ""}
           onChange={(e) => setCustomerData({ ...customerData, notes: e.target.value })}
           style={{ marginBottom: "20px" }}
-          />
+        />
     </div>
   </div>
 )}
