@@ -186,21 +186,27 @@ const MapComponent = ({ projects = [] }) => {
                 const startDate = project.start_date ? new Date(project.start_date).toLocaleDateString() : 'N/A';
                 const contractAmount = project.construction_fee ? `${project.construction_fee.toLocaleString()} 元` : 'N/A';
 
-                const contentString = `
-                  <div style="font-family: Arial, sans-serif; font-size: 14px; padding: 8px 28px 8px 12px;">
-                    <div style="font-size: 16px; font-weight: bold; color: #2c2c2c; margin-bottom: 8px;">
-                      ${project.project_name || '未提供專案名稱'}
-                    </div>
-                    <div style="font-size: 13px; color: #555555; line-height: 1.5;">
-                      <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
-                      <p style="margin: 0;"><strong>施工金額:</strong> ${contractAmount}</p>
-                    </div>
+                const projectTitleText = project.project_name || '未提供專案名稱';
+                
+                // Create an HTML element for the header content
+                const projectTitleElement = document.createElement('div');
+                projectTitleElement.style.fontSize = '1.4em';
+                projectTitleElement.style.fontWeight = 'bold';
+                projectTitleElement.textContent = projectTitleText; // Use textContent for plain text to avoid XSS if projectTitleText could contain HTML
+
+                const projectDetails = `
+                  <div style="font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;">
+                    <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
+                    <p style="margin: 0;"><strong>施工金額:</strong> ${contractAmount}</p>
                   </div>
                 `;
 
                 const infoWindow = new InfoWindow({
-                  content: contentString,
+                  headerContent: projectTitleElement, // Pass the HTML element
+                  content: projectDetails,
                   ariaLabel: project.project_name || '專案詳情',
+                  // We can add some padding around the main content if needed, 
+                  // but the header should be handled by the API's default styling for headers.
                 });
 
                 infoWindow.open({
