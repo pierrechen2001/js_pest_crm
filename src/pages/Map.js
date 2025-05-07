@@ -197,7 +197,8 @@ const MapComponent = ({ projects = [] }) => {
                 const projectDetails = `
                   <div style="font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;">
                     <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
-                    <p style="margin: 0;"><strong>施工金額:</strong> ${contractAmount}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>施工金額:</strong> ${contractAmount}</p>
+                    <a href="/order/${project.project_id}" target="_blank" style="color: #1a73e8; text-decoration: none; font-weight: bold;">查看專案詳細頁面</a>
                   </div>
                 `;
 
