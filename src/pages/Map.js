@@ -16,6 +16,7 @@ const MapComponent = ({ projects = [] }) => {
   const projectMarkersRef = useRef([]); // To store project markers
   const circleRef = useRef(null);
   const mapClickListenerRef = useRef(null); // To store the map click listener
+  const activeInfoWindowRef = useRef(null); // To store the active InfoWindow
   const [searchInput, setSearchInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -128,19 +129,28 @@ const MapComponent = ({ projects = [] }) => {
 
   // Effect to display project markers within the circle
   useEffect(() => {
-    if (!mapReady || !mainMarkerPosition || !projects || projects.length === 0 || !window.google || !window.google.maps.geometry || !window.google.maps.marker) {
+    if (!mapReady || !mainMarkerPosition || !projects || !window.google || !window.google.maps.geometry || !window.google.maps.marker || !window.google.maps.InfoWindow) {
       projectMarkersRef.current.forEach(marker => marker.map = null);
       projectMarkersRef.current = [];
+      if (activeInfoWindowRef.current) {
+        activeInfoWindowRef.current.close();
+        activeInfoWindowRef.current = null;
+      }
       return;
     }
     
     const geocoder = new window.google.maps.Geocoder();
     const { spherical } = window.google.maps.geometry;
     const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+    const { InfoWindow } = window.google.maps; // Get InfoWindow constructor
 
-    // Clear previous project markers
+    // Clear previous project markers and close any open InfoWindow
     projectMarkersRef.current.forEach(marker => marker.map = null);
     projectMarkersRef.current = [];
+    if (activeInfoWindowRef.current) {
+      activeInfoWindowRef.current.close();
+      activeInfoWindowRef.current = null;
+    }
 
     const geocodeDelay = 250; // ms delay between geocoding requests
 
@@ -155,9 +165,9 @@ const MapComponent = ({ projects = [] }) => {
             const distance = spherical.computeDistanceBetween(mainMarkerPosition, projectLocation);
 
             if (distance <= circleRadius) {
-              const pinGlyph = new PinElement({
-                glyph: project.project_name?.charAt(0) || 'P', // First letter or 'P'
-                glyphColor: 'white',
+              const pinElement = new PinElement({
+                // glyph: project.project_name?.charAt(0) || 'P', // Removed glyph
+                glyphColor: 'white', // No glyph, so no glyphColor
                 background: '#4285F4', // Google Blue for project markers
                 borderColor: '#1A73E8',
               });
@@ -165,8 +175,41 @@ const MapComponent = ({ projects = [] }) => {
                 position: projectLocation,
                 map: mapInstanceRef.current,
                 title: project.project_name || 'Project Location',
-                content: pinGlyph.element,
+                content: pinElement.element,
               });
+
+              projectMarker.addListener('click', () => {
+                if (activeInfoWindowRef.current) {
+                  activeInfoWindowRef.current.close();
+                }
+            
+                const startDate = project.start_date ? new Date(project.start_date).toLocaleDateString() : 'N/A';
+                const contractAmount = project.construction_fee ? `${project.construction_fee.toLocaleString()} 元` : 'N/A';
+
+                const contentString = `
+                  <div style="font-family: Arial, sans-serif; font-size: 14px; padding: 8px 28px 8px 12px;">
+                    <div style="font-size: 16px; font-weight: bold; color: #2c2c2c; margin-bottom: 8px;">
+                      ${project.project_name || '未提供專案名稱'}
+                    </div>
+                    <div style="font-size: 13px; color: #555555; line-height: 1.5;">
+                      <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
+                      <p style="margin: 0;"><strong>施工金額:</strong> ${contractAmount}</p>
+                    </div>
+                  </div>
+                `;
+
+                const infoWindow = new InfoWindow({
+                  content: contentString,
+                  ariaLabel: project.project_name || '專案詳情',
+                });
+
+                infoWindow.open({
+                  anchor: projectMarker,
+                  map: mapInstanceRef.current,
+                });
+                activeInfoWindowRef.current = infoWindow;
+              });
+
               projectMarkersRef.current.push(projectMarker);
             }
           } else if (status === window.google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
