@@ -15,6 +15,7 @@ const MapComponent = ({ projects = [] }) => {
   const markerRef = useRef(null); // Main search marker
   const projectMarkersRef = useRef([]); // To store project markers
   const circleRef = useRef(null);
+  const mapClickListenerRef = useRef(null); // To store the map click listener
   const [searchInput, setSearchInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -68,6 +69,7 @@ const MapComponent = ({ projects = [] }) => {
           zoom: 12,
           scaleControl: true,
           mapId: "9511f62ce31b4d10",
+          gestureHandling: 'greedy'
         });
         mapInstanceRef.current = map;
         markerRef.current = new AdvancedMarkerElement({
@@ -77,6 +79,19 @@ const MapComponent = ({ projects = [] }) => {
         setMainMarkerPosition(initialCenter);
         console.log("Initial AdvancedMarkerElement created:", markerRef.current);
         updateCircle(initialCenter, map, circleRadius);
+
+        // Add map click listener and store it
+        if (mapInstanceRef.current) {
+          mapClickListenerRef.current = mapInstanceRef.current.addListener('click', (mapsMouseEvent) => {
+            const clickedLatLng = mapsMouseEvent.latLng.toJSON(); // Get lat/lng of the click
+            if (markerRef.current) {
+              markerRef.current.position = clickedLatLng;
+            }
+            setMainMarkerPosition(clickedLatLng);
+            updateCircle(clickedLatLng, map, circleRadius);
+          });
+        }
+
         setMapReady(true);
       }
       setIsLoading(false);
@@ -95,6 +110,11 @@ const MapComponent = ({ projects = [] }) => {
       if (markerRef.current) {
         markerRef.current.map = null;
         markerRef.current = null;
+      }
+      // Clean up the specific map click listener
+      if (mapClickListenerRef.current) {
+        mapClickListenerRef.current.remove();
+        mapClickListenerRef.current = null;
       }
     };
   }, []); // Removed projects from here, will be handled by its own effect
