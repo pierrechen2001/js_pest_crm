@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   Drawer, 
   List, 
@@ -8,10 +8,15 @@ import {
   Divider, 
   Avatar, 
   Typography, 
-  Box,
-  ListItemButton
+  Box, 
+  Menu,
+  MenuItem,
+  ListItemButton,
+  IconButton,
+  Tooltip
 } from "@mui/material";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { styled } from '@mui/material/styles';
 import { useAuth } from '../context/AuthContext';
 
 // Icons
@@ -19,19 +24,46 @@ import PeopleIcon from "@mui/icons-material/People";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import SecurityIcon from "@mui/icons-material/Security";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { Assignment as AssignmentIcon, Map as MapIcon } from '@mui/icons-material';
 
+
+// 自定義樣式元件
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
+  width: 240,
+  flexShrink: 0,
+  '& .MuiDrawer-paper': {
+    width: 240,
+    boxSizing: 'border-box',
+    background: `linear-gradient(180deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+    color: theme.palette.common.white,
+    borderRight: 'none',
+  },
+}));
+
 const Sidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout, hasRole } = useAuth();
-
+  
+  // User menu state
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  
+  // Handle menu open/close
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+  
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+  
   // Handle logout
   const handleLogout = async () => {
+    handleClose();
     try {
       await logout();
-      navigate('/login');
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -42,7 +74,7 @@ const Sidebar = () => {
     return location.pathname === path;
   };
 
-  // Menu items with simple structure
+  // Menu items
   const menuItems = [
     {
       text: '客戶管理',
@@ -55,7 +87,7 @@ const Sidebar = () => {
       path: '/orders',
     },
     {
-      text: '專案管理',
+      text: '庫存管理',
       icon: <InventoryIcon />,
       path: '/inventory',
     },
@@ -91,117 +123,132 @@ const Sidebar = () => {
   ];
 
   return (
-    <Drawer
+    <StyledDrawer
       variant="permanent"
       anchor="left"
-      sx={{
-        width: 240,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: 240,
-          boxSizing: 'border-box',
-        },
-      }}
     >
-      {/* 使用者資料區 */}
+      {/* 使用者資料區 - 用白色文字 */}
       <Box sx={{ 
-        p: 2, 
+        p: 3, 
         display: "flex", 
         alignItems: "center",
-        borderBottom: '1px solid rgba(0,0,0,0.1)'
+        borderBottom: '1px solid rgba(255,255,255,0.1)'
       }}>
-        <Avatar sx={{ bgcolor: 'primary.main' }}>
+        <Avatar 
+          sx={{ 
+            bgcolor: 'common.white', 
+            color: 'primary.dark',
+            width: 42,
+            height: 42
+          }}
+        >
           {user?.email?.charAt(0).toUpperCase()}
         </Avatar>
         <Box sx={{ ml: 2, overflow: "hidden" }}>
-          <Typography variant="subtitle1" noWrap>
+          <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
             {user?.email}
           </Typography>
-          <Typography variant="body2" noWrap color="textSecondary">
+          <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
             {user?.roles?.[0] || 'User'}
           </Typography>
         </Box>
+        <Tooltip title="帳號設定">
+          <IconButton
+            onClick={handleClick}
+            size="small"
+            sx={{ ml: 1 }}
+            aria-controls={open ? 'account-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? 'true' : undefined}
+          >
+            <SecurityIcon />
+          </IconButton>
+        </Tooltip>
       </Box>
       
       <Divider />
       
-      {/* 主導航 */}
-      <List sx={{ p: 1 }}>
+      {/* 導航鏈接 */}
+      <List component="nav" sx={{ p: 2 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+          <ListItem key={item.text} disablePadding>
             <ListItemButton 
-              component={Link}
+              component={Link} 
               to={item.path}
               selected={isActivePage(item.path)}
-              sx={{
+              sx={{ 
                 borderRadius: 1,
+                mb: 1,
+                color: 'common.white',
                 '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                  backgroundColor: 'rgba(255,255,255,0.15)',
                   '&:hover': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
                   },
                 },
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
                 }
               }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ color: 'common.white' }}>
                 {item.icon}
               </ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemText 
+                primary={item.text} 
+                primaryTypographyProps={{
+                  color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                  fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+                }}
+              />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
       
-      <Divider />
+      <Divider sx={{ mx: 2 }} />
       
       {/* 管理員選項 */}
       {hasRole('admin') && (
-        <>
-          <List sx={{ p: 1 }}>
-            <Typography 
-              variant="overline" 
-              display="block" 
-              sx={{ px: 1, pt: 1, opacity: 0.7 }}
-            >
-              管理員選單
-            </Typography>
-            {adminMenuItems.map((item) => (
-              <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton 
-                  component={Link}
-                  to={item.path}
-                  selected={isActivePage(item.path)}
-                  sx={{
-                    borderRadius: 1,
-                    '&.Mui-selected': {
-                      backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                      },
-                    },
+        <List component="nav" sx={{ p: 1 }}>
+          {adminMenuItems.map((item) => (
+            <ListItem key={item.text} disablePadding>
+              <ListItemButton 
+                component={Link} 
+                to={item.path}
+                selected={isActivePage(item.path)}
+                sx={{ 
+                  borderRadius: 1,
+                  mb: 0.5,
+                  '&.Mui-selected': {
+                    backgroundColor: 'primary.light',
                     '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    }
+                      backgroundColor: 'primary.light',
+                    },
+                  }
+                }}
+              >
+                <ListItemIcon>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.text}
+                  primaryTypographyProps={{
+                    color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                    fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
                   }}
-                >
-                  <ListItemIcon>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-          <Divider />
-        </>
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
       )}
       
-      {/* 登出按鈕 */}
       <Box sx={{ flexGrow: 1 }} />
-      <List sx={{ p: 1 }}>
+      <Divider />
+      
+      {/* 登出按鈕 */}
+      <List component="nav" sx={{ p: 1 }}>
         <ListItem disablePadding>
           <ListItemButton 
             onClick={handleLogout}
@@ -217,7 +264,25 @@ const Sidebar = () => {
           </ListItemButton>
         </ListItem>
       </List>
-    </Drawer>
+      
+      {/* 用戶選單 */}
+      <Menu
+        anchorEl={anchorEl}
+        id="account-menu"
+        open={open}
+        onClose={handleClose}
+        onClick={handleClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={handleLogout}>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          登出
+        </MenuItem>
+      </Menu>
+    </StyledDrawer>
   );
 };
 
