@@ -43,26 +43,18 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
 // Main App Content
 const AppContent = () => {
-  const { user, loading, error: authError } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const location = useLocation();
   const nodeRef = useRef(null);
   const [customers, setCustomers] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [isInitialising, setIsInitialising] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 
-  // Fetch customers and projects
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) {
-        setLoadingData(false);
-        return;
-      }
-
+      console.log("User authenticated, fetching app data (customers and projects)...");
       try {
-        setLoadingData(true);
-        console.log("Fetching data in App.js (customers and projects)...");
-        
         const customerPromise = supabase.from('customer_database').select('*');
         const projectPromise = supabase.from('project').select('*, customer_database(customer_id, customer_name)');
 
@@ -75,20 +67,23 @@ const AppContent = () => {
         setProjects(projectResponse.data || []);
 
       } catch (error) {
-        console.error('Error fetching data in App.js:', error);
+        console.error('Error fetching app data in App.js:', error);
         setFetchError(error.message);
       } finally {
-        setLoadingData(false);
+        setIsInitialising(false);
       }
     };
 
-    if (user && !loading) {
-      fetchData();
+    if (!authLoading) {
+      if (user) {
+        fetchData();
+      } else {
+        setIsInitialising(false);
+      }
     }
-  }, [user, loading]);
+  }, [user, authLoading]);
 
-  // Display a loading indicator if the auth state is still initializing
-  if (loading || loadingData) {
+  if (isInitialising) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
@@ -99,7 +94,6 @@ const AppContent = () => {
     );
   }
 
-  // Display any auth errors
   if (authError || fetchError) {
     return (
       <Box 
@@ -128,7 +122,6 @@ const AppContent = () => {
     );
   }
 
-  // Customer CRUD operations
   const addCustomer = async (customerData) => {
     try {
       const { data, error } = await supabase
@@ -225,7 +218,7 @@ const AppContent = () => {
                       <Customers 
                         customers={customers} 
                         setCustomers={setCustomers}
-                        loading={loadingData} 
+                        loading={isInitialising} 
                         error={fetchError} 
                         addCustomer={addCustomer} 
                         updateCustomer={updateCustomer} 
