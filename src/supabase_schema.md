@@ -54,6 +54,10 @@ create table public.project (
   contact2_name text null,
   contact2_type text null,
   contact2_contact text null,
+  contact3_role text null,
+  contact3_name text null,
+  contact3_type text null,
+  contact3_contact text null,
   constraint project_pkey primary key (project_id),
   constraint project_customer_id_fkey foreign KEY (customer_id) references customer_database (customer_id) on delete set null
 ) TABLESPACE pg_default;
@@ -90,4 +94,23 @@ create table public.permissions (
   id serial not null,
   name character varying(50) not null,
   constraint permissions_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create table public.project_log (
+  log_id uuid not null default gen_random_uuid (),
+  project_id uuid not null,
+  log_type text not null,
+  log_date date not null,
+  created_by text not null,
+  content text not null,
+  notes text null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null,
+  constraint project_log_pkey primary key (log_id),
+  constraint project_log_project_id_fkey foreign KEY (project_id) references project (project_id) on delete CASCADE,
+  constraint project_log_log_type_check check (
+    (
+      log_type = any (array['工程'::text, '財務'::text, '行政'::text])
+    )
+  )
 ) TABLESPACE pg_default;

@@ -287,8 +287,7 @@ export default function Orders() {
       setProjectData(getInitialProjectData());
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('儲存失敗，請檢查資料是否正確！'); // 添加錯誤提示
-      // 可以添加錯誤提示
+      alert('儲存失敗，請檢查資料是否正確！');
     }
   };
 

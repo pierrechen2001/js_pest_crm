@@ -1,0 +1,226 @@
+/* ApiCalendar.css */
+.calendar-container {
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  max-width: 90% !important;
+  margin: 0 auto !important;
+}
+
+.calendar-title {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #333;
+  margin-bottom: 20px !important;
+}
+
+/* 行事曆整體樣式 */
+.modern-calendar-wrapper {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 5px;
+}
+
+/* 行事曆標題 */
+.fc .fc-toolbar-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 行事曆頭部 */
+.fc .fc-toolbar {
+  margin-bottom: 2em;
+}
+
+/* 按鈕組 */
+.fc .fc-button-group .fc-button {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  color: #333;
+  font-weight: 500;
+  border-radius: 6px;
+  margin: 0 2px;
+  box-shadow: none;
+}
+
+.fc .fc-button-group .fc-button:hover {
+  background-color: #f5f5f5;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: #f0f0f0;
+  border-color: #ddd;
+  color: #333;
+}
+
+/* 表格單元格 */
+.fc .fc-daygrid-day {
+  border: 1px solid #f0f0f0;
+  background: white;
+  min-height: 80px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+/* 當天日期 */
+.fc .fc-day-today {
+  background-color: #f8f9fa !important;
+  border-radius: 4px;
+}
+
+/* 日期數字 */
+.fc .fc-daygrid-day-number {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #555;
+  padding: 6px;
+}
+
+/* 事件項目 */
+.calendar-event, .custom-calendar-event {
+  border-radius: 6px !important;
+  margin: 2px 0 !important;
+  padding: 2px 4px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  border: none !important;
+}
+
+/* 重新整理按鈕 */
+.refresh-button {
+  font-size: 14px !important;
+  text-transform: none !important;
+  border-radius: 6px !important;
+}
+
+/* 新增活動按鈕 */
+.add-event-button {
+  font-size: 14px !important;
+  text-transform: none !important;
+  border-radius: 6px !important;
+  background-color: #1976d2;
+  color: white;
+  padding: 6px 16px;
+}
+
+.add-event-button:hover {
+  background-color: #1565c0;
+}
+
+/* 新增活動對話框 */
+.event-dialog .MuiDialogTitle-root {
+  background-color: #f8f9fa;
+  padding: 16px 24px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.event-dialog .MuiDialogContent-root {
+  padding: 20px 24px;
+}
+
+.event-dialog .MuiDialogActions-root {
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.event-dialog .MuiButton-contained {
+  background-color: #1976d2;
+}
+
+.event-dialog .MuiButton-contained:hover {
+  background-color: #1565c0;
+}
+
+/* 表單控制項樣式 */
+.event-dialog .MuiFormControl-root {
+  margin-bottom: 16px;
+}
+
+.event-dialog .MuiInputLabel-root {
+  font-size: 14px;
+}
+
+.event-dialog .MuiOutlinedInput-root {
+  border-radius: 6px;
+}
+
+.event-dialog .MuiOutlinedInput-notchedOutline {
+  border-color: #e0e0e0;
+}
+
+.event-dialog .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #bdbdbd;
+}
+
+.event-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1976d2;
+}
+
+/* 各類事件顏色 */
+.fc-event-title {
+  padding: 3px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* 週末日期 */
+.fc-day-sat, .fc-day-sun {
+  background-color: #fafafa;
+}
+
+/* 日期外的背景 */
+.fc .fc-day-other {
+  background-color: #f9f9f9;
+}
+
+/* 行事曆格子高度 */
+.fc .fc-daygrid-body-balanced .fc-daygrid-day-events {
+  min-height: 2rem;
+}
+
+/* 月份選擇器樣式調整 */
+.fc-header-toolbar .fc-toolbar-chunk:nth-child(2) {
+  flex: 1;
+  text-align: center;
+}
+
+/* 整體行事曆尺寸控制 */
+.fc {
+  width: 100%;
+  height: 100%;
+  font-size: 0.95rem;
+}
+
+/* 行事曆表格圓角 */
+.fc-theme-standard .fc-scrollgrid {
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .fc-header-toolbar .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .calendar-container {
+    max-width: 95% !important;
+    padding: 10px;
+  }
+} 
