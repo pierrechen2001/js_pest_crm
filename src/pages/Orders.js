@@ -196,27 +196,62 @@ const [projectData, setProjectData] = useState({
   ]
 });
 
-const [statusAnchorEl, setStatusAnchorEl] = useState(null);
-const [billingAnchorEl, setBillingAnchorEl] = useState(null);
-const handleStatusFilterClick = (event) => {
-  setStatusAnchorEl(event.currentTarget);
-};
+    return true;
+  })
+  .sort((a, b) => {
+    if (sortOrder === "asc") {
+      return new Date(a.start_date || "") - new Date(b.start_date || "");
+    } else {
+      return new Date(b.start_date || "") - new Date(a.start_date || "");
+    }
+  });
 
-const handleBillingFilterClick = (event) => {
-  setBillingAnchorEl(event.currentTarget);
-};
+  // Dialog 控制
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [projectData, setProjectData] = useState({
+    project_name: "",
+    customer_id: null,
+    site_city: "",
+    site_district: "",
+    site_address: "",
+    construction_item: "",
+    construction_fee: "",
+    start_date: "",
+    end_date: "",
+    construction_days: "",
+    construction_scope: "",
+    construction_notes: "",
+    payment_method: "",
+    payment_date: "",
+    construction_status: "未開始",
+    billing_status: "未請款",
+    contacts: [
+      { role: "", name: "", contactType: "", contact: "" }, // 預設一個聯絡人
+    ],
+  });
+  
+  const [statusAnchorEl, setStatusAnchorEl] = useState(null);
+  const [billingAnchorEl, setBillingAnchorEl] = useState(null);
+  const handleStatusFilterClick = (event) => {
+    setStatusAnchorEl(event.currentTarget);
+  };
+  
+  const handleBillingFilterClick = (event) => {
+    setBillingAnchorEl(event.currentTarget);
+  };
+  
+  const handleStatusFilterClose = (status) => {
+    setStatusAnchorEl(null);
+    if (status !== undefined) setStatusFilter(status);
+  };
+  
+  const handleBillingFilterClose = (billing) => {
+    setBillingAnchorEl(null);
+    if (billing !== undefined) setBillingFilter(billing);
+  };
+  // 獲取數據
 
-const handleStatusFilterClose = (status) => {
-  setStatusAnchorEl(null);
-  if (status !== undefined) setStatusFilter(status);
-};
-
-const handleBillingFilterClose = (billing) => {
-  setBillingAnchorEl(null);
-  if (billing !== undefined) setBillingFilter(billing);
-};
-  // REMOVE or COMMENT OUT the useEffect that fetches data
-  /*
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -295,7 +330,11 @@ const handleBillingFilterClose = (billing) => {
           contact2_role: projectData.contacts[1]?.role || "",
           contact2_name: projectData.contacts[1]?.name || "",
           contact2_type: projectData.contacts[1]?.contactType || "",
-          contact2_contact: projectData.contacts[1]?.contact || ""
+          contact2_contact: projectData.contacts[1]?.contact || "",
+          contact3_role: projectData.contacts[2]?.role || "",
+          contact3_name: projectData.contacts[2]?.name || "",
+          contact3_type: projectData.contacts[2]?.contactType || "",
+          contact3_contact: projectData.contacts[2]?.contact || "",
         }])
         .select('*, customer_database(customer_id, customer_name)'); // Ensure you select joined data if needed for optimistic update
   
@@ -370,13 +409,18 @@ const updateContact = (index, field, value) => {
   // if (loading) return <CircularProgress />;
   // if (error) return <Typography color="error">{error}</Typography>;
 
+
   return (
     <div style={{ padding: 20 }}>
       {/* ... (Button, Search, Filter UI remains the same) ... */}
       <Button 
         variant="contained" 
         startIcon={<Add />} 
-        onClick={() => setOpenDialog(true)}
+        onClick={() => {
+          setProjectData(getInitialProjectData());
+          setSelectedCustomer(null); // 重置選擇的客戶
+          setOpenDialog(true);
+        }}
         style={{ marginBottom: 20 }}
       >
         新增專案
@@ -421,7 +465,7 @@ const updateContact = (index, field, value) => {
               setSelectedCustomer(newValue);
               setProjectData(prev => ({
                 ...prev,
-                customer_id: newValue?.customer_id
+                customer_id: newValue?.customer_id || null,
               }));
             }}
             renderInput={(params) => (
@@ -440,19 +484,14 @@ const updateContact = (index, field, value) => {
 
           <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
           <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
-            {/* 聯絡人 1 */}
+            {/* 預設聯絡人 1 */}
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <FormControl fullWidth>
-                <InputLabel>職位</InputLabel>
-                <Select
-                  value={projectData.contacts[0]?.role || ""}
-                  onChange={(e) => updateContact(0, "role", e.target.value)}
-                >
-                  {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                    <MenuItem key={role} value={role}>{role}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <TextField
+                label="職位"
+                fullWidth
+                value={projectData.contacts[0]?.role || ""}
+                onChange={(e) => updateContact(0, "role", e.target.value)}
+              />
               <TextField
                 label="名字"
                 fullWidth
@@ -494,31 +533,31 @@ const updateContact = (index, field, value) => {
                 }}
               />
             </div>
+          </div>
 
-            {/* 聯絡人 2 */}
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <FormControl fullWidth>
-                <InputLabel>職位</InputLabel>
-                <Select
-                  value={projectData.contacts[1]?.role || ""}
-                  onChange={(e) => updateContact(1, "role", e.target.value)}
-                >
-                  {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                    <MenuItem key={role} value={role}>{role}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
+          {/* 動態聯絡人 1 */}
+          {projectData.contacts?.map((contact, index) => {
+            if (index === 0) return null; // 跳過預設聯絡人
+            return (
+            <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <TextField
+                label="職位"
+                fullWidth
+                value={contact.role || ""}
+                onChange={(e) => updateContact(index, "role", e.target.value)}
+              />
               <TextField
                 label="名字"
                 fullWidth
-                value={projectData.contacts[1]?.name || ""}
-                onChange={(e) => updateContact(1, "name", e.target.value)}
+                value={contact.name || ""}
+                onChange={(e) => updateContact(index, "name", e.target.value)}
               />
               <FormControl fullWidth>
                 <InputLabel>聯絡方式類型</InputLabel>
                 <Select
-                  value={projectData.contacts[1]?.contactType || ""}
-                  onChange={(e) => updateContact(1, "contactType", e.target.value)}
+                  value={contact.contactType || ""}
+                  onChange={(e) => updateContact(index, "contactType", e.target.value)}
                 >
                   {["電話", "市話", "LineID", "Email"].map((type) => (
                     <MenuItem key={type} value={type}>{type}</MenuItem>
@@ -526,55 +565,80 @@ const updateContact = (index, field, value) => {
                 </Select>
               </FormControl>
               <TextField
-                label={projectData.contacts[1]?.contactType || "聯絡方式"}
+                label={contact.contactType || "聯絡方式"}
                 fullWidth
-                value={projectData.contacts[1]?.contact || ""}
+                value={contact.contact || ""}
                 onChange={(e) => {
                   let formattedValue = e.target.value;
-
-                  // 自動格式化電話號碼
-                  if (projectData.contacts[1]?.contactType === "電話") {
+                  if (contact.contactType === "電話") {
                     formattedValue = formattedValue
                       .replace(/[^\d]/g, "")
                       .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                  } else if (projectData.contacts[1]?.contactType === "市話") {
+                  } else if (contact.contactType === "市話") {
                     formattedValue = formattedValue
                       .replace(/[^\d]/g, "")
                       .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
                   }
-
                   const newContacts = [...projectData.contacts];
-                  newContacts[1] = { ...newContacts[1], contact: formattedValue };
+                  newContacts[index] = { ...newContacts[index], contact: formattedValue };
                   setProjectData({ ...projectData, contacts: newContacts });
                 }}
               />
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => {
+                  const updatedContacts = projectData.contacts.filter((_, i) => i !== index);
+                  setProjectData({ ...projectData, contacts: updatedContacts });
+                }}
+              >
+                刪除
+              </Button>
             </div>
-          </div>
+            );})}
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              const updatedContacts = [...(projectData.contacts || []), { role: "", name: "", contactType: "", contact: "" }];
+              setProjectData({ ...projectData, contacts: updatedContacts });
+            }}
+            disabled={projectData.contacts.length >= 3}
+          >
+            新增聯絡人
+          </Button>
+        </div>
 
           <Divider sx={{ my: 2 }} />
           <Typography variant="h6" gutterBottom>施工資訊</Typography>
 
           {/* 施工地址 */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
-            <Autocomplete
-              options={taiwanCities}
-              renderInput={(params) => <TextField {...params} label="施工縣市" fullWidth />}
-              value={projectData.site_city || ""}
-              onChange={(event, newValue) => handleCityChange(newValue)}
-            />
-            <Autocomplete
-              options={taiwanDistricts[projectData.site_city] || []}
-              renderInput={(params) => <TextField {...params} label="施工區域" fullWidth />}
-              value={projectData.site_district || ""}
-              onChange={(event, newValue) => handleDistrictChange(newValue)}
-            />
-            <TextField
-            name="site_address"
-            label="施工地址"
-            fullWidth
-            value={projectData.site_address}
-            onChange={handleChange}
-          />
+            <div style={{ flex: 1 }}>
+              <Autocomplete
+                options={taiwanCities}
+                renderInput={(params) => <TextField {...params} label="施工縣市" fullWidth />}
+                value={projectData.site_city || ""}
+                onChange={(event, newValue) => handleCityChange(newValue)}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <Autocomplete
+                options={taiwanDistricts[projectData.site_city] || []}
+                renderInput={(params) => <TextField {...params} label="施工區域" fullWidth />}
+                value={projectData.site_district || ""}
+                onChange={(event, newValue) => handleDistrictChange(newValue)}
+              />
+            </div>
+            <div style={{ flex: 3 }}>
+              <TextField
+                name="site_address"
+                label="施工地址"
+                fullWidth
+                value={projectData.site_address}
+                onChange={handleChange}
+              />
+            </div>
           </div>
       
           <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>

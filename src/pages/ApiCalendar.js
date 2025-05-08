@@ -1,18 +1,22 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Typography, Container, Button, CircularProgress, Box, Alert, TextField } from "@mui/material";
+import { Typography, Container, Button, CircularProgress, Box, Alert, TextField, Dialog, DialogTitle, DialogContent, DialogActions, FormControl, InputLabel, Select, MenuItem, FormHelperText } from "@mui/material";
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
+import zhTW from 'date-fns/locale/zh-TW';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import zhTWLocale from '@fullcalendar/core/locales/zh-tw';
 import { useAuth } from '../context/AuthContext';
+import './ApiCalendar.css'; // 引入自定義CSS
 
 // Fallback credentials if environment variables don't work
 const FALLBACK_API_KEY = "AIzaSyD_nRTQtxTTNLW19U4T0zdTohWT0BPiKzI";
 const FALLBACK_CLIENT_ID = "516194420420-7oatcqmd1kc9h37nk4m2pe08aqfmd180.apps.googleusercontent.com";
 
 const ApiCalendar = () => {
-  // const { user } = useAuth();
+  const { user, googleAuth } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,16 +25,76 @@ const ApiCalendar = () => {
   const [customClientId, setCustomClientId] = useState("");
   const [customApiKey, setCustomApiKey] = useState("");
   const [useCustomCredentials, setUseCustomCredentials] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(false);
+  
+  // 新增活動相關狀態
+  const [openNewEventDialog, setOpenNewEventDialog] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    start: new Date(),
+    end: new Date(new Date().getTime() + 60 * 60 * 1000), // 預設一小時後
+    description: '',
+    type: 'default', // 預設類型
+  });
+  const [eventErrors, setEventErrors] = useState({
+    title: false,
+    start: false,
+    end: false,
+  });
+  const [addingEvent, setAddingEvent] = useState(false);
+  const [addEventSuccess, setAddEventSuccess] = useState(false);
+  const [addEventError, setAddEventError] = useState(null);
   
   // 使用特定公開行事曆ID
   const calendarId = "jongshingpest@gmail.com";
 
   // Add debug information
   const addDebugInfo = (message) => {
-    console.log(message);
+    console.log(`[Calendar] ${message}`);
   };
 
-  // Fetch calendar events
+  // 使用 Google Auth 登入
+  const handleGoogleSignIn = async () => {
+    try {
+      if (!googleAuth) {
+        setNeedsAuth(true);
+        addDebugInfo("Google 認證尚未初始化，需要先登入");
+        throw new Error("Google 認證尚未初始化，請先登入您的 Google 帳號");
+      }
+
+      try {
+        const currentUser = googleAuth.currentUser.get();
+        
+        if (currentUser && currentUser.hasGrantedScopes('https://www.googleapis.com/auth/calendar')) {
+          addDebugInfo("使用者已授權日曆存取權限");
+          return currentUser;
+        }
+      } catch (error) {
+        addDebugInfo(`檢查當前用戶時出錯: ${error.message}`);
+        // 如果無法獲取當前用戶，嘗試重新登入
+      }
+      
+      addDebugInfo("請求日曆存取權限");
+      const googleUser = await googleAuth.signIn({
+        scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
+      });
+      
+      // 確認是否取得所需的權限
+      if (!googleUser.hasGrantedScopes('https://www.googleapis.com/auth/calendar')) {
+        throw new Error("使用者未授予日曆存取權限");
+      }
+      
+      addDebugInfo("Google 登入且取得日曆授權成功");
+      setNeedsAuth(false);
+      return googleUser;
+    } catch (error) {
+      addDebugInfo(`Google 登入錯誤: ${error.message}`);
+      setNeedsAuth(true);
+      throw error;
+    }
+  };
+
+  // Fetch calendar events - 讀取公開行事曆，不需要授權
   const fetchEvents = useCallback(async () => {
     if (!window.gapi || !window.gapi.client) {
       addDebugInfo("GAPI client not available yet");
@@ -76,15 +140,71 @@ const ApiCalendar = () => {
       });
       
       // Format for FullCalendar
-      const formattedEvents = response.result.items.map(event => ({
-        id: event.id,
-        title: event.summary,
-        start: event.start.dateTime || event.start.date,
-        end: event.end.dateTime || event.end.date,
-        description: event.description,
-        location: event.location,
-        url: event.htmlLink
-      }));
+      const formattedEvents = response.result.items.map(event => {
+        // 依據事件類型或內容設定不同的顏色
+        let backgroundColor;
+        const eventTitle = event.summary ? event.summary.toLowerCase() : '';
+        const eventDesc = event.description ? event.description.toLowerCase() : '';
+        
+        // 更豐富的顏色分類
+        if (eventTitle.includes('設計') || eventTitle.includes('design')) {
+          backgroundColor = '#e5eaff'; // 淡藍色
+        } else if (eventTitle.includes('測試') || eventTitle.includes('test')) {
+          backgroundColor = '#ffefd5'; // 淡橙色
+        } else if (eventTitle.includes('營銷') || eventTitle.includes('銷售') || 
+                   eventTitle.includes('marketing') || eventTitle.includes('sales')) {
+          backgroundColor = '#e8f5e9'; // 淡綠色
+        } else if (eventTitle.includes('程式') || eventTitle.includes('開發') || 
+                   eventTitle.includes('program') || eventTitle.includes('develop')) {
+          backgroundColor = '#f3e5f5'; // 淡紫色
+        } else if (eventTitle.includes('會議') || eventTitle.includes('討論') || 
+                   eventTitle.includes('meeting') || eventTitle.includes('discussion')) {
+          backgroundColor = '#ffebee'; // 淡紅色
+        } else if (eventTitle.includes('研究') || eventTitle.includes('分析') || 
+                   eventTitle.includes('research') || eventTitle.includes('analysis')) {
+          backgroundColor = '#fff8e1'; // 淡黃色
+        } else if (eventTitle.includes('培訓') || eventTitle.includes('教育') || 
+                   eventTitle.includes('training') || eventTitle.includes('education')) {
+          backgroundColor = '#e0f7fa'; // 淡青色
+        } else if (eventTitle.includes('客戶') || eventTitle.includes('拜訪') || 
+                   eventTitle.includes('customer') || eventTitle.includes('visit')) {
+          backgroundColor = '#f1f8e9'; // 淡綠色
+        } else if (eventTitle.includes('計劃') || eventTitle.includes('規劃') || 
+                   eventTitle.includes('plan') || eventTitle.includes('schedule')) {
+          backgroundColor = '#e8eaf6'; // 淡靛藍色
+        } else {
+          // 如果沒有匹配的關鍵字，使用日期來決定顏色
+          const date = new Date(event.start.dateTime || event.start.date);
+          const weekday = date.getDay(); // 0-6 (週日-週六)
+          
+          // 根據星期幾設定不同的顏色
+          const colorPalette = [
+            '#ede7f6', // 週日 - 淡紫羅蘭色
+            '#e3f2fd', // 週一 - 淡藍色
+            '#e0f2f1', // 週二 - 淡綠松石色
+            '#f1f8e9', // 週三 - 淡萊姆色
+            '#fff8e1', // 週四 - 淡琥珀色
+            '#fbe9e7', // 週五 - 淡橙色
+            '#f3e5f5'  // 週六 - 淡紫色
+          ];
+          
+          backgroundColor = colorPalette[weekday];
+        }
+        
+        return {
+          id: event.id,
+          title: event.summary,
+          start: event.start.dateTime || event.start.date,
+          end: event.end.dateTime || event.end.date,
+          description: event.description,
+          location: event.location,
+          url: event.htmlLink,
+          backgroundColor: backgroundColor,
+          borderColor: backgroundColor,
+          textColor: '#333', // 深灰色文字
+          classNames: ['custom-calendar-event']
+        };
+      });
       
       setEvents(formattedEvents);
       addDebugInfo(`Fetched ${formattedEvents.length} events`);
@@ -96,7 +216,162 @@ const ApiCalendar = () => {
     } finally {
       setLoading(false);
     }
-  }, [addDebugInfo, calendarId]);
+  }, [calendarId]);
+
+  // 新增活動到行事曆 - 需要授權
+  const addEventToCalendar = async () => {
+    let hasErrors = false;
+    const newErrors = {
+      title: false,
+      start: false,
+      end: false
+    };
+
+    // 驗證欄位
+    if (!newEvent.title.trim()) {
+      newErrors.title = true;
+      hasErrors = true;
+    }
+
+    if (!newEvent.start) {
+      newErrors.start = true;
+      hasErrors = true;
+    }
+
+    if (!newEvent.end) {
+      newErrors.end = true;
+      hasErrors = true;
+    } else if (newEvent.end < newEvent.start) {
+      newErrors.end = true;
+      hasErrors = true;
+    }
+
+    setEventErrors(newErrors);
+    
+    if (hasErrors) {
+      return;
+    }
+
+    setAddingEvent(true);
+    setAddEventSuccess(false);
+    setAddEventError(null);
+
+    try {
+      if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
+        throw new Error("Google Calendar API 未正確載入");
+      }
+
+      // 新增活動前確保用戶已登入並授權
+      try {
+        await handleGoogleSignIn();
+      } catch (error) {
+        setNeedsAuth(true);
+        throw new Error("需要 Google 授權才能新增活動");
+      }
+
+      // 根據類型選擇顏色
+      let colorId;
+      switch (newEvent.type) {
+        case 'design':
+          colorId = '1'; // 藍色
+          break;
+        case 'testing':
+          colorId = '5'; // 黃色
+          break;
+        case 'marketing':
+          colorId = '2'; // 綠色
+          break;
+        case 'programming':
+          colorId = '3'; // 紫色
+          break;
+        case 'meeting':
+          colorId = '4'; // 粉紅色
+          break;
+        case 'research':
+          colorId = '6'; // 橙色
+          break;
+        case 'training':
+          colorId = '7'; // 青色
+          break;
+        case 'customer':
+          colorId = '9'; // 綠色
+          break;
+        case 'planning':
+          colorId = '10'; // 藍紫色
+          break;
+        default:
+          colorId = '0'; // 預設
+      }
+
+      // 準備事件資料
+      const event = {
+        summary: newEvent.title,
+        description: newEvent.description,
+        start: {
+          dateTime: newEvent.start.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        end: {
+          dateTime: newEvent.end.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        colorId: colorId
+      };
+
+      // 創建事件
+      const response = await window.gapi.client.calendar.events.insert({
+        calendarId: calendarId,
+        resource: event
+      });
+
+      if (response && response.result) {
+        setAddEventSuccess(true);
+        // 重新獲取所有事件以更新日曆
+        await fetchEvents();
+        // 清除表單並關閉對話框
+        setTimeout(() => {
+          setAddEventSuccess(false);
+          setOpenNewEventDialog(false);
+          resetEventForm();
+        }, 1500);
+      }
+    } catch (error) {
+      console.error("新增活動錯誤:", error);
+      setAddEventError(`無法新增活動: ${error.message}`);
+    } finally {
+      setAddingEvent(false);
+    }
+  };
+
+  // 重設活動表單
+  const resetEventForm = () => {
+    const now = new Date();
+    setNewEvent({
+      title: '',
+      start: now,
+      end: new Date(now.getTime() + 60 * 60 * 1000),
+      description: '',
+      type: 'default',
+    });
+    setEventErrors({
+      title: false,
+      start: false,
+      end: false,
+    });
+    setAddEventError(null);
+  };
+
+  // 打開新增活動對話框
+  const handleOpenNewEventDialog = () => {
+    resetEventForm();
+    setOpenNewEventDialog(true);
+  };
+
+  // 關閉新增活動對話框
+  const handleCloseNewEventDialog = () => {
+    setOpenNewEventDialog(false);
+    resetEventForm();
+  };
 
   // Initialize Google client directly in this component
   const initializeGapi = useCallback(async () => {
@@ -141,9 +416,10 @@ const ApiCalendar = () => {
         addDebugInfo("GAPI script already loaded");
       }
       
-      // Load client
+      // 載入 client 用於讀取公開行事曆
+      // 載入 auth2 用於後續新增活動時使用
       if (!window.gapi.client) {
-        addDebugInfo("Loading client...");
+        addDebugInfo("Loading client and auth2...");
         await new Promise((resolve, reject) => {
           try {
             window.gapi.load('client', {
@@ -170,12 +446,13 @@ const ApiCalendar = () => {
         addDebugInfo("client already loaded");
       }
       
-      // Initialize client - only need API key for public calendars
+      // 初始化客戶端 - 只需要 API key 來讀取公開行事曆
+      // 初始化 auth 用於後續操作，但不強制要求登入
       addDebugInfo("Initializing gapi.client...");
       try {
         await window.gapi.client.init({
           apiKey: apiKey,
-          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]
+          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
         });
         addDebugInfo("GAPI client initialized successfully");
       } catch (err) {
@@ -229,8 +506,7 @@ const ApiCalendar = () => {
   // Main rendering logic
   if (!gapiInitialized && !gapiLoading && !error) {
     return (
-      <Container maxWidth="lg">
-        <Typography variant="h4" gutterBottom>蟲清消毒服務行事曆</Typography>
+      <Container maxWidth="lg" className="calendar-container">
         <Box sx={{ 
           display: 'flex', 
           flexDirection: 'column', 
@@ -249,8 +525,7 @@ const ApiCalendar = () => {
 
   if (gapiLoading) {
     return (
-      <Container maxWidth="lg">
-        <Typography variant="h4" gutterBottom>蟲清消毒服務行事曆</Typography>
+      <Container maxWidth="lg" className="calendar-container">
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 4 }}>
           <CircularProgress color="secondary" />
           <Typography variant="body2" sx={{ mt: 2 }}>載入中...</Typography>
@@ -261,8 +536,7 @@ const ApiCalendar = () => {
 
   if (error && !gapiInitialized) {
     return (
-      <Container maxWidth="lg">
-        <Typography variant="h4" gutterBottom>蟲清消毒服務行事曆</Typography>
+      <Container maxWidth="lg" className="calendar-container">
         <Alert severity="error" sx={{ mb: 2 }}>
           連接失敗，請稍後再試
         </Alert>
@@ -285,32 +559,39 @@ const ApiCalendar = () => {
   }
 
   return (
-    <Container maxWidth="lg">
-      <Typography variant="h4" gutterBottom>
-        蟲清消毒服務行事曆
-      </Typography>
-      
+    <Container maxWidth="lg" className="calendar-container">
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
-      <Button 
-        variant="contained" 
-        onClick={fetchEvents} 
-        sx={{ mb: 2, mr: 2 }}
-        disabled={loading || !gapiInitialized}
-      >
-        重新整理行事曆
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Button 
+          variant="contained" 
+          color="primary"
+          onClick={handleOpenNewEventDialog}
+          className="add-event-button"
+        >
+          新增活動
+        </Button>
+        
+        <Button 
+          variant="outlined" 
+          onClick={fetchEvents} 
+          disabled={loading || !gapiInitialized}
+          className="refresh-button"
+        >
+          重新整理行事曆
+        </Button>
+      </Box>
       
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
           <CircularProgress color="secondary" />
         </Box>
       ) : (
-        <Box sx={{ height: '700px', mt: 2 }}>
+        <Box sx={{ height: '630px', mt: 2 }} className="modern-calendar-wrapper">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
@@ -333,9 +614,148 @@ const ApiCalendar = () => {
               }
             }}
             height="100%"
+            dayMaxEvents={3}
+            eventDisplay="block"
+            eventClassNames="calendar-event"
           />
         </Box>
       )}
+
+      {/* 新增活動對話框 */}
+      <Dialog 
+        open={openNewEventDialog} 
+        onClose={handleCloseNewEventDialog}
+        maxWidth="sm"
+        fullWidth
+        className="event-dialog"
+      >
+        <DialogTitle>新增活動</DialogTitle>
+        <DialogContent>
+          {addEventSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              活動已成功新增！
+            </Alert>
+          )}
+          
+          {addEventError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {addEventError}
+            </Alert>
+          )}
+          
+          {needsAuth && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              需要 Google 授權才能新增活動
+              <Button 
+                color="inherit"
+                size="small"
+                onClick={handleGoogleSignIn}
+                sx={{ ml: 2 }}
+              >
+                授權 Google 日曆
+              </Button>
+            </Alert>
+          )}
+          
+          <TextField
+            autoFocus
+            margin="dense"
+            id="event-title"
+            label="活動標題"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newEvent.title}
+            onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+            error={eventErrors.title}
+            helperText={eventErrors.title ? "請輸入活動標題" : ""}
+            sx={{ mb: 2 }}
+            required
+          />
+          
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={zhTW}>
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' }, mb: 2 }}>
+              <DateTimePicker
+                label="開始時間"
+                value={newEvent.start}
+                onChange={(date) => setNewEvent({...newEvent, start: date})}
+                slotProps={{
+                  textField: {
+                    variant: 'outlined',
+                    fullWidth: true,
+                    required: true,
+                    error: eventErrors.start,
+                    helperText: eventErrors.start ? "請選擇有效的開始時間" : ""
+                  }
+                }}
+              />
+              
+              <DateTimePicker
+                label="結束時間"
+                value={newEvent.end}
+                onChange={(date) => setNewEvent({...newEvent, end: date})}
+                slotProps={{
+                  textField: {
+                    variant: 'outlined',
+                    fullWidth: true,
+                    required: true,
+                    error: eventErrors.end,
+                    helperText: eventErrors.end ? "結束時間必須晚於開始時間" : ""
+                  }
+                }}
+              />
+            </Box>
+          </LocalizationProvider>
+          
+          <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+            <InputLabel id="event-type-label">活動類型</InputLabel>
+            <Select
+              labelId="event-type-label"
+              id="event-type"
+              value={newEvent.type}
+              onChange={(e) => setNewEvent({...newEvent, type: e.target.value})}
+              label="活動類型"
+            >
+              <MenuItem value="default">一般活動</MenuItem>
+              <MenuItem value="design">設計</MenuItem>
+              <MenuItem value="testing">測試</MenuItem>
+              <MenuItem value="marketing">營銷/銷售</MenuItem>
+              <MenuItem value="programming">程式開發</MenuItem>
+              <MenuItem value="meeting">會議/討論</MenuItem>
+              <MenuItem value="research">研究/分析</MenuItem>
+              <MenuItem value="training">培訓/教育</MenuItem>
+              <MenuItem value="customer">客戶/拜訪</MenuItem>
+              <MenuItem value="planning">計劃/規劃</MenuItem>
+            </Select>
+            <FormHelperText>選擇活動類型以套用不同顏色</FormHelperText>
+          </FormControl>
+          
+          <TextField
+            margin="dense"
+            id="event-description"
+            label="活動描述"
+            multiline
+            rows={4}
+            fullWidth
+            variant="outlined"
+            value={newEvent.description}
+            onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseNewEventDialog} color="inherit">
+            取消
+          </Button>
+          <Button 
+            onClick={addEventToCalendar} 
+            color="primary" 
+            variant="contained"
+            disabled={addingEvent}
+          >
+            {addingEvent ? "新增中..." : "新增活動"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
