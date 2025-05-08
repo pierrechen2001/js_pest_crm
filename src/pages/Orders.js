@@ -160,52 +160,6 @@ const filteredProjects = (projects || [])
   }
 });
 
-// ... (Dialog state and other handlers remain the same)
-const [openDialog, setOpenDialog] = useState(false);
-const [selectedCustomer, setSelectedCustomer] = useState(null);
-const [projectData, setProjectData] = useState({
-  project_name: "",
-  customer_id: null,
-  site_city: "",
-  site_district: "",
-  site_address: "",
-  construction_item: "",
-  construction_fee: "",
-  start_date: "",
-  end_date: "",
-  construction_days: "",
-  construction_scope: "",
-  construction_notes: "",
-  payment_method: "",
-  payment_date: "",
-  construction_status: "未開始",
-  billing_status: "未請款",
-  contacts: [
-    {
-      role: "",
-      name: "",
-      contactType: "",
-      contact: "",
-    },
-    {
-      role: "",
-      name: "",
-      contactType: "",
-      contact: "",
-    }
-  ]
-});
-
-    return true;
-  })
-  .sort((a, b) => {
-    if (sortOrder === "asc") {
-      return new Date(a.start_date || "") - new Date(b.start_date || "");
-    } else {
-      return new Date(b.start_date || "") - new Date(a.start_date || "");
-    }
-  });
-
   // Dialog 控制
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -288,7 +242,6 @@ const [projectData, setProjectData] = useState({
 
     fetchData();
   }, []);
-  */
 
   // Update local state if props change (e.g., after global data re-fetches)
   useEffect(() => {
