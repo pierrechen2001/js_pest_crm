@@ -50,6 +50,7 @@ const AppContent = () => {
   const [projects, setProjects] = useState([]);
   const [isInitialising, setIsInitialising] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -188,14 +189,14 @@ const AppContent = () => {
   return (
     <>
       <CssBaseline />
-      {user && <Sidebar />}
+      {user && <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
       
       <Container
         sx={{
-          marginLeft: user ? "240px" : "0",
+          marginLeft: user ? (sidebarCollapsed ? "64px" : "240px") : "0",
           padding: "20px",
           transition: "margin 0.3s",
-          width: user ? "calc(100% - 240px)" : "100%",
+          width: user ? (sidebarCollapsed ? "calc(100% - 64px)" : "calc(100% - 240px)") : "100%",
         }}
       >
         <TransitionGroup>
@@ -271,7 +272,7 @@ const AppContent = () => {
                   path="/calendar"
                   element={
                     <ProtectedRoute>
-                      <Calendar />
+                      <Navigate to="/apicalendar" replace />
                     </ProtectedRoute>
                   }
                 />

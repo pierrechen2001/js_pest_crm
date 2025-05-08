@@ -27,22 +27,28 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SecurityIcon from "@mui/icons-material/Security";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { Assignment as AssignmentIcon, Map as MapIcon } from '@mui/icons-material';
-
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 // 自定義樣式元件
-const StyledDrawer = styled(Drawer)(({ theme }) => ({
-  width: 240,
+const StyledDrawer = styled(Drawer)(({ theme, collapsed }) => ({
+  width: collapsed ? 64 : 240,
   flexShrink: 0,
   '& .MuiDrawer-paper': {
-    width: 240,
+    width: collapsed ? 64 : 240,
     boxSizing: 'border-box',
     background: `linear-gradient(180deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
     color: theme.palette.common.white,
     borderRight: 'none',
+    overflowX: 'hidden',
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
 }));
 
-const Sidebar = () => {
+const Sidebar = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
   const { user, logout, hasRole } = useAuth();
   
@@ -69,6 +75,11 @@ const Sidebar = () => {
     }
   };
 
+  // Toggle sidebar collapse
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
+  };
+
   // Check if current page
   const isActivePage = (path) => {
     return location.pathname === path;
@@ -93,11 +104,6 @@ const Sidebar = () => {
     },
     {
       text: '行事曆',
-      icon: <CalendarMonthIcon />,
-      path: '/calendar',
-    },
-    {
-      text: 'Google日曆',
       icon: <CalendarMonthIcon />,
       path: '/apicalendar',
     },
@@ -126,50 +132,101 @@ const Sidebar = () => {
     <StyledDrawer
       variant="permanent"
       anchor="left"
+      collapsed={collapsed}
     >
       {/* 使用者資料區 - 用白色文字 */}
       <Box sx={{ 
-        p: 3, 
+        p: collapsed ? 1 : 3, 
         display: "flex", 
         alignItems: "center",
+        justifyContent: collapsed ? "center" : "flex-start",
         borderBottom: '1px solid rgba(255,255,255,0.1)'
       }}>
-        <Avatar 
-          sx={{ 
-            bgcolor: 'common.white', 
-            color: 'primary.dark',
-            width: 42,
-            height: 42
-          }}
-        >
-          {user?.email?.charAt(0).toUpperCase()}
-        </Avatar>
-        <Box sx={{ ml: 2, overflow: "hidden" }}>
-          <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
-            {user?.email}
-          </Typography>
-          <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
-            {user?.roles?.[0] || 'User'}
-          </Typography>
-        </Box>
-        <Tooltip title="帳號設定">
-          <IconButton
-            onClick={handleClick}
-            size="small"
-            sx={{ ml: 1 }}
-            aria-controls={open ? 'account-menu' : undefined}
-            aria-haspopup="true"
-            aria-expanded={open ? 'true' : undefined}
+        {collapsed ? (
+          <Avatar 
+            sx={{ 
+              bgcolor: 'common.white', 
+              color: 'primary.dark',
+              width: 42,
+              height: 42
+            }}
           >
-            <SecurityIcon />
-          </IconButton>
-        </Tooltip>
+            {user?.email?.charAt(0).toUpperCase()}
+          </Avatar>
+        ) : (
+          <>
+            <Avatar 
+              sx={{ 
+                bgcolor: 'common.white', 
+                color: 'primary.dark',
+                width: 42,
+                height: 42
+              }}
+            >
+              {user?.email?.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ ml: 2, overflow: "hidden" }}>
+              <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
+                {user?.email}
+              </Typography>
+              <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                {user?.roles?.[0] || 'User'}
+              </Typography>
+            </Box>
+            <Tooltip title="帳號設定">
+              <IconButton
+                onClick={handleClick}
+                size="small"
+                sx={{ ml: 1 }}
+                aria-controls={open ? 'account-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? 'true' : undefined}
+              >
+                <SecurityIcon />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
       </Box>
       
       <Divider />
       
+      {/* 收合按鈕 */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: collapsed ? 'center' : 'flex-end',
+        p: collapsed ? 1 : 0,
+        position: 'relative',
+        height: collapsed ? 'auto' : 0
+      }}>
+        <IconButton 
+          onClick={toggleCollapsed} 
+          sx={{ 
+            color: 'white',
+            bgcolor: collapsed ? 'transparent' : 'rgba(255,255,255,0.15)',
+            borderRadius: '50%',
+            width: 30,
+            height: 30,
+            '&:hover': {
+              bgcolor: 'rgba(255,255,255,0.25)',
+              transform: 'scale(1.1)',
+            },
+            transition: 'all 0.2s ease-in-out',
+            position: collapsed ? 'static' : 'absolute',
+            right: collapsed ? 'auto' : 12,
+            top: collapsed ? 'auto' : -15,
+            zIndex: 1200,
+            boxShadow: collapsed ? 'none' : '0 2px 5px rgba(0,0,0,0.2)',
+          }}
+          size="small"
+          aria-label={collapsed ? "展開側邊欄" : "收合側邊欄"}
+        >
+          {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+        </IconButton>
+      </Box>
+      
       {/* 導航鏈接 */}
-      <List component="nav" sx={{ p: 2 }}>
+      <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton 
@@ -180,6 +237,9 @@ const Sidebar = () => {
                 borderRadius: 1,
                 mb: 1,
                 color: 'common.white',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                minHeight: 48,
+                px: collapsed ? 1 : 3,
                 '&.Mui-selected': {
                   backgroundColor: 'rgba(255,255,255,0.15)',
                   '&:hover': {
@@ -191,16 +251,25 @@ const Sidebar = () => {
                 }
               }}
             >
-              <ListItemIcon sx={{ color: 'common.white' }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
-                primaryTypographyProps={{
-                  color: isActivePage(item.path) ? 'primary.main' : 'inherit',
-                  fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
-                }}
-              />
+              <Tooltip title={collapsed ? item.text : ""} placement="right">
+                <ListItemIcon sx={{ 
+                  color: 'common.white', 
+                  minWidth: collapsed ? 0 : 36,
+                  mr: collapsed ? 0 : 3,
+                  justifyContent: 'center',
+                }}>
+                  {item.icon}
+                </ListItemIcon>
+              </Tooltip>
+              {!collapsed && (
+                <ListItemText 
+                  primary={item.text} 
+                  primaryTypographyProps={{
+                    color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                    fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+                  }}
+                />
+              )}
             </ListItemButton>
           </ListItem>
         ))}
@@ -210,7 +279,7 @@ const Sidebar = () => {
       
       {/* 管理員選項 */}
       {hasRole('admin') && (
-        <List component="nav" sx={{ p: 1 }}>
+        <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
           {adminMenuItems.map((item) => (
             <ListItem key={item.text} disablePadding>
               <ListItemButton 
@@ -220,6 +289,9 @@ const Sidebar = () => {
                 sx={{ 
                   borderRadius: 1,
                   mb: 0.5,
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  minHeight: 48,
+                  px: collapsed ? 1 : 3,
                   '&.Mui-selected': {
                     backgroundColor: 'primary.light',
                     '&:hover': {
@@ -228,16 +300,24 @@ const Sidebar = () => {
                   }
                 }}
               >
-                <ListItemIcon>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={item.text}
-                  primaryTypographyProps={{
-                    color: isActivePage(item.path) ? 'primary.main' : 'inherit',
-                    fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
-                  }}
-                />
+                <Tooltip title={collapsed ? item.text : ""} placement="right">
+                  <ListItemIcon sx={{ 
+                    minWidth: collapsed ? 0 : 36,
+                    mr: collapsed ? 0 : 3,
+                    justifyContent: 'center',
+                  }}>
+                    {item.icon}
+                  </ListItemIcon>
+                </Tooltip>
+                {!collapsed && (
+                  <ListItemText 
+                    primary={item.text}
+                    primaryTypographyProps={{
+                      color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                      fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+                    }}
+                  />
+                )}
               </ListItemButton>
             </ListItem>
           ))}
@@ -254,18 +334,34 @@ const Sidebar = () => {
             onClick={handleLogout}
             sx={{ 
               borderRadius: 1,
-              color: 'error.main',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              minHeight: 48,
+              px: collapsed ? 1 : 3,
             }}
           >
-            <ListItemIcon>
-              <LogoutIcon color="error" />
-            </ListItemIcon>
-            <ListItemText primary="登出" />
+            <Tooltip title={collapsed ? "登出" : ""} placement="right">
+              <ListItemIcon sx={{ 
+                color: 'common.white',
+                minWidth: collapsed ? 0 : 36,
+                mr: collapsed ? 0 : 3,
+                justifyContent: 'center',
+              }}>
+                <LogoutIcon />
+              </ListItemIcon>
+            </Tooltip>
+            {!collapsed && (
+              <ListItemText 
+                primary="登出"
+                primaryTypographyProps={{
+                  color: 'inherit',
+                }}
+              />
+            )}
           </ListItemButton>
         </ListItem>
       </List>
       
-      {/* 用戶選單 */}
+      {/* User menu */}
       <Menu
         anchorEl={anchorEl}
         id="account-menu"
