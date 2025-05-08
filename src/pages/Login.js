@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
+
 const Login = () => {
   const { login, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -58,7 +59,7 @@ const Login = () => {
     try {
       setError("");
       console.log("Login: Starting Google login process");
-      
+  
       // Load gapi script if not already loaded
       if (!window.gapi) {
         console.log("Login: Loading gapi script");
@@ -73,7 +74,7 @@ const Login = () => {
         });
         console.log("Login: gapi script loaded");
       }
-      
+  
       // Initialize gapi auth2
       if (!window.gapi.auth2) {
         console.log("Login: Initializing auth2");
@@ -86,7 +87,7 @@ const Login = () => {
           });
         });
       }
-      
+  
       // Get auth instance or create one
       let authInstance;
       try {
@@ -105,38 +106,65 @@ const Login = () => {
           scope: "profile email https://www.googleapis.com/auth/calendar.readonly"
         });
       }
-      
+  
       // Sign in
       console.log("Login: Starting sign in");
       const googleUser = await authInstance.signIn({
         prompt: 'select_account'
       });
-      
+  
       console.log("Login: Google sign-in successful");
-      
+  
       // Get user profile and ID token
-      // const profile = googleUser.getBasicProfile();
+      const profile = googleUser.getBasicProfile();
       const id_token = googleUser.getAuthResponse().id_token;
-      
+  
       console.log("Login: Using Supabase to sign in with ID token");
-      
+  
       // Sign in with Supabase
-      const { data,error: supabaseError } = await supabase.auth.signInWithIdToken({
+      const { data, error: supabaseError } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: id_token,
       });
-      
+  
       if (supabaseError) throw supabaseError;
-      
+  
       console.log("Login: Supabase authentication successful");
-      
+  
+      // 🔥 Add or Update User in Supabase Database
+      const email = profile.getEmail();
+      const name = profile.getName();
+      const google_id = profile.getId();
+      const picture_url = profile.getImageUrl();
+  
+      // Check if the user already exists
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+  
+      if (!existingUser) {
+        console.log("User not found in database, creating a new one...");
+        // Add the new user to Supabase
+        const { error: insertError } = await supabase.from('users').insert({
+          email: email,
+          name: name,
+          google_id: google_id,
+          picture_url: picture_url
+        });
+        if (insertError) throw insertError;
+        console.log("User successfully added to the database");
+      } else {
+        console.log("User already exists in the database");
+      }
+  
       // Store user info and redirect
       localStorage.setItem("loginMethod", "google");
       localStorage.setItem("userRoles", JSON.stringify(["admin"]));
-      
-      // 移除自動導航到 /customers
-      // navigate("/customers");
-      
+  
+      console.log("Login successful, redirecting...");
+      navigate("/customers");
     } catch (error) {
       console.error("Login: Error during Google login:", error);
       setError(error.message || "Google 登入失敗");

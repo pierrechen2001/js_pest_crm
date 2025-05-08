@@ -200,6 +200,23 @@ const UserManagement = () => {
       return;
     }
 
+  if (selectedUser) {
+    // Update existing user
+    setUsers(users.map(user =>
+      user.id === selectedUser.id ? { ...user, ...editForm } : user
+    ));
+  } else {
+    // Add new user
+    const newUser = {
+      id: Math.max(...users.map(u => u.id), 0) + 1,
+      ...editForm,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
+    };
+    setUsers([...users, newUser]);
+  }
+  setOpenDialog(false);
+
+
     if (selectedUser) {
       // 更新現有使用者
       setUsers(users.map(user => 
@@ -706,5 +723,7 @@ const UserManagement = () => {
     </Fade>
   );
 };
+
+
 
 export default UserManagement;

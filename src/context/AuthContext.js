@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { gapi } from "gapi-script";
+import { assignRolePermissions } from '../lib/permissionUtils';
 
 // Create context
 const AuthContext = createContext(null);
@@ -59,35 +60,91 @@ export const AuthProvider = ({ children }) => {
   }, [navigate]);
 
   // Google login function
-  const googleLogin = useCallback(async (existingGoogleUser) => {
+  const googleLogin = async () => {
+    console.log('login');
     try {
-      console.log("AuthContext: Google login called", { 
-        hasExistingUser: !!existingGoogleUser,
-        googleAuthAvailable: !!googleAuth
+      // Trigger Google OAuth login
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
       });
-      
-      let googleUser;
-      
-      if (existingGoogleUser) {
-        // Use the provided Google user (from Login component)
-        googleUser = existingGoogleUser;
-        console.log("AuthContext: Using provided Google user");
-      } else if (googleAuth) {
-        // Get a new Google user from auth instance
-        console.log("AuthContext: Getting new Google user from authInstance");
-        googleUser = await googleAuth.signIn();
-      } else {
-        console.error("AuthContext: Google authentication not initialized");
-        throw new Error("Google authentication not initialized. Please check your configuration.");
+  
+      if (error) throw error;
+  
+      // Wait for the session to be established
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData || !sessionData.session) throw new Error('Session not established.');
+  
+      const userId = sessionData.session.user.id;
+      const userEmail = sessionData.session.user.email;
+  
+      // Check if the user exists in your custom users table
+      let { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('id', userId)
+        .single();
+  
+      // If the user does not exist, add them to your custom users table
+      if (!userData || userError) {
+        console.log("User not found in 'users' table, adding...");
+        const roleName = (userEmail === "admin@example.com" || userEmail === "b12705058@g.ntu.edu.tw") ? "admin" : "user";
+  
+        // Insert the new user into your custom users table
+        const { error: insertError } = await supabase.from('users').insert({
+          id: userId,
+          email: userEmail,
+          name: userEmail.split('@')[0],
+        });
+        if (insertError) throw insertError;
+  
+        // Assign default permissions to the new user
+        await assignRolePermissions(userId, roleName);
+  
+        // Fetch the newly inserted user
+        const { data: newUser } = await supabase
+          .from('users')
+          .select('id, email')
+          .eq('id', userId)
+          .single();
+          
+        userData = newUser;
       }
-      
-      await handleGoogleUser(googleUser);
+  
+      // Fetch user permissions from the database
+      const { data: permissionData, error: permissionError } = await supabase
+        .from('userpermissions')
+        .select(`
+          module:modules(name),
+          permission:permissions(name)
+        `)
+        .eq('user_id', userData.id);
+  
+      if (permissionError) throw permissionError;
+  
+      // Transform permissions into a structured object
+      const permissions = {};
+      permissionData.forEach((perm) => {
+        if (!permissions[perm.module.name]) {
+          permissions[perm.module.name] = {};
+        }
+        permissions[perm.module.name][perm.permission.name] = true;
+      });
+  
+      // Store the user in context
+      setUser({
+        id: userData.id,
+        email: userData.email,
+        roles: ['user'], // or dynamically set based on role
+        permissions,
+        loginMethod: "google",
+      });
+  
+      console.log("Google sign-in successful!");
     } catch (error) {
-      console.error("AuthContext: Error during Google login:", error);
+      console.error("Error during Google sign-in:", error.message);
       setError(error.message);
-      throw error;
     }
-  }, [googleAuth, handleGoogleUser]);
+  };
 
   // Initialize Google API client
   useEffect(() => {
@@ -252,67 +309,68 @@ export const AuthProvider = ({ children }) => {
   }, [navigate]);
 
   // Email/Password login
-  const login = async (email, password) => {
-    try {
-      debugLog('Attempting login with email:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
-      });
-      
-      if (error) throw error;
-      if (!data.user) throw new Error('No user returned from login');
 
-      debugLog('Login successful:', data.user);
 
-      // Set user roles based on email
-      const roles = (email === "admin@example.com" || email === "b12705058@g.ntu.edu.tw") ? ["admin"] : ["user"];
-      
-      setUser({
-        id: data.user.id,
-        email: data.user.email,
-        roles: roles,
-        loginMethod: "email"
-      });
+const login = async (email, password) => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
 
-      localStorage.setItem("loginMethod", "email");
-      localStorage.setItem("userRoles", JSON.stringify(roles));
-      
-      // 移除自動導航到 /customers
-      // navigate("/customers");
-    } catch (error) {
-      console.error("Error logging in:", error);
-      setError(error.message);
-      throw error;
-    }
-  };
+    const { data: userData } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('id', data.user.id)
+      .single();
+
+    if (!userData) throw new Error('User not found');
+
+    // Fetch permissions
+    const { data: permissionData } = await supabase
+      .from('userpermissions')
+      .select(`
+        module:modules(name),
+        permission:permissions(name)
+      `)
+      .eq('user_id', userData.id);
+
+    const permissions = {};
+    permissionData.forEach((perm) => {
+      if (!permissions[perm.module.name]) {
+        permissions[perm.module.name] = {};
+      }
+      permissions[perm.module.name][perm.permission.name] = true;
+    });
+
+      console.log("yes");
+    setUser({
+      id: userData.id,
+      email: userData.email,
+      roles: ['user'],  // This will change when dynamic roles are implemented
+      permissions,
+      loginMethod: "email"
+    });
+  } catch (error) {
+    console.error("Error logging in:", error.message);
+  }
+};
 
   // Sign up with email/password
   const signUp = async (email, password) => {
     try {
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
-        password 
-      });
-      
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      if (!data.user) throw new Error('No user returned from signup');
-
+  
+      const roleName = (email === "admin@example.com" || email === "b12705058@g.ntu.edu.tw") ? "admin" : "user";
+      await assignRolePermissions(data.user.id, roleName);
+  
       setUser({
         id: data.user.id,
         email: data.user.email,
-        roles: ["user"],
+        roles: [roleName],
         loginMethod: "email"
       });
-
-      localStorage.setItem("loginMethod", "email");
-      localStorage.setItem("userRoles", JSON.stringify(["user"]));
-      
-      // 移除自動導航到 /customers
-      // navigate("/customers");
     } catch (error) {
-      console.error("Error signing up:", error);
-      throw error;
+      console.error("Error signing up:", error.message);
     }
   };
 
