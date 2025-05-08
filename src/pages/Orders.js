@@ -104,8 +104,8 @@ export default function Orders({ projects: initialProjects = [], customers: init
   // Use props for initial state, allow internal updates if needed for local operations like adding a new project optimistically
   const [projects, setProjects] = useState(initialProjects);
   const [customers, setCustomers] = useState(initialCustomers);
-  // const [loading, setLoading] = useState(true); // Loading is now handled by App.js
-  // const [error, setError] = useState(null); // Error is now handled by App.js
+  const [loading, setLoading] = useState(true); // Loading is now handled by App.js
+  const [error, setError] = useState(null); // Error is now handled by App.js
   
 // ... (rest of the state variables: statusFilter, billingFilter, etc.)
   const [statusFilter, setStatusFilter] = useState("");
@@ -163,27 +163,30 @@ const filteredProjects = (projects || [])
   // Dialog 控制
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [projectData, setProjectData] = useState({
-    project_name: "",
-    customer_id: null,
-    site_city: "",
-    site_district: "",
-    site_address: "",
-    construction_item: "",
-    construction_fee: "",
-    start_date: "",
-    end_date: "",
-    construction_days: "",
-    construction_scope: "",
-    construction_notes: "",
-    payment_method: "",
-    payment_date: "",
-    construction_status: "未開始",
-    billing_status: "未請款",
-    contacts: [
-      { role: "", name: "", contactType: "", contact: "" }, // 預設一個聯絡人
-    ],
-  });
+  function getInitialProjectData() {
+    return {
+      project_name: "",
+      customer_id: null,
+      site_city: "",
+      site_district: "",
+      site_address: "",
+      construction_item: "",
+      construction_fee: "",
+      start_date: "",
+      end_date: "",
+      construction_days: "",
+      construction_scope: "",
+      construction_notes: "",
+      payment_method: "",
+      payment_date: "",
+      construction_status: "未開始",
+      billing_status: "未請款",
+      contacts: [
+        { role: "", name: "", contactType: "", contact: "" }, // 預設一個聯絡人
+      ],
+    };
+  }
+  const [projectData, setProjectData] = useState(getInitialProjectData());
   
   const [statusAnchorEl, setStatusAnchorEl] = useState(null);
   const [billingAnchorEl, setBillingAnchorEl] = useState(null);
