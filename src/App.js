@@ -9,7 +9,7 @@ import OrderDetail from "./pages/OrderDetail";
 import Inventory from "./pages/Inventory";
 import Calendar from "./pages/Calendar";
 import ApiCalendar from "./pages/ApiCalendar";
-import Map from "./pages/Map";
+import MapComponent from './pages/Map';
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
@@ -43,46 +43,47 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
 // Main App Content
 const AppContent = () => {
-  const { user, loading, error: authError } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const location = useLocation();
   const nodeRef = useRef(null);
   const [customers, setCustomers] = useState([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(false);
-  const [error, setError] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [isInitialising, setIsInitialising] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
-  // Fetch customers only when needed
   useEffect(() => {
-    const fetchCustomers = async () => {
-      // Don't fetch if we're not on a page that needs customers data
-      if (!user || !location.pathname.includes('/customer')) {
-        return;
-      }
-
+    const fetchData = async () => {
+      console.log("User authenticated, fetching app data (customers and projects)...");
       try {
-        setLoadingCustomers(true);
-        console.log("Fetching customers data...");
-        
-        const { data, error } = await supabase
-          .from('customer_database')
-          .select('*');
+        const customerPromise = supabase.from('customer_database').select('*');
+        const projectPromise = supabase.from('project').select('*, customer_database(customer_id, customer_name)');
 
-        if (error) throw error;
-        setCustomers(data || []);
+        const [customerResponse, projectResponse] = await Promise.all([customerPromise, projectPromise]);
+
+        if (customerResponse.error) throw customerResponse.error;
+        setCustomers(customerResponse.data || []);
+
+        if (projectResponse.error) throw projectResponse.error;
+        setProjects(projectResponse.data || []);
+
       } catch (error) {
-        console.error('Error fetching customers:', error);
-        setError(error.message);
+        console.error('Error fetching app data in App.js:', error);
+        setFetchError(error.message);
       } finally {
-        setLoadingCustomers(false);
+        setIsInitialising(false);
       }
     };
 
-    if (user && !loading) {
-      fetchCustomers();
+    if (!authLoading) {
+      if (user) {
+        fetchData();
+      } else {
+        setIsInitialising(false);
+      }
     }
-  }, [user, loading, location.pathname]);
+  }, [user, authLoading]);
 
-  // Display a loading indicator if the auth state is still initializing
-  if (loading) {
+  if (isInitialising) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
@@ -93,8 +94,7 @@ const AppContent = () => {
     );
   }
 
-  // Display any auth errors
-  if (authError) {
+  if (authError || fetchError) {
     return (
       <Box 
         sx={{ 
@@ -103,15 +103,13 @@ const AppContent = () => {
           justifyContent: 'center', 
           alignItems: 'center', 
           height: '100vh',
-          p: 3,
-          textAlign: 'center'
         }}
       >
         <Typography variant="h6" color="error" gutterBottom>
-          Authentication Error
+          Error
         </Typography>
         <Typography variant="body1">
-          {authError}
+          {authError || fetchError}
         </Typography>
         <Button 
           variant="contained" 
@@ -124,7 +122,6 @@ const AppContent = () => {
     );
   }
 
-  // Customer CRUD operations
   const addCustomer = async (customerData) => {
     try {
       const { data, error } = await supabase
@@ -221,8 +218,8 @@ const AppContent = () => {
                       <Customers 
                         customers={customers} 
                         setCustomers={setCustomers}
-                        loading={loadingCustomers} 
-                        error={error} 
+                        loading={isInitialising} 
+                        error={fetchError} 
                         addCustomer={addCustomer} 
                         updateCustomer={updateCustomer} 
                         deleteCustomer={deleteCustomer} 
@@ -247,7 +244,7 @@ const AppContent = () => {
                   path="/orders"
                   element={
                     <ProtectedRoute>
-                      <Orders />
+                      <Orders projects={projects} customers={customers} />
                     </ProtectedRoute>
                   }
                 />
@@ -294,7 +291,7 @@ const AppContent = () => {
                   path="/map"
                   element={
                     <ProtectedRoute>
-                      <Map />
+                      <MapComponent projects={projects} />
                     </ProtectedRoute>
                   }
                 />

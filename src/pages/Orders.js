@@ -4,6 +4,7 @@ import { Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActio
 import { Add } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
+// MapComponent import removed if not directly used on this page layout
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款"];
@@ -98,16 +99,15 @@ const taiwanDistricts = {
   ],
 };
 
-export default function Orders() {
-  // 狀態管理
+export default function Orders({ projects: initialProjects = [], customers: initialCustomers = [] }) {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Use props for initial state, allow internal updates if needed for local operations like adding a new project optimistically
+  const [projects, setProjects] = useState(initialProjects);
+  const [customers, setCustomers] = useState(initialCustomers);
+  const [loading, setLoading] = useState(true); // Loading is now handled by App.js
+  const [error, setError] = useState(null); // Error is now handled by App.js
   
-  // 篩選和排序
-  // const [search, setSearch] = useState("");
+// ... (rest of the state variables: statusFilter, billingFilter, etc.)
   const [statusFilter, setStatusFilter] = useState("");
   const [billingFilter, setBillingFilter] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -115,74 +115,78 @@ export default function Orders() {
   const [selectedFilters, setSelectedFilters] = useState([]);
   const filterOptions = ["專案名稱", "客戶名稱", "施工地址"];
 
-  const filteredProjects = (projects || [])
-  .filter((project) => {
-    // 搜索邏輯
-    if (searchQuery.trim() !== "") {
-      const searchLower = searchQuery.toLowerCase();
+// ... (filteredProjects logic remains largely the same, but uses the 'projects' state derived from props)
+const filteredProjects = (projects || [])
+.filter((project) => {
+  // 搜索邏輯
+  if (searchQuery.trim() !== "") {
+    const searchLower = searchQuery.toLowerCase();
 
-      if (selectedFilters.length === 0) {
-        return (
-          project.project_name?.toLowerCase().includes(searchLower) ||
-          project.customer_database?.customer_name?.toLowerCase().includes(searchLower) ||
-          `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
+    if (selectedFilters.length === 0) {
+      return (
+        project.project_name?.toLowerCase().includes(searchLower) ||
+        project.customer_database?.customer_name?.toLowerCase().includes(searchLower) ||
+        `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
+          .toLowerCase()
+          .includes(searchLower)
+      );
+    }
+
+    const matchesAnyField = selectedFilters.some((filter) => {
+      switch (filter) {
+        case "專案名稱":
+          return project.project_name?.toLowerCase().includes(searchLower);
+        case "客戶名稱":
+          return project.customer_database?.customer_name?.toLowerCase().includes(searchLower);
+        case "施工地址":
+          return `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
             .toLowerCase()
-            .includes(searchLower)
-        );
+            .includes(searchLower);
+        default:
+          return false;
       }
+    });
 
-      const matchesAnyField = selectedFilters.some((filter) => {
-        switch (filter) {
-          case "專案名稱":
-            return project.project_name?.toLowerCase().includes(searchLower);
-          case "客戶名稱":
-            return project.customer_database?.customer_name?.toLowerCase().includes(searchLower);
-          case "施工地址":
-            return `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
-              .toLowerCase()
-              .includes(searchLower);
-          default:
-            return false;
-        }
-      });
+    if (!matchesAnyField) return false;
+  }
 
-      if (!matchesAnyField) return false;
-    }
-
-    return true;
-  })
-  .sort((a, b) => {
-    if (sortOrder === "asc") {
-      return new Date(a.start_date || "") - new Date(b.start_date || "");
-    } else {
-      return new Date(b.start_date || "") - new Date(a.start_date || "");
-    }
-  });
+  return true;
+})
+.sort((a, b) => {
+  if (sortOrder === "asc") {
+    return new Date(a.start_date || "") - new Date(b.start_date || "");
+  } else {
+    return new Date(b.start_date || "") - new Date(a.start_date || "");
+  }
+});
 
   // Dialog 控制
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [projectData, setProjectData] = useState({
-    project_name: "",
-    customer_id: null,
-    site_city: "",
-    site_district: "",
-    site_address: "",
-    construction_item: "",
-    construction_fee: "",
-    start_date: "",
-    end_date: "",
-    construction_days: "",
-    construction_scope: "",
-    construction_notes: "",
-    payment_method: "",
-    payment_date: "",
-    construction_status: "未開始",
-    billing_status: "未請款",
-    contacts: [
-      { role: "", name: "", contactType: "", contact: "" }, // 預設一個聯絡人
-    ],
-  });
+  function getInitialProjectData() {
+    return {
+      project_name: "",
+      customer_id: null,
+      site_city: "",
+      site_district: "",
+      site_address: "",
+      construction_item: "",
+      construction_fee: "",
+      start_date: "",
+      end_date: "",
+      construction_days: "",
+      construction_scope: "",
+      construction_notes: "",
+      payment_method: "",
+      payment_date: "",
+      construction_status: "未開始",
+      billing_status: "未請款",
+      contacts: [
+        { role: "", name: "", contactType: "", contact: "" }, // 預設一個聯絡人
+      ],
+    };
+  }
+  const [projectData, setProjectData] = useState(getInitialProjectData());
   
   const [statusAnchorEl, setStatusAnchorEl] = useState(null);
   const [billingAnchorEl, setBillingAnchorEl] = useState(null);
@@ -204,12 +208,12 @@ export default function Orders() {
     if (billing !== undefined) setBillingFilter(billing);
   };
   // 獲取數據
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // 獲取專案數據
         const { data: projectsData, error: projectsError } = await supabase
           .from('project')
           .select(`
@@ -223,7 +227,6 @@ export default function Orders() {
 
         if (projectsError) throw projectsError;
 
-        // 獲取客戶列表（用於新增專案時選擇）
         const { data: customersData, error: customersError } = await supabase
           .from('customer_database')
           .select('customer_id, customer_name');
@@ -243,8 +246,19 @@ export default function Orders() {
     fetchData();
   }, []);
 
-  // 處理新增專案
+  // Update local state if props change (e.g., after global data re-fetches)
+  useEffect(() => {
+    setProjects(initialProjects);
+  }, [initialProjects]);
+
+  useEffect(() => {
+    setCustomers(initialCustomers);
+  }, [initialCustomers]);
+
+  // handleSaveProject might need to inform App.js to re-fetch or optimistically update the global projects state
+  // For now, it will update the local 'projects' state in Orders.js
   const handleSaveProject = async () => {
+    // ... (handleSaveProject logic remains the same but consider global state update implications)
     try {
       const { data, error } = await supabase
         .from('project')
@@ -278,80 +292,83 @@ export default function Orders() {
           contact3_type: projectData.contacts[2]?.contactType || "",
           contact3_contact: projectData.contacts[2]?.contact || "",
         }])
-        .select();
+        .select('*, customer_database(customer_id, customer_name)'); // Ensure you select joined data if needed for optimistic update
   
       if (error) throw error;
   
-      setProjects(prev => [...prev, data[0]]);
+      // Optimistically update the local projects state. 
+      // For a true global update, App.js would need a way to refresh its projects list.
+      setProjects(prev => [...prev, data[0]]); 
       setOpenDialog(false);
-      setProjectData(getInitialProjectData());
+      // Reset form data
+      setProjectData({
+        project_name: "",
+        customer_id: null,
+        site_city: "",
+        site_district: "",
+        site_address: "",
+        construction_item: "",
+        construction_fee: "",
+        start_date: "",
+        end_date: "",
+        construction_days: "",
+        construction_scope: "",
+        construction_notes: "",
+        payment_method: "",
+        payment_date: "",
+        construction_status: "未開始",
+        billing_status: "未請款",
+        contacts: [
+          { role: "", name: "", contactType: "", contact: "" },
+          { role: "", name: "", contactType: "", contact: "" }
+        ]
+    });
+    setSelectedCustomer(null);
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('儲存失敗，請檢查資料是否正確！');
+      // You might want to set an error state here to display to the user
     }
   };
 
-  // 處理表單變更
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProjectData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  // 用於更新 Autocomplete 的縣市和區域
-  const handleCityChange = (newCity) => {
-    setProjectData((prev) => ({
-      ...prev,
-      site_city: newCity,
-      site_district: "", // 當縣市改變時，清空區域
-    }));
-  };
+// ... (handleChange, handleCityChange, handleDistrictChange, updateContact remain the same)
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  setProjectData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
+// 用於更新 Autocomplete 的縣市和區域
+const handleCityChange = (newCity) => {
+  setProjectData((prev) => ({
+    ...prev,
+    site_city: newCity,
+    site_district: "", // 當縣市改變時，清空區域
+  }));
+};
 
-  const handleDistrictChange = (newDistrict) => {
-    setProjectData((prev) => ({
-      ...prev,
-      site_district: newDistrict,
-    }));
-  };
+const handleDistrictChange = (newDistrict) => {
+  setProjectData((prev) => ({
+    ...prev,
+    site_district: newDistrict,
+  }));
+};
 
-  const updateContact = (index, field, value) => {
-    const newContacts = [...projectData.contacts];
-    newContacts[index] = {
-      ...newContacts[index],
-      [field]: value,
-    };
-    setProjectData({ ...projectData, contacts: newContacts });
-  };
-
-  const getInitialProjectData = () => ({
-    project_name: "",
-    customer_id: null,
-    site_city: "",
-    site_district: "",
-    site_address: "",
-    construction_item: "",
-    construction_fee: "",
-    start_date: "",
-    end_date: "",
-    construction_days: "",
-    construction_scope: "",
-    construction_notes: "",
-    payment_method: "",
-    payment_date: "",
-    construction_status: "未開始",
-    billing_status: "未請款",
-    contacts: [
-      { role: "", name: "", contactType: "", contact: "" },
-    ],
-  });
-
+const updateContact = (index, field, value) => {
+  const updated = [...projectData.contacts];
+  updated[index] = { ...updated[index], [field]: value };
+  setProjectData({ ...projectData, contacts: updated });
+};
   
-  if (loading) return <CircularProgress />;
-  if (error) return <Typography color="error">{error}</Typography>;
+
+  // Remove loading/error checks that are now in App.js
+  // if (loading) return <CircularProgress />;
+  // if (error) return <Typography color="error">{error}</Typography>;
+
 
   return (
     <div style={{ padding: 20 }}>
+      {/* ... (Button, Search, Filter UI remains the same) ... */}
       <Button 
         variant="contained" 
         startIcon={<Add />} 
@@ -391,12 +408,13 @@ export default function Orders() {
         </FormControl>
       </div>
 
+      {/* ... (Dialog content remains the same) ... */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth >
         <DialogTitle>新增專案</DialogTitle>
         <DialogContent>
           <Typography variant="h6" gutterBottom>基本資訊</Typography>
           <Autocomplete
-            options={customers}
+            options={customers} // Use customers from props/state
             getOptionLabel={(option) => option.customer_name}
             value={selectedCustomer}
             onChange={(event, newValue) => {
@@ -675,6 +693,17 @@ export default function Orders() {
         </DialogActions>
       </Dialog>
 
+      {/* MapComponent is no longer rendered here directly */}
+      {/* 
+      <div style={{ marginTop: 20, marginBottom: 20 }}>
+        <Typography variant="h6" gutterBottom>
+          專案地圖位置
+        </Typography>
+        <MapComponent projects={filteredProjects} />
+      </div>
+      */}
+
+      {/* ... (Table remains the same) ... */}
       <Table>
       <TableHead>
         <TableRow>
