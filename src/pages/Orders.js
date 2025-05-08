@@ -163,6 +163,7 @@ const filteredProjects = (projects || [])
   // Dialog 控制
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [useCustomerAddress, setUseCustomerAddress] = useState(false);
   function getInitialProjectData() {
     return {
       project_name: "",
@@ -423,6 +424,8 @@ const updateContact = (index, field, value) => {
                 ...prev,
                 customer_id: newValue?.customer_id || null,
               }));
+              // 當客戶改變時重置地址複製選項
+              setUseCustomerAddress(false);
             }}
             renderInput={(params) => (
               <TextField {...params} label="選擇客戶" margin="normal" />
@@ -436,8 +439,70 @@ const updateContact = (index, field, value) => {
             margin="normal"
             value={projectData.project_name}
             onChange={handleChange}
+            required
           />
-
+          
+          {selectedCustomer && (
+            <FormControl component="fieldset" style={{ marginTop: 10, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <Checkbox
+                  checked={useCustomerAddress}
+                  onChange={(e) => {
+                    setUseCustomerAddress(e.target.checked);
+                    
+                    if (e.target.checked) {
+                      // 從選擇的客戶資料中自動填入地址及聯絡方式
+                      const fetchCustomerDetails = async () => {
+                        try {
+                          const { data, error } = await supabase
+                            .from('customer_database')
+                            .select('*')
+                            .eq('customer_id', selectedCustomer.customer_id)
+                            .single();
+                            
+                          if (error) throw error;
+                          
+                          // 更新專案地址
+                          setProjectData(prev => ({
+                            ...prev,
+                            site_city: data.contact_city || "",
+                            site_district: data.contact_district || "",
+                            site_address: data.contact_address || "",
+                            contacts: [
+                              {
+                                role: data.contact1_role || "",
+                                name: data.contact1_name || "", 
+                                contactType: data.contact1_type || "",
+                                contact: data.contact1_contact || ""
+                              },
+                              ...(data.contact2_name ? [{
+                                role: data.contact2_role || "",
+                                name: data.contact2_name || "",
+                                contactType: data.contact2_type || "",
+                                contact: data.contact2_contact || ""
+                              }] : []),
+                              ...(data.contact3_name ? [{
+                                role: data.contact3_role || "",
+                                name: data.contact3_name || "",
+                                contactType: data.contact3_type || "",
+                                contact: data.contact3_contact || ""
+                              }] : [])
+                            ].filter(contact => contact.name)
+                          }));
+                        } catch (error) {
+                          console.error('Error fetching customer details:', error);
+                        }
+                      };
+                      
+                      fetchCustomerDetails();
+                    }
+                  }}
+                />
+                <Typography>地址、聯絡方式同客戶資料</Typography>
+              </div>
+            </FormControl>
+          )}
+          
           <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
           <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
             {/* 預設聯絡人 1 */}
