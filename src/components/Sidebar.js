@@ -278,7 +278,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       <Divider sx={{ mx: 2 }} />
       
       {/* 管理員選項 */}
-      {hasRole('admin') && (
+      {true && (
         <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
           {adminMenuItems.map((item) => (
             <ListItem key={item.text} disablePadding>
