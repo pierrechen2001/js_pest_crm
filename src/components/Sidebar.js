@@ -56,6 +56,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   
+  // Check if user is approved or admin
+  const canAccessNavigation = user?.isApproved || user?.roles?.includes('admin');
+  
   // Handle menu open/close
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -197,136 +200,142 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       <Divider />
       
       {/* 收合按鈕 */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: collapsed ? 'center' : 'flex-end',
-        p: collapsed ? 1 : 0,
-        position: 'relative',
-        height: collapsed ? 'auto' : 0
-      }}>
-        <IconButton 
-          onClick={toggleCollapsed} 
-          sx={{ 
-            color: 'white',
-            bgcolor: collapsed ? 'transparent' : 'rgba(255,255,255,0.15)',
-            borderRadius: '50%',
-            width: 30,
-            height: 30,
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.25)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.2s ease-in-out',
-            position: collapsed ? 'static' : 'absolute',
-            right: collapsed ? 'auto' : 12,
-            top: collapsed ? 'auto' : -15,
-            zIndex: 1200,
-            boxShadow: collapsed ? 'none' : '0 2px 5px rgba(0,0,0,0.2)',
-          }}
-          size="small"
-          aria-label={collapsed ? "展開側邊欄" : "收合側邊欄"}
-        >
-          {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
-        </IconButton>
-      </Box>
+      {canAccessNavigation && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: collapsed ? 'center' : 'flex-end',
+          p: collapsed ? 1 : 0,
+          position: 'relative',
+          height: collapsed ? 'auto' : 0
+        }}>
+          <IconButton 
+            onClick={toggleCollapsed} 
+            sx={{ 
+              color: 'white',
+              bgcolor: collapsed ? 'transparent' : 'rgba(255,255,255,0.15)',
+              borderRadius: '50%',
+              width: 30,
+              height: 30,
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.25)',
+                transform: 'scale(1.1)',
+              },
+              transition: 'all 0.2s ease-in-out',
+              position: collapsed ? 'static' : 'absolute',
+              right: collapsed ? 'auto' : 12,
+              top: collapsed ? 'auto' : -15,
+              zIndex: 1200,
+              boxShadow: collapsed ? 'none' : '0 2px 5px rgba(0,0,0,0.2)',
+            }}
+            size="small"
+            aria-label={collapsed ? "展開側邊欄" : "收合側邊欄"}
+          >
+            {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+      )}
       
       {/* 導航鏈接 */}
-      <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton 
-              component={Link} 
-              to={item.path}
-              selected={isActivePage(item.path)}
-              sx={{ 
-                borderRadius: 1,
-                mb: 1,
-                color: 'common.white',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                minHeight: 48,
-                px: collapsed ? 1 : 3,
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                  },
-                },
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                }
-              }}
-            >
-              <Tooltip title={collapsed ? item.text : ""} placement="right">
-                <ListItemIcon sx={{ 
-                  color: 'common.white', 
-                  minWidth: collapsed ? 0 : 36,
-                  mr: collapsed ? 0 : 3,
-                  justifyContent: 'center',
-                }}>
-                  {item.icon}
-                </ListItemIcon>
-              </Tooltip>
-              {!collapsed && (
-                <ListItemText 
-                  primary={item.text} 
-                  primaryTypographyProps={{
-                    color: isActivePage(item.path) ? 'primary.main' : 'inherit',
-                    fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
-                  }}
-                />
-              )}
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      
-      <Divider sx={{ mx: 2 }} />
-      
-      {/* 管理員選項 */}
-      {true && (
-        <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
-          {adminMenuItems.map((item) => (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton 
-                component={Link} 
-                to={item.path}
-                selected={isActivePage(item.path)}
-                sx={{ 
-                  borderRadius: 1,
-                  mb: 0.5,
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  minHeight: 48,
-                  px: collapsed ? 1 : 3,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.light',
-                    '&:hover': {
-                      backgroundColor: 'primary.light',
+      {canAccessNavigation && (
+        <>
+          <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
+            {menuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton 
+                  component={Link} 
+                  to={item.path}
+                  selected={isActivePage(item.path)}
+                  sx={{ 
+                    borderRadius: 1,
+                    mb: 1,
+                    color: 'common.white',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    minHeight: 48,
+                    px: collapsed ? 1 : 3,
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                      },
                     },
-                  }
-                }}
-              >
-                <Tooltip title={collapsed ? item.text : ""} placement="right">
-                  <ListItemIcon sx={{ 
-                    minWidth: collapsed ? 0 : 36,
-                    mr: collapsed ? 0 : 3,
-                    justifyContent: 'center',
-                  }}>
-                    {item.icon}
-                  </ListItemIcon>
-                </Tooltip>
-                {!collapsed && (
-                  <ListItemText 
-                    primary={item.text}
-                    primaryTypographyProps={{
-                      color: isActivePage(item.path) ? 'primary.main' : 'inherit',
-                      fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    }
+                  }}
+                >
+                  <Tooltip title={collapsed ? item.text : ""} placement="right">
+                    <ListItemIcon sx={{ 
+                      color: 'common.white', 
+                      minWidth: collapsed ? 0 : 36,
+                      mr: collapsed ? 0 : 3,
+                      justifyContent: 'center',
+                    }}>
+                      {item.icon}
+                    </ListItemIcon>
+                  </Tooltip>
+                  {!collapsed && (
+                    <ListItemText 
+                      primary={item.text} 
+                      primaryTypographyProps={{
+                        color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                        fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+                      }}
+                    />
+                  )}
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+          
+          <Divider sx={{ mx: 2 }} />
+          
+          {/* 管理員選項 */}
+          {user?.roles?.includes('admin') && (
+            <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
+              {adminMenuItems.map((item) => (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton 
+                    component={Link} 
+                    to={item.path}
+                    selected={isActivePage(item.path)}
+                    sx={{ 
+                      borderRadius: 1,
+                      mb: 0.5,
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      minHeight: 48,
+                      px: collapsed ? 1 : 3,
+                      '&.Mui-selected': {
+                        backgroundColor: 'primary.light',
+                        '&:hover': {
+                          backgroundColor: 'primary.light',
+                        },
+                      }
                     }}
-                  />
-                )}
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
+                  >
+                    <Tooltip title={collapsed ? item.text : ""} placement="right">
+                      <ListItemIcon sx={{ 
+                        minWidth: collapsed ? 0 : 36,
+                        mr: collapsed ? 0 : 3,
+                        justifyContent: 'center',
+                      }}>
+                        {item.icon}
+                      </ListItemIcon>
+                    </Tooltip>
+                    {!collapsed && (
+                      <ListItemText 
+                        primary={item.text}
+                        primaryTypographyProps={{
+                          color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                          fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+                        }}
+                      />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </>
       )}
       
       <Box sx={{ flexGrow: 1 }} />

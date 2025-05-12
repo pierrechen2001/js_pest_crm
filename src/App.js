@@ -23,6 +23,7 @@ import { supabase } from './lib/supabaseClient';
 // Protected Route component
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const { user, hasRole, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -36,9 +37,14 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // if (requiredRole && !hasRole(requiredRole)) {
-  //   return <Navigate to="/customers" replace />;
-  // }
+  // Check if user is approved
+  if (!user.isApproved && user.roles[0] !== 'admin' && location.pathname !== '/pending-approval') {
+    return <Navigate to="/pending-approval" replace />;
+  }
+
+  if (requiredRole && !hasRole(requiredRole)) {
+    return <Navigate to="/customers" replace />;
+  }
 
   return children;
 };
