@@ -140,31 +140,49 @@ const Login = () => {
       // Check if the user already exists
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, email, is_approved, role')
         .eq('email', email)
         .single();
   
       if (!existingUser) {
         console.log("User not found in database, creating a new one...");
         // Add the new user to Supabase
-        const { error: insertError } = await supabase.from('users').insert({
-          email: email,
-          name: name,
-          google_id: google_id,
-          picture_url: picture_url
-        });
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            email: email,
+            name: name,
+            google_id: google_id,
+            picture_url: picture_url,
+            role: 'user',
+            is_approved: false
+          })
+          .select()
+          .single();
+
         if (insertError) throw insertError;
         console.log("User successfully added to the database");
+        
+        // Store user info and redirect to pending approval page
+        localStorage.setItem("loginMethod", "google");
+        localStorage.setItem("userRoles", JSON.stringify(["user"]));
+        navigate("/pending-approval");
       } else {
         console.log("User already exists in the database");
+        
+        // Check if user is approved
+        if (!existingUser.is_approved && existingUser.role !== 'admin') {
+          // Store user info and redirect to pending approval page
+          localStorage.setItem("loginMethod", "google");
+          localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          navigate("/pending-approval");
+        } else {
+          // Store user info and redirect to customers page
+          localStorage.setItem("loginMethod", "google");
+          localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          navigate("/customers");
+        }
       }
-  
-      // Store user info and redirect
-      localStorage.setItem("loginMethod", "google");
-      localStorage.setItem("userRoles", JSON.stringify(["admin"]));
-  
-      console.log("Login successful, redirecting...");
-      navigate("/customers");
     } catch (error) {
       console.error("Login: Error during Google login:", error);
       setError(error.message || "Google 登入失敗");
