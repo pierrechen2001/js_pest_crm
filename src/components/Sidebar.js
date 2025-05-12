@@ -125,6 +125,11 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       text: '角色管理',
       icon: <AdminPanelSettingsIcon />,
       path: '/role-management',
+    },
+    {
+      text: '用戶審核',
+      icon: <SecurityIcon />,
+      path: '/user-approvals',
     }
   ];
 

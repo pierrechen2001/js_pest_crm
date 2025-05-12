@@ -13,6 +13,8 @@ import MapComponent from './pages/Map';
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
+import PendingApproval from './pages/PendingApproval';
+import UserApprovals from './pages/UserApprovals';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
@@ -315,6 +317,18 @@ const AppContent = () => {
                     </ProtectedRoute>
                   }
                 />
+
+                <Route
+                  path="/user-approvals"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <UserApprovals />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Public Routes */}
+                <Route path="/pending-approval" element={<PendingApproval />} />
 
                 {/* Default Routes */}
                 <Route path="/" element={<Navigate to={user ? "/customers" : "/login"} />} />

@@ -61,7 +61,6 @@ export const AuthProvider = ({ children }) => {
 
   // Google login function
   const googleLogin = async () => {
-    console.log('login');
     try {
       // Trigger Google OAuth login
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -76,11 +75,12 @@ export const AuthProvider = ({ children }) => {
   
       const userId = sessionData.session.user.id;
       const userEmail = sessionData.session.user.email;
+      const userName = sessionData.session.user.user_metadata?.full_name || userEmail.split('@')[0];
   
       // Check if the user exists in your custom users table
       let { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email')
+        .select('id, email, name, role, is_approved')
         .eq('id', userId)
         .single();
   
@@ -90,24 +90,41 @@ export const AuthProvider = ({ children }) => {
         const roleName = (userEmail === "admin@example.com" || userEmail === "b12705058@g.ntu.edu.tw") ? "admin" : "user";
   
         // Insert the new user into your custom users table
-        const { error: insertError } = await supabase.from('users').insert({
-          id: userId,
-          email: userEmail,
-          name: userEmail.split('@')[0],
-        });
-        if (insertError) throw insertError;
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: userId,
+            email: userEmail,
+            name: userName,
+            role: roleName,
+            is_approved: roleName === 'admin' // Auto-approve admins
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("Error inserting user:", insertError);
+          throw insertError;
+        }
   
         // Assign default permissions to the new user
         await assignRolePermissions(userId, roleName);
-  
-        // Fetch the newly inserted user
-        const { data: newUser } = await supabase
-          .from('users')
-          .select('id, email')
-          .eq('id', userId)
-          .single();
           
         userData = newUser;
+      }
+
+      // Check if user is approved
+      if (!userData.is_approved && userData.role !== 'admin') {
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          name: userData.name,
+          roles: [userData.role],
+          isApproved: false,
+          loginMethod: "google"
+        });
+        navigate("/pending-approval");
+        return;
       }
   
       // Fetch user permissions from the database
@@ -119,7 +136,10 @@ export const AuthProvider = ({ children }) => {
         `)
         .eq('user_id', userData.id);
   
-      if (permissionError) throw permissionError;
+      if (permissionError) {
+        console.error("Error fetching permissions:", permissionError);
+        throw permissionError;
+      }
   
       // Transform permissions into a structured object
       const permissions = {};
@@ -134,15 +154,23 @@ export const AuthProvider = ({ children }) => {
       setUser({
         id: userData.id,
         email: userData.email,
-        roles: ['user'], // or dynamically set based on role
+        name: userData.name,
+        roles: [userData.role],
         permissions,
-        loginMethod: "google",
+        isApproved: true,
+        loginMethod: "google"
       });
+
+      // Store login method in localStorage
+      localStorage.setItem("loginMethod", "google");
+      localStorage.setItem("userRoles", JSON.stringify([userData.role]));
   
       console.log("Google sign-in successful!");
+      navigate("/customers");
     } catch (error) {
       console.error("Error during Google sign-in:", error.message);
       setError(error.message);
+      throw error;
     }
   };
 
