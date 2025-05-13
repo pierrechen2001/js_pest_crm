@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { CssBaseline, CircularProgress, Box, Container, Typography, Button } from "@mui/material";
+import { ThemeProvider, CssBaseline, CircularProgress, Box, Container, Typography, Button } from "@mui/material";
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from "./components/Sidebar";
 import Customers from "./pages/Customers";
@@ -19,6 +19,8 @@ import { CSSTransition } from 'react-transition-group';
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from './lib/supabaseClient';
+import theme from './theme.js'; // Assuming you have a theme.js file for MUI theme
+
 
 // Protected Route component
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -356,11 +358,13 @@ const AppContent = () => {
 // Main App Component
 const App = () => {
   return (
+    <ThemeProvider theme={theme}>
     <Router>
       <AuthProvider>
         <AppContent />
       </AuthProvider>
     </Router>
+    </ThemeProvider>
   );
 };
 
