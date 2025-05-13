@@ -6,6 +6,7 @@ const theme = createTheme({
       main: '#fdb2b0', // 主色調
       light: '#fcd3d3',
       dark: '#a55f54',
+      black: '#191515',
     },
     secondary: {
       main: '#b9d6d7', // 次要色調

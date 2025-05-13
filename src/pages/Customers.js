@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography } from "@mui/material";
+import { Box, Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography } from "@mui/material";
 import { useNavigate } from 'react-router-dom';
 
 
@@ -259,6 +259,336 @@ const Customers = ({
 
   return (
     <div style={{ padding: 20 }}>
+
+      <Box sx={{ position: 'relative', mb: 4 }}>
+      <Paper
+        elevation={3}
+        sx={{
+          backgroundColor: 'primary.light', // or use "#935F4D"
+          padding: 4,
+          borderRadius: 3,
+          mb: 4,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 4,
+        }}
+      >
+        <Box sx={{ zIndex: 1, position: 'relative' }}>
+          <Typography variant="h2" sx={{ color: 'primary.black', fontWeight: 'bold' , mb: 10}}>
+            客戶管理
+          </Typography>
+
+          <Button variant="contained" onClick={handleOpen} style={{ marginBottom: 10 }}>新增客戶</Button>
+          <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
+            <DialogTitle>新增客戶</DialogTitle>
+            <DialogContent>
+              {step === 1 && (
+                <FormControl fullWidth>
+                  <InputLabel>選擇客戶類型</InputLabel>
+                  <Select value={newCustomerType} onChange={(e) => setNewCustomerType(e.target.value)}>
+                    {customerTypes.map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+              {step === 2 && (
+            <div>
+              {/* 客戶資訊 */}
+              <Typography variant="h6" gutterBottom>客戶基本資訊</Typography>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+                <TextField 
+                    label="客戶名稱" 
+                    fullWidth 
+                    name="name" 
+                    value={customerData.name || ""} 
+                    onChange={handleChange} 
+                  />
+                  </div>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+                <div style={{ flex: 1 }}>
+                  <Autocomplete
+                    options={taiwanCities}
+                    renderInput={(params) => (
+                      <TextField 
+                        {...params} 
+                        label={
+                          newCustomerType === "一般住家" ? "地址" :
+                          newCustomerType === "建築師" ? "事務所地址" :
+                          newCustomerType === "古蹟、政府機關" ? "專案地址" :
+                          "公司地址"
+                        } 
+                        fullWidth 
+                      />
+                    )}
+                    value={customerData.city || ""}
+                    onChange={(event, newValue) => setCustomerData({ ...customerData, city: newValue })}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <Autocomplete
+                    options={taiwanDistricts[customerData.city] || []}
+                    renderInput={(params) => <TextField {...params} label="區域" fullWidth />}
+                    value={customerData.district || ""}
+                    onChange={(event, newValue) => setCustomerData({ ...customerData, district: newValue })}
+                  />
+                </div>
+                <div style={{ flex: 3 }}>
+                  <TextField 
+                    label="路名/詳細地址" 
+                    fullWidth 
+                    name="road" 
+                    value={customerData.road || ""} 
+                    onChange={handleChange} 
+                  />
+                </div>
+              </div>
+
+              {/* 統編與抬頭（僅非一般住家顯示） */}
+              {newCustomerType !== "一般住家" && (
+                <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+                  <TextField 
+                    label="統一編號" 
+                    fullWidth 
+                    name="TaxID" 
+                    value={customerData.TaxID || ""} 
+                    onChange={handleChange} 
+                  />
+                  <TextField 
+                    label="抬頭" 
+                    fullWidth 
+                    name="Title" 
+                    value={customerData.Title || ""} 
+                    onChange={handleChange} 
+                  />
+                </div>
+              )}
+
+              {/* 聯絡資訊 */}
+              <Typography variant="h6" gutterBottom>聯絡資訊</Typography>
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
+                {/* 公司電話與傳真號碼 */}
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <TextField
+                    label="公司電話（市話）"
+                    fullWidth
+                    value={customerData.company_phone || ""}
+                    onChange={(e) => {
+                      let formattedValue = e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                      setCustomerData({ ...customerData, company_phone: formattedValue });
+                    }}
+                  />
+                  <TextField
+                    label="傳真號碼"
+                    fullWidth
+                    value={customerData.fax || ""}
+                    onChange={(e) => {
+                      let formattedValue = e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                      setCustomerData({ ...customerData, fax: formattedValue });
+                    }}
+                  />
+                  <TextField
+                    label="公司信箱"
+                    fullWidth
+                    value={customerData.email || ""}
+                    onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                  />
+                </div>      
+
+                {/* 預設聯絡人 1 */}
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <TextField
+                    label="職位"
+                    fullWidth
+                    value={customerData.contacts[0]?.role || ""}
+                    onChange={(e) => {
+                      const updatedContacts = [...customerData.contacts];
+                      updatedContacts[0].role = e.target.value;
+                      setCustomerData({ ...customerData, contacts: updatedContacts });
+                    }}
+                  />
+                  <TextField
+                    label="名字"
+                    fullWidth
+                    value={customerData.contacts[0]?.name || ""}
+                    onChange={(e) => {
+                      const updatedContacts = [...customerData.contacts];
+                      updatedContacts[0].name = e.target.value;
+                      setCustomerData({ ...customerData, contacts: updatedContacts });
+                    }}
+                  />
+                  <FormControl fullWidth>
+                    <InputLabel>聯絡方式類型</InputLabel>
+                    <Select
+                      value={customerData.contacts[0]?.contactType || ""}
+                      onChange={(e) => {
+                        const updatedContacts = [...customerData.contacts];
+                        updatedContacts[0] = { ...updatedContacts[0], contactType: e.target.value, contact: "" };
+                        setCustomerData({ ...customerData, contacts: updatedContacts });
+                      }}
+                    >
+                      {["LineID", "市話", "電話", "信箱"].map((type) => (
+                        <MenuItem key={type} value={type}>{type}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label={customerData.contacts[0]?.contactType || "聯絡方式"}
+                    fullWidth
+                    value={customerData.contacts[0]?.contact || ""}
+                    onChange={(e) => {
+                      let formattedValue = e.target.value;
+                      const contactType = customerData.contacts[0]?.contactType;
+
+                      if (contactType === "市話") {
+                        formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                      } else if (contactType === "電話") {
+                        formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+                      }
+
+                      const updatedContacts = [...customerData.contacts];
+                      updatedContacts[0].contact = formattedValue;
+                      setCustomerData({ ...customerData, contacts: updatedContacts });
+                    }}
+                  />
+                </div>
+
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
+                {customerData.contacts?.map((contact, index) => {
+                      if (index === 0) return null; // 跳過預設聯絡人
+                      return (
+                  <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <TextField
+                        label="職位"
+                        fullWidth
+                        value={contact.role || ""}
+                        onChange={(e) => {
+                          const updatedContacts = [...customerData.contacts];
+                          updatedContacts[index].role = e.target.value;
+                          setCustomerData({ ...customerData, contacts: updatedContacts });
+                        }}
+                      />
+                      <TextField
+                        label="名字"
+                        fullWidth
+                        value={contact.name || ""}
+                        onChange={(e) => {
+                          const updatedContacts = [...customerData.contacts];
+                          updatedContacts[index].name = e.target.value;
+                          setCustomerData({ ...customerData, contacts: updatedContacts });
+                        }}
+                      />
+                      <FormControl fullWidth>
+                        <InputLabel>聯絡方式類型</InputLabel>
+                        <Select
+                          value={contact.contactType || ""}
+                          onChange={(e) => {
+                            const updatedContacts = [...customerData.contacts];
+                            updatedContacts[index] = {
+                              ...updatedContacts[index],
+                              contactType: e.target.value,
+                              contact: "", // 清空原本輸入
+                            };
+                            setCustomerData({ ...customerData, contacts: updatedContacts });
+                          }}
+                        >
+                          {["LineID", "市話", "電話", "信箱"].map((type) => (
+                            <MenuItem key={type} value={type}>{type}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <TextField
+                        label={contact.contactType || "聯絡方式"}
+                        fullWidth
+                        value={contact.contact || ""}
+                        onChange={(e) => {
+                          let formattedValue = e.target.value;
+                          if (contact.contactType === "市話") {
+                            formattedValue = formattedValue
+                              .replace(/[^\d]/g, "")
+                              .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                          } else if (contact.contactType === "電話") {
+                            formattedValue = formattedValue
+                              .replace(/[^\d]/g, "")
+                              .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+                          }
+
+                          const updatedContacts = [...customerData.contacts];
+                          updatedContacts[index].contact = formattedValue;
+                          setCustomerData({ ...customerData, contacts: updatedContacts });
+                        }}
+                      />
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => {
+                          const updatedContacts = customerData.contacts.filter((_, i) => i !== index);
+                          setCustomerData({ ...customerData, contacts: updatedContacts });
+                        }}
+                      >
+                        刪除
+                      </Button>
+                    </div>
+                  )})}
+
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      const updatedContacts = [
+                        ...(customerData.contacts || []),
+                        { role: "", name: "", contactType: "", contact: "" },
+                      ];
+                      setCustomerData({ ...customerData, contacts: updatedContacts });
+                    }}
+                    disabled={(customerData.contacts || []).length >= 3}
+                  >
+                    新增聯絡人
+                  </Button>
+                </div>
+
+
+                  <TextField
+                    label="注意事項"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    value={customerData.notes || ""}
+                    onChange={(e) => setCustomerData({ ...customerData, notes: e.target.value })}
+                    style={{ marginBottom: "20px" }}
+                  />
+              </div>
+            </div>
+          )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleClose}>取消</Button>
+              {step === 1 ? (
+                <Button variant="contained" onClick={handleNextStep} disabled={!newCustomerType}>下一步</Button>
+              ) : (
+                <Button variant="contained" onClick={handleSaveCustomer} disabled={!customerData.name}>儲存</Button>
+              )}
+            </DialogActions>
+          </Dialog>
+        </Box>
+
+
+        {/* 右側：插圖 */}
+        <Box
+          component="img"
+          src="/customer-page.svg"
+          alt="客戶管理圖"
+          sx={{
+            height: 200,
+            maxWidth: '100%',
+          }}
+        />
+
+      </Paper>
+      </Box>
+
       {/* 客戶類型篩選按鈕 */}
       <div style={{ display: "flex", gap: "10px", marginBottom: 10 }}>
         <Button variant={selectedType === "" ? "contained" : "outlined"} onClick={() => setSelectedType("")} color="primary">全部</Button>
@@ -301,341 +631,50 @@ const Customers = ({
       </div>
       
 
-      <Button variant="contained" onClick={handleOpen} style={{ marginBottom: 20 }}>新增客戶</Button>
-<Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-  <DialogTitle>新增客戶</DialogTitle>
-  <DialogContent>
-    {step === 1 && (
-      <FormControl fullWidth>
-        <InputLabel>選擇客戶類型</InputLabel>
-        <Select value={newCustomerType} onChange={(e) => setNewCustomerType(e.target.value)}>
-          {customerTypes.map((type) => (
-            <MenuItem key={type} value={type}>{type}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    )}
-    {step === 2 && (
-  <div>
-    {/* 客戶資訊 */}
-    <Typography variant="h6" gutterBottom>客戶基本資訊</Typography>
-    <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-      <TextField 
-          label="客戶名稱" 
-          fullWidth 
-          name="name" 
-          value={customerData.name || ""} 
-          onChange={handleChange} 
-        />
-        </div>
-    <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-      <div style={{ flex: 1 }}>
-        <Autocomplete
-          options={taiwanCities}
-          renderInput={(params) => (
-            <TextField 
-              {...params} 
-              label={
-                newCustomerType === "一般住家" ? "地址" :
-                newCustomerType === "建築師" ? "事務所地址" :
-                newCustomerType === "古蹟、政府機關" ? "專案地址" :
-                "公司地址"
-              } 
-              fullWidth 
-            />
-          )}
-          value={customerData.city || ""}
-          onChange={(event, newValue) => setCustomerData({ ...customerData, city: newValue })}
-        />
-      </div>
-      <div style={{ flex: 1 }}>
-        <Autocomplete
-          options={taiwanDistricts[customerData.city] || []}
-          renderInput={(params) => <TextField {...params} label="區域" fullWidth />}
-          value={customerData.district || ""}
-          onChange={(event, newValue) => setCustomerData({ ...customerData, district: newValue })}
-        />
-      </div>
-      <div style={{ flex: 3 }}>
-        <TextField 
-          label="路名/詳細地址" 
-          fullWidth 
-          name="road" 
-          value={customerData.road || ""} 
-          onChange={handleChange} 
-        />
-      </div>
-    </div>
 
-    {/* 統編與抬頭（僅非一般住家顯示） */}
-    {newCustomerType !== "一般住家" && (
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <TextField 
-          label="統一編號" 
-          fullWidth 
-          name="TaxID" 
-          value={customerData.TaxID || ""} 
-          onChange={handleChange} 
-        />
-        <TextField 
-          label="抬頭" 
-          fullWidth 
-          name="Title" 
-          value={customerData.Title || ""} 
-          onChange={handleChange} 
-        />
-      </div>
-    )}
-
-    {/* 聯絡資訊 */}
-    <Typography variant="h6" gutterBottom>聯絡資訊</Typography>
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
-      {/* 公司電話與傳真號碼 */}
-      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <TextField
-          label="公司電話（市話）"
-          fullWidth
-          value={customerData.company_phone || ""}
-          onChange={(e) => {
-            let formattedValue = e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-            setCustomerData({ ...customerData, company_phone: formattedValue });
-          }}
-        />
-        <TextField
-          label="傳真號碼"
-          fullWidth
-          value={customerData.fax || ""}
-          onChange={(e) => {
-            let formattedValue = e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-            setCustomerData({ ...customerData, fax: formattedValue });
-          }}
-        />
-        <TextField
-          label="公司信箱"
-          fullWidth
-          value={customerData.email || ""}
-          onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-        />
-      </div>      
-
-      {/* 預設聯絡人 1 */}
-      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <TextField
-          label="職位"
-          fullWidth
-          value={customerData.contacts[0]?.role || ""}
-          onChange={(e) => {
-            const updatedContacts = [...customerData.contacts];
-            updatedContacts[0].role = e.target.value;
-            setCustomerData({ ...customerData, contacts: updatedContacts });
-          }}
-        />
-        <TextField
-          label="名字"
-          fullWidth
-          value={customerData.contacts[0]?.name || ""}
-          onChange={(e) => {
-            const updatedContacts = [...customerData.contacts];
-            updatedContacts[0].name = e.target.value;
-            setCustomerData({ ...customerData, contacts: updatedContacts });
-          }}
-        />
-        <FormControl fullWidth>
-          <InputLabel>聯絡方式類型</InputLabel>
-          <Select
-            value={customerData.contacts[0]?.contactType || ""}
-            onChange={(e) => {
-              const updatedContacts = [...customerData.contacts];
-              updatedContacts[0] = { ...updatedContacts[0], contactType: e.target.value, contact: "" };
-              setCustomerData({ ...customerData, contacts: updatedContacts });
-            }}
-          >
-            {["LineID", "市話", "電話", "信箱"].map((type) => (
-              <MenuItem key={type} value={type}>{type}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          label={customerData.contacts[0]?.contactType || "聯絡方式"}
-          fullWidth
-          value={customerData.contacts[0]?.contact || ""}
-          onChange={(e) => {
-            let formattedValue = e.target.value;
-            const contactType = customerData.contacts[0]?.contactType;
-
-            if (contactType === "市話") {
-              formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-            } else if (contactType === "電話") {
-              formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-            }
-
-            const updatedContacts = [...customerData.contacts];
-            updatedContacts[0].contact = formattedValue;
-            setCustomerData({ ...customerData, contacts: updatedContacts });
-          }}
-        />
-      </div>
-
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
-      {customerData.contacts?.map((contact, index) => {
-            if (index === 0) return null; // 跳過預設聯絡人
-            return (
-        <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <TextField
-              label="職位"
-              fullWidth
-              value={contact.role || ""}
-              onChange={(e) => {
-                const updatedContacts = [...customerData.contacts];
-                updatedContacts[index].role = e.target.value;
-                setCustomerData({ ...customerData, contacts: updatedContacts });
-              }}
-            />
-            <TextField
-              label="名字"
-              fullWidth
-              value={contact.name || ""}
-              onChange={(e) => {
-                const updatedContacts = [...customerData.contacts];
-                updatedContacts[index].name = e.target.value;
-                setCustomerData({ ...customerData, contacts: updatedContacts });
-              }}
-            />
-            <FormControl fullWidth>
-              <InputLabel>聯絡方式類型</InputLabel>
-              <Select
-                value={contact.contactType || ""}
-                onChange={(e) => {
-                  const updatedContacts = [...customerData.contacts];
-                  updatedContacts[index] = {
-                    ...updatedContacts[index],
-                    contactType: e.target.value,
-                    contact: "", // 清空原本輸入
-                  };
-                  setCustomerData({ ...customerData, contacts: updatedContacts });
-                }}
-              >
-                {["LineID", "市話", "電話", "信箱"].map((type) => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label={contact.contactType || "聯絡方式"}
-              fullWidth
-              value={contact.contact || ""}
-              onChange={(e) => {
-                let formattedValue = e.target.value;
-                if (contact.contactType === "市話") {
-                  formattedValue = formattedValue
-                    .replace(/[^\d]/g, "")
-                    .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                } else if (contact.contactType === "電話") {
-                  formattedValue = formattedValue
-                    .replace(/[^\d]/g, "")
-                    .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                }
-
-                const updatedContacts = [...customerData.contacts];
-                updatedContacts[index].contact = formattedValue;
-                setCustomerData({ ...customerData, contacts: updatedContacts });
-              }}
-            />
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={() => {
-                const updatedContacts = customerData.contacts.filter((_, i) => i !== index);
-                setCustomerData({ ...customerData, contacts: updatedContacts });
-              }}
-            >
-              刪除
-            </Button>
-          </div>
-        )})}
-
-        <Button
-          variant="outlined"
-          onClick={() => {
-            const updatedContacts = [
-              ...(customerData.contacts || []),
-              { role: "", name: "", contactType: "", contact: "" },
-            ];
-            setCustomerData({ ...customerData, contacts: updatedContacts });
-          }}
-          disabled={(customerData.contacts || []).length >= 3}
-        >
-          新增聯絡人
-        </Button>
-      </div>
-
-
-        <TextField
-          label="注意事項"
-          fullWidth
-          multiline
-          rows={2}
-          value={customerData.notes || ""}
-          onChange={(e) => setCustomerData({ ...customerData, notes: e.target.value })}
-          style={{ marginBottom: "20px" }}
-        />
-    </div>
-  </div>
-)}
-  </DialogContent>
-  <DialogActions>
-    <Button onClick={handleClose}>取消</Button>
-    {step === 1 ? (
-      <Button variant="contained" onClick={handleNextStep} disabled={!newCustomerType}>下一步</Button>
-    ) : (
-      <Button variant="contained" onClick={handleSaveCustomer} disabled={!customerData.name}>儲存</Button>
-    )}
-  </DialogActions>
-</Dialog>
 
       {/* 客戶列表 */}
       <TableContainer component={Paper}>
-  <Table>
-    <TableHead>
-      <TableRow>
-        <TableCell style={{ width: "7%" }}>列數</TableCell>
-        <TableCell style={{ width: "12%" }}>客戶分類</TableCell>
-        <TableCell style={{ width: "20%" }}>客戶名稱</TableCell>
-        <TableCell style={{ width: "13%" }}>聯絡人</TableCell>
-        <TableCell style={{ width: "13%" }}>聯絡電話</TableCell>
-        <TableCell style={{ width: "35%" }}>地址</TableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      {filteredCustomers.map((customer, index) => (
-        <TableRow 
-          key={customer.customer_id} 
-          hover 
-          style={{ cursor: "pointer" }} 
-          onClick={() => navigate(`/customer/${customer.customer_id}`)}
-        >
-          <TableCell style={{ width: "7%" }}>{index + 1}</TableCell>
-          <TableCell style={{ width: "12%" }}>{customer.customer_type}</TableCell>
-          <TableCell style={{ width: "20%" }}>{customer.customer_name}</TableCell>
-          <TableCell style={{ width: "13%" }}>
-            {customer.contact1_name && <div>{customer.contact1_name}</div>}
-            {customer.contact2_name && <div>{customer.contact2_name}</div>}
-            {customer.contact3_name && <div>{customer.contact3_name}</div>}
-          </TableCell>
-          <TableCell style={{ width: "13%" }}>
-            {customer.contact1_contact && <div>{customer.contact1_contact}</div>}
-            {customer.contact2_contact && <div>{customer.contact2_contact}</div>}
-            {customer.contact3_contact && <div>{customer.contact3_contact}</div>}
-          </TableCell>
-          <TableCell style={{ width: "35%" }}>
-            {`${customer.contact_city}${customer.contact_district}${customer.contact_address}`}
-          </TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-</TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell style={{ width: "7%" }}>列數</TableCell>
+              <TableCell style={{ width: "12%" }}>客戶分類</TableCell>
+              <TableCell style={{ width: "20%" }}>客戶名稱</TableCell>
+              <TableCell style={{ width: "13%" }}>聯絡人</TableCell>
+              <TableCell style={{ width: "13%" }}>聯絡電話</TableCell>
+              <TableCell style={{ width: "35%" }}>地址</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredCustomers.map((customer, index) => (
+              <TableRow 
+                key={customer.customer_id} 
+                hover 
+                style={{ cursor: "pointer" }} 
+                onClick={() => navigate(`/customer/${customer.customer_id}`)}
+              >
+                <TableCell style={{ width: "7%" }}>{index + 1}</TableCell>
+                <TableCell style={{ width: "12%" }}>{customer.customer_type}</TableCell>
+                <TableCell style={{ width: "20%" }}>{customer.customer_name}</TableCell>
+                <TableCell style={{ width: "13%" }}>
+                  {customer.contact1_name && <div>{customer.contact1_name}</div>}
+                  {customer.contact2_name && <div>{customer.contact2_name}</div>}
+                  {customer.contact3_name && <div>{customer.contact3_name}</div>}
+                </TableCell>
+                <TableCell style={{ width: "13%" }}>
+                  {customer.contact1_contact && <div>{customer.contact1_contact}</div>}
+                  {customer.contact2_contact && <div>{customer.contact2_contact}</div>}
+                  {customer.contact3_contact && <div>{customer.contact3_contact}</div>}
+                </TableCell>
+                <TableCell style={{ width: "35%" }}>
+                  {`${customer.contact_city}${customer.contact_district}${customer.contact_address}`}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </div>
   );
 };
