@@ -431,11 +431,11 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       flexGrow: 1,         // ✅ 撐滿整排空間
     }}>
       <Accordion
-        defaultExpanded={false}
+        defaultExpanded={true}
         sx={{
-          flex: 1,
+
           width: '100%',
-          display: 'flex',
+          display: 'block',
           flexDirection: 'column',
           '& .MuiAccordionSummary-content': {
             margin: 0,
@@ -465,11 +465,11 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       flexGrow: 1,         // ✅ 撐滿整排空間
     }}>
       <Accordion
-        defaultExpanded={false}
+        defaultExpanded={true}
         sx={{
-          flex: 1,
+
           width: '100%',
-          display: 'flex',
+          display: 'block',
           flexDirection: 'column',
           '& .MuiAccordionSummary-content': {
             margin: 0,
@@ -507,9 +507,9 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       <Accordion
         defaultExpanded={false}
         sx={{
-          flex: 1,
+
           width: '100%',
-          display: 'flex',
+          display: 'block',
           flexDirection: 'column',
           '& .MuiAccordionSummary-content': {
             margin: 0,
