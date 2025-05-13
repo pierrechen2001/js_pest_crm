@@ -81,6 +81,7 @@ create table public.users (
   google_id character varying(100) null,
   picture_url text null,
   role text null,
+  is_approved boolean not null default false,
   constraint users_pkey primary key (id),
   constraint users_email_key unique (email)
 ) TABLESPACE pg_default;

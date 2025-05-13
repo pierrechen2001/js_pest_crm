@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect} from "react";
 import { 
   Drawer, 
   List, 
@@ -56,6 +56,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   
+  // Check if user is approved or an admin
+  const isUserApproved = user?.isApproved === true || user?.roles?.includes('admin');
+  
   // Handle menu open/close
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -85,6 +88,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     return location.pathname === path;
   };
 
+  
   // Menu items
   const menuItems = [
     {
@@ -132,6 +136,13 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       path: '/user-approvals',
     }
   ];
+  
+  useEffect(() => {
+    if (user) {
+      console.log('Current user roles:', user.roles[0]);
+      console.log('User approval status:', user.isApproved);
+    }
+  }, [user]);
 
   return (
     <StyledDrawer
@@ -176,114 +187,123 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
               </Typography>
               <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 {user?.roles?.[0] || 'User'}
+                {!isUserApproved && <span style={{ color: '#ff9800', marginLeft: '5px' }}>(待審核)</span>}
               </Typography>
             </Box>
-            <Tooltip title="帳號設定">
-              <IconButton
-                onClick={handleClick}
-                size="small"
-                sx={{ ml: 1 }}
-                aria-controls={open ? 'account-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={open ? 'true' : undefined}
-              >
-                <SecurityIcon />
-              </IconButton>
-            </Tooltip>
+            {isUserApproved && (
+              <Tooltip title="帳號設定">
+                <IconButton
+                  onClick={handleClick}
+                  size="small"
+                  sx={{ ml: 1 }}
+                  aria-controls={open ? 'account-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={open ? 'true' : undefined}
+                >
+                  <SecurityIcon />
+                </IconButton>
+              </Tooltip>
+            )}
           </>
         )}
       </Box>
       
       <Divider />
       
-      {/* 收合按鈕 */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: collapsed ? 'center' : 'flex-end',
-        p: collapsed ? 1 : 0,
-        position: 'relative',
-        height: collapsed ? 'auto' : 0
-      }}>
-        <IconButton 
-          onClick={toggleCollapsed} 
-          sx={{ 
-            color: 'white',
-            bgcolor: collapsed ? 'transparent' : 'rgba(255,255,255,0.15)',
-            borderRadius: '50%',
-            width: 30,
-            height: 30,
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.25)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.2s ease-in-out',
-            position: collapsed ? 'static' : 'absolute',
-            right: collapsed ? 'auto' : 12,
-            top: collapsed ? 'auto' : -15,
-            zIndex: 1200,
-            boxShadow: collapsed ? 'none' : '0 2px 5px rgba(0,0,0,0.2)',
-          }}
-          size="small"
-          aria-label={collapsed ? "展開側邊欄" : "收合側邊欄"}
-        >
-          {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
-        </IconButton>
-      </Box>
+      {/* 收合按鈕 - 只有已審核用戶可見 */}
+      {isUserApproved && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: collapsed ? 'center' : 'flex-end',
+          p: collapsed ? 1 : 0,
+          position: 'relative',
+          height: collapsed ? 'auto' : 0
+        }}>
+          <IconButton 
+            onClick={toggleCollapsed} 
+            sx={{ 
+              color: 'white',
+              bgcolor: collapsed ? 'transparent' : 'rgba(255,255,255,0.15)',
+              borderRadius: '50%',
+              width: 30,
+              height: 30,
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.25)',
+                transform: 'scale(1.1)',
+              },
+              transition: 'all 0.2s ease-in-out',
+              position: collapsed ? 'static' : 'absolute',
+              right: collapsed ? 'auto' : 12,
+              top: collapsed ? 'auto' : -15,
+              zIndex: 1200,
+              boxShadow: collapsed ? 'none' : '0 2px 5px rgba(0,0,0,0.2)',
+            }}
+            size="small"
+            aria-label={collapsed ? "展開側邊欄" : "收合側邊欄"}
+          >
+            {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+      )}
       
-      {/* 導航鏈接 */}
-      <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton 
-              component={Link} 
-              to={item.path}
-              selected={isActivePage(item.path)}
-              sx={{ 
-                borderRadius: 1,
-                mb: 1,
-                color: 'common.white',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                minHeight: 48,
-                px: collapsed ? 1 : 3,
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                  },
-                },
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                }
-              }}
-            >
-              <Tooltip title={collapsed ? item.text : ""} placement="right">
-                <ListItemIcon sx={{ 
-                  color: 'common.white', 
-                  minWidth: collapsed ? 0 : 36,
-                  mr: collapsed ? 0 : 3,
-                  justifyContent: 'center',
-                }}>
-                  {item.icon}
-                </ListItemIcon>
-              </Tooltip>
-              {!collapsed && (
-                <ListItemText 
-                  primary={item.text} 
-                  primaryTypographyProps={{
-                    color: isActivePage(item.path) ? 'primary.main' : 'inherit',
-                    fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+      {/* 導航鏈接 - 只有已審核用戶可見 */}
+      {isUserApproved && (
+        <>
+          <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
+            {menuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton 
+                  component={Link} 
+                  to={item.path}
+                  selected={isActivePage(item.path)}
+                  sx={{ 
+                    borderRadius: 1,
+                    mb: 1,
+                    color: 'common.white',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    minHeight: 48,
+                    px: collapsed ? 1 : 3,
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                      },
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    }
                   }}
-                />
-              )}
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+                >
+                  <Tooltip title={collapsed ? item.text : ""} placement="right">
+                    <ListItemIcon sx={{ 
+                      color: 'common.white', 
+                      minWidth: collapsed ? 0 : 36,
+                      mr: collapsed ? 0 : 3,
+                      justifyContent: 'center',
+                    }}>
+                      {item.icon}
+                    </ListItemIcon>
+                  </Tooltip>
+                  {!collapsed && (
+                    <ListItemText 
+                      primary={item.text} 
+                      primaryTypographyProps={{
+                        color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                        fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
+                      }}
+                    />
+                  )}
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+          
+          <Divider sx={{ mx: 2 }} />
+        </>
+      )}
       
-      <Divider sx={{ mx: 2 }} />
-      
-      {/* 管理員選項 */}
-      {true && (
+      {/* 管理員選項 - 只有管理員角色可見 */}
+      {isUserApproved && user?.roles?.includes('admin') && (
         <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
           {adminMenuItems.map((item) => (
             <ListItem key={item.text} disablePadding>
@@ -329,10 +349,43 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </List>
       )}
       
+      {/* 未審核用戶提示 */}
+      {!isUserApproved && (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 2,
+          mt: 2
+        }}>
+          <Typography 
+            variant="body2" 
+            align="center" 
+            sx={{ 
+              color: 'rgba(255,255,255,0.7)',
+              mb: 1
+            }}
+          >
+            您的帳號正在等待審核
+          </Typography>
+          <Typography 
+            variant="caption" 
+            align="center" 
+            sx={{ 
+              color: 'rgba(255,255,255,0.5)',
+              mb: 2
+            }}
+          >
+            審核通過後即可使用系統功能
+          </Typography>
+        </Box>
+      )}
+      
       <Box sx={{ flexGrow: 1 }} />
       <Divider />
       
-      {/* 登出按鈕 */}
+      {/* 登出按鈕 - 所有用戶可見 */}
       <List component="nav" sx={{ p: 1 }}>
         <ListItem disablePadding>
           <ListItemButton 
