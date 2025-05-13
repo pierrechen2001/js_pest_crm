@@ -15,7 +15,7 @@ import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
 import PendingApproval from './pages/PendingApproval';
 import UserApprovals from './pages/UserApprovals';
-import { TransitionGroup, CSSTransition } from 'react-transition-group';
+import { CSSTransition } from 'react-transition-group';
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from './lib/supabaseClient';
@@ -212,7 +212,7 @@ const AppContent = () => {
           flexDirection: "column"
         }}
       >
-        <TransitionGroup>
+
           <CSSTransition
             key={location.key}
             nodeRef={nodeRef}
@@ -347,7 +347,7 @@ const AppContent = () => {
               </Routes>
             </div>
           </CSSTransition>
-        </TransitionGroup>
+
       </Box>
     </>
   );
