@@ -63,12 +63,20 @@ export default function OrderDetail() {
     notes: ''
   });
 
-  // 編輯狀態控制
-  const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openEditProjectDialog, setOpenEditProjectDialog] = useState(false);
 
-  // 篩選日誌
+  const handleOpenProjectDialog = () => {
+    setEditedProject(project);
+    setOpenEditProjectDialog(true);
+  };
+
+  const handleCloseProjectDialog = () => {
+    setEditedProject(project);
+    setOpenEditProjectDialog(false);
+  };
+
   const [filterType, setFilterType] = useState('');
   const [filterDateRange, setFilterDateRange] = useState({
     start: '',
@@ -76,19 +84,16 @@ export default function OrderDetail() {
   });
   const [filterKeyword, setFilterKeyword] = useState('');
 
-  // 新增日誌對話框
   const [openEditLogDialog, setOpenEditLogDialog] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const [openDeleteLogDialog, setOpenDeleteLogDialog] = useState(false);
   const [deletingLogId, setDeletingLogId] = useState(null);
 
-  // 獲取專案數據
   useEffect(() => {
     const fetchProjectData = async () => {
       try {
         setLoading(true);
         
-        // 獲取專案詳細資訊
         const { data: projectData, error: projectError } = await supabase
           .from('project')
           .select(`
@@ -102,7 +107,7 @@ export default function OrderDetail() {
         
         setProject(projectData);
         setCustomer(projectData.customer_database);
-        setEditedProject(projectData); // 初始化編輯數據
+        setEditedProject(projectData);
       } catch (error) {
         console.error('Error fetching project data:', error);
         setError(error.message);
@@ -114,7 +119,6 @@ export default function OrderDetail() {
     fetchProjectData();
   }, [projectId]);
 
-  // 獲取專案日誌
   useEffect(() => {
     const fetchProjectLogs = async () => {
       try {
@@ -135,7 +139,6 @@ export default function OrderDetail() {
     fetchProjectLogs();
   }, [projectId]);
 
-  // 處理表單變更
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditedProject(prev => ({
@@ -144,12 +147,11 @@ export default function OrderDetail() {
     }));
   };
 
-  // 處理城市和區域變更
   const handleCityChange = (newValue) => {
     setEditedProject(prev => ({
       ...prev,
       site_city: newValue,
-      site_district: "" // 當縣市變更時，清空區域
+      site_district: ""
     }));
   };
 
@@ -160,7 +162,6 @@ export default function OrderDetail() {
     }));
   };
 
-  // 處理新增日誌
   const handleAddLog = async () => {
     try {
       const { data, error } = await supabase
@@ -172,7 +173,7 @@ export default function OrderDetail() {
             log_date: newLog.log_date,
             content: newLog.content,
             notes: newLog.notes,
-            created_by: '系統管理員' // 這裡可以根據實際登入用戶來設定
+            created_by: '系統管理員'
           }
         ])
         .select();
@@ -193,12 +194,10 @@ export default function OrderDetail() {
     }
   };
 
-  // 更新專案資訊
   const handleUpdateProject = async () => {
     try {
       setLoading(true);
       
-      // 準備提交的數據
       const updatedData = {
         project_name: editedProject.project_name,
         site_city: editedProject.site_city,
@@ -238,7 +237,7 @@ export default function OrderDetail() {
       if (error) throw error;
       
       setProject(data[0]);
-      setIsEditing(false);
+      setOpenEditProjectDialog(false);
     } catch (error) {
       console.error('Error updating project:', error);
       setError('更新專案時發生錯誤：' + error.message);
@@ -247,7 +246,6 @@ export default function OrderDetail() {
     }
   };
 
-  // 刪除專案
   const handleDeleteProject = async () => {
     try {
       setLoading(true);
@@ -259,7 +257,6 @@ export default function OrderDetail() {
         
       if (error) throw error;
       
-      // 刪除成功，導航回專案列表頁面
       navigate('/orders');
     } catch (error) {
       console.error('Error deleting project:', error);
@@ -269,23 +266,11 @@ export default function OrderDetail() {
       setOpenDeleteDialog(false);
     }
   };
-  
-  // 取消編輯
-  const handleCancelEdit = () => {
-    setEditedProject(project); // 重置為原始數據
-    setIsEditing(false);
-  };
 
-  // 篩選日誌
   const filteredLogs = projectLogs.filter(log => {
-    // 類型篩選
     if (filterType && log.log_type !== filterType) return false;
-    
-    // 日期範圍篩選
     if (filterDateRange.start && log.log_date < filterDateRange.start) return false;
     if (filterDateRange.end && log.log_date > filterDateRange.end) return false;
-    
-    // 關鍵字篩選
     if (filterKeyword) {
       const keyword = filterKeyword.toLowerCase();
       return (
@@ -293,18 +278,15 @@ export default function OrderDetail() {
         log.notes?.toLowerCase().includes(keyword)
       );
     }
-    
     return true;
   });
 
-  // 重設篩選
   const handleResetFilter = () => {
     setFilterType('');
     setFilterDateRange({ start: '', end: '' });
     setFilterKeyword('');
   };
 
-  // 處理編輯日誌
   const handleEditLog = async () => {
     try {
       const { data, error } = await supabase
@@ -331,7 +313,6 @@ export default function OrderDetail() {
     }
   };
 
-  // 處理刪除日誌
   const handleDeleteLog = async () => {
     try {
       const { error } = await supabase
@@ -356,7 +337,6 @@ export default function OrderDetail() {
 
   return (
     <Box sx={{ background: '#f5f6fa', minHeight: '100vh', p: 4 }}>
-      {/* 頂部標題區 */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box display="flex" alignItems="center">
           <IconButton onClick={() => navigate('/orders')} sx={{ mr: 2 }}>
@@ -367,58 +347,35 @@ export default function OrderDetail() {
           </Typography>
         </Box>
         <Box>
-          {!isEditing ? (
-            <>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                startIcon={<Edit />} 
-                onClick={() => setIsEditing(true)}
-                sx={{ mr: 2, borderRadius: 2, textTransform: 'none', px: 3 }}
-              >
-                編輯專案
-              </Button>
-              <Button 
-                variant="outlined" 
-                color="error" 
-                startIcon={<Delete />} 
-                onClick={() => setOpenDeleteDialog(true)}
-                sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
-              >
-                刪除專案
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                onClick={handleUpdateProject}
-                sx={{ mr: 2, borderRadius: 2, textTransform: 'none', px: 3 }}
-              >
-                儲存變更
-              </Button>
-              <Button 
-                variant="outlined" 
-                onClick={handleCancelEdit}
-                sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
-              >
-                取消
-              </Button>
-            </>
-          )}
+          <>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              startIcon={<Edit />} 
+              onClick={handleOpenProjectDialog}
+              sx={{ mr: 2, borderRadius: 2, textTransform: 'none', px: 3 }}
+            >
+              編輯專案
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="error" 
+              startIcon={<Delete />} 
+              onClick={() => setOpenDeleteDialog(true)}
+              sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
+            >
+              刪除專案
+            </Button>
+          </>
         </Box>
       </Box>
 
-      {/* 並排卡片區塊 */}
       <Grid container spacing={3}>
-        {/* 左側：客戶資訊卡片，寬度1 */}
         <Grid item xs={12} md={4}>
           <Card sx={{ mb: 0, borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: '100%' }}>
             <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>客戶資訊</Typography>
             <Divider sx={{ mb: 2 }} />
             
-            {/* 基本資訊 */}
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Business sx={{ mr: 1, color: 'primary.main' }} />
@@ -430,7 +387,6 @@ export default function OrderDetail() {
             </Box>
             <Divider sx={{ my: 2 }} />
 
-            {/* 聯絡資訊 */}
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
@@ -442,7 +398,6 @@ export default function OrderDetail() {
             </Box>
             <Divider sx={{ my: 2 }} />
 
-            {/* 聯絡人資訊 */}
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Person sx={{ mr: 1, color: 'primary.main' }} />
@@ -463,7 +418,6 @@ export default function OrderDetail() {
             </Box>
             <Divider sx={{ my: 2 }} />
 
-            {/* 注意事項 */}
             <Box sx={{ flexGrow: 1 }}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Note sx={{ mr: 1, color: 'primary.main' }} />
@@ -473,447 +427,453 @@ export default function OrderDetail() {
             </Box>
           </Card>
         </Grid>
-        {/* 右側：專案資訊卡片，寬度2 */}
         <Grid item xs={12} md={8}>
           <Card sx={{ borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>專案資訊</Typography>
             <Divider sx={{ mb: 2 }} />
-            {/* 專案基本資訊 */}
             <Box mb={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Info sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">基本資訊</Typography>
               </Box>
-              {isEditing ? (
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="專案名稱"
-                      name="project_name"
-                      value={editedProject.project_name || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <Autocomplete
-                        fullWidth
-                        options={taiwanCities}
-                        renderInput={(params) => <TextField {...params} label="施工縣市" />}
-                        value={editedProject.site_city || ''}
-                        onChange={(event, newValue) => handleCityChange(newValue)}
-                      />
-                      <Autocomplete
-                        fullWidth
-                        options={taiwanDistricts[editedProject.site_city] || []}
-                        renderInput={(params) => <TextField {...params} label="施工區域" />}
-                        value={editedProject.site_district || ''}
-                        onChange={(event, newValue) => handleDistrictChange(newValue)}
-                      />
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="施工地址"
-                      name="site_address"
-                      value={editedProject.site_address || ''}
-                      onChange={handleChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>施工狀態</InputLabel>
-                      <Select
-                        name="construction_status"
-                        value={editedProject.construction_status || '未開始'}
-                        onChange={handleChange}
-                      >
-                        {constructionStatusOptions.map((option) => (
-                          <MenuItem key={option} value={option}>{option}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>請款狀態</InputLabel>
-                      <Select
-                        name="billing_status"
-                        value={editedProject.billing_status || '未請款'}
-                        onChange={handleChange}
-                      >
-                        {billingStatusOptions.map((option) => (
-                          <MenuItem key={option} value={option}>{option}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>專案名稱：</strong> {project.project_name}</Typography>
+                  <Typography>
+                    <strong>施工地址：</strong> 
+                    {`${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`}
+                  </Typography>
                 </Grid>
-              ) : (
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography><strong>專案名稱：</strong> {project.project_name}</Typography>
-                    <Typography>
-                      <strong>施工地址：</strong> 
-                      {`${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography><strong>施工狀態：</strong> {project.construction_status}</Typography>
-                    <Typography><strong>請款狀態：</strong> {project.billing_status}</Typography>
-                  </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>施工狀態：</strong> {project.construction_status}</Typography>
+                  <Typography><strong>請款狀態：</strong> {project.billing_status}</Typography>
                 </Grid>
-              )}
+              </Grid>
             </Box>
             <Divider sx={{ mb: 3 }} />
-            {/* 施工資訊 */}
             <Box mb={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Build sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">施工資訊</Typography>
               </Box>
-              {isEditing ? (
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="開始日期"
-                      type="date"
-                      name="start_date"
-                      value={editedProject.start_date || ''}
-                      onChange={handleChange}
-                      InputLabelProps={{ shrink: true }}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="結束日期"
-                      type="date"
-                      name="end_date"
-                      value={editedProject.end_date || ''}
-                      onChange={handleChange}
-                      InputLabelProps={{ shrink: true }}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="施工項目"
-                      name="construction_item"
-                      value={editedProject.construction_item || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="施工天數"
-                      type="number"
-                      name="construction_days"
-                      value={editedProject.construction_days || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="施工金額"
-                      type="number"
-                      name="construction_fee"
-                      value={editedProject.construction_fee || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="施工範圍"
-                      name="construction_scope"
-                      value={editedProject.construction_scope || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="注意事項"
-                      name="project_notes"
-                      value={editedProject.project_notes || ''}
-                      onChange={handleChange}
-                      multiline
-                      rows={3}
-                      margin="normal"
-                    />
-                  </Grid>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>開始日期：</strong> {project.start_date}</Typography>
+                  <Typography><strong>施工項目：</strong> {project.construction_item}</Typography>
+                  <Typography><strong>施工天數：</strong> {project.construction_days}</Typography>
                 </Grid>
-              ) : (
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography><strong>開始日期：</strong> {project.start_date}</Typography>
-                    <Typography><strong>施工項目：</strong> {project.construction_item}</Typography>
-                    <Typography><strong>施工天數：</strong> {project.construction_days}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography><strong>結束日期：</strong> {project.end_date}</Typography>
-                    <Typography><strong>施工金額：</strong> ${project.construction_fee?.toLocaleString()}</Typography>
-                    <Typography><strong>施工範圍：</strong> {project.construction_scope}</Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography><strong>注意事項：</strong> {project.project_notes}</Typography>
-                  </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>結束日期：</strong> {project.end_date}</Typography>
+                  <Typography><strong>施工金額：</strong> ${project.construction_fee?.toLocaleString()}</Typography>
+                  <Typography><strong>施工範圍：</strong> {project.construction_scope}</Typography>
                 </Grid>
-              )}
+                <Grid item xs={12}>
+                  <Typography><strong>注意事項：</strong> {project.project_notes}</Typography>
+                </Grid>
+              </Grid>
             </Box>
             <Divider sx={{ mb: 3 }} />
-            {/* 收款資訊 */}
             <Box mb={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Payment sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">收款資訊</Typography>
               </Box>
-              {isEditing ? (
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="收款方式"
-                      name="payment_method"
-                      value={editedProject.payment_method || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="收款日期"
-                      type="date"
-                      name="payment_date"
-                      value={editedProject.payment_date || ''}
-                      onChange={handleChange}
-                      InputLabelProps={{ shrink: true }}
-                      margin="normal"
-                    />
-                  </Grid>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>收款方式：</strong> {project.payment_method}</Typography>
                 </Grid>
-              ) : (
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography><strong>收款方式：</strong> {project.payment_method}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography><strong>收款日期：</strong> {project.payment_date}</Typography>
-                  </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>收款日期：</strong> {project.payment_date}</Typography>
                 </Grid>
-              )}
+              </Grid>
             </Box>
             <Divider sx={{ mb: 3 }} />
-            {/* 聯絡人資訊 */}
             <Box>
               <Box display="flex" alignItems="center" mb={1}>
                 <ContactPhone sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡人資訊</Typography>
               </Box>
-              {isEditing ? (
-                <Grid container spacing={2}>
-                  {/* 聯絡人 1 */}
-                  <Grid item xs={12}><Typography variant="subtitle2">聯絡人 1</Typography></Grid>
-                  <Grid item xs={3}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>職位</InputLabel>
-                      <Select
-                        name="contact1_role"
-                        value={editedProject.contact1_role || ''}
-                        onChange={handleChange}
-                      >
-                        {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                          <MenuItem key={role} value={role}>{role}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+              <>
+                {project.contact1_name && (
+                  <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                    <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 1</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact1_role}</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact1_name}</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>{project.contact1_type}：</strong> {project.contact1_contact}</Typography></Grid>
                   </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      fullWidth
-                      label="名字"
-                      name="contact1_name"
-                      value={editedProject.contact1_name || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
+                )}
+                {project.contact2_name && (
+                  <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                    <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 2</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact2_role}</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact2_name}</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>{project.contact2_type}：</strong> {project.contact2_contact}</Typography></Grid>
                   </Grid>
-                  <Grid item xs={3}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>聯絡方式類型</InputLabel>
-                      <Select
-                        name="contact1_type"
-                        value={editedProject.contact1_type || ''}
-                        onChange={handleChange}
-                      >
-                        {["電話", "市話", "LineID", "Email"].map((type) => (
-                          <MenuItem key={type} value={type}>{type}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                )}
+                {project.contact3_name && (
+                  <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                    <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 3</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact3_role}</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact3_name}</Typography></Grid>
+                    <Grid item xs={12} md={2}><Typography><strong>{project.contact3_type}：</strong> {project.contact3_contact}</Typography></Grid>
                   </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      fullWidth
-                      label="聯絡方式"
-                      name="contact1_contact"
-                      value={editedProject.contact1_contact || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  {/* 聯絡人 2 */}
-                  <Grid item xs={12}><Typography variant="subtitle2">聯絡人 2</Typography></Grid>
-                  <Grid item xs={3}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>職位</InputLabel>
-                      <Select
-                        name="contact2_role"
-                        value={editedProject.contact2_role || ''}
-                        onChange={handleChange}
-                      >
-                        {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                          <MenuItem key={role} value={role}>{role}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      fullWidth
-                      label="名字"
-                      name="contact2_name"
-                      value={editedProject.contact2_name || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>聯絡方式類型</InputLabel>
-                      <Select
-                        name="contact2_type"
-                        value={editedProject.contact2_type || ''}
-                        onChange={handleChange}
-                      >
-                        {["電話", "市話", "LineID", "Email"].map((type) => (
-                          <MenuItem key={type} value={type}>{type}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      fullWidth
-                      label="聯絡方式"
-                      name="contact2_contact"
-                      value={editedProject.contact2_contact || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  {/* 聯絡人 3 */}
-                  <Grid item xs={12}><Typography variant="subtitle2">聯絡人 3</Typography></Grid>
-                  <Grid item xs={3}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>職位</InputLabel>
-                      <Select
-                        name="contact3_role"
-                        value={editedProject.contact3_role || ''}
-                        onChange={handleChange}
-                      >
-                        {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                          <MenuItem key={role} value={role}>{role}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      fullWidth
-                      label="名字"
-                      name="contact3_name"
-                      value={editedProject.contact3_name || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>聯絡方式類型</InputLabel>
-                      <Select
-                        name="contact3_type"
-                        value={editedProject.contact3_type || ''}
-                        onChange={handleChange}
-                      >
-                        {["電話", "市話", "LineID", "Email"].map((type) => (
-                          <MenuItem key={type} value={type}>{type}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField
-                      fullWidth
-                      label="聯絡方式"
-                      name="contact3_contact"
-                      value={editedProject.contact3_contact || ''}
-                      onChange={handleChange}
-                      margin="normal"
-                    />
-                  </Grid>
-                </Grid>
-              ) : (
-                <>
-                  {project.contact1_name && (
-                    <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                      <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 1</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact1_role}</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact1_name}</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>{project.contact1_type}：</strong> {project.contact1_contact}</Typography></Grid>
-                    </Grid>
-                  )}
-                  {project.contact2_name && (
-                    <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                      <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 2</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact2_role}</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact2_name}</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>{project.contact2_type}：</strong> {project.contact2_contact}</Typography></Grid>
-                    </Grid>
-                  )}
-                  {project.contact3_name && (
-                    <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                      <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 3</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact3_role}</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact3_name}</Typography></Grid>
-                      <Grid item xs={12} md={2}><Typography><strong>{project.contact3_type}：</strong> {project.contact3_contact}</Typography></Grid>
-                    </Grid>
-                  )}
-                  {!project.contact1_name && !project.contact2_name && !project.contact3_name && (
-                    <Grid container spacing={2}><Grid item xs={12}><Typography color="textSecondary">尚未設定聯絡人資訊</Typography></Grid></Grid>
-                  )}
-                </>
-              )}
+                )}
+                {!project.contact1_name && !project.contact2_name && !project.contact3_name && (
+                  <Grid container spacing={2}><Grid item xs={12}><Typography color="textSecondary">尚未設定聯絡人資訊</Typography></Grid></Grid>
+                )}
+              </>
             </Box>
           </Card>
         </Grid>
       </Grid>
 
-      {/* 專案日誌區塊 */}
+      <Dialog
+        open={openEditProjectDialog}
+        onClose={handleCloseProjectDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>編輯專案資訊</DialogTitle>
+        <DialogContent>
+          <Box mb={3}>
+            <Typography variant="subtitle1" fontWeight="bold">基本資訊</Typography>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="專案名稱"
+                  name="project_name"
+                  value={editedProject.project_name || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Autocomplete
+                    fullWidth
+                    options={taiwanCities}
+                    renderInput={(params) => <TextField {...params} label="施工縣市" />}
+                    value={editedProject.site_city || ''}
+                    onChange={(event, newValue) => handleCityChange(newValue)}
+                  />
+                  <Autocomplete
+                    fullWidth
+                    options={taiwanDistricts[editedProject.site_city] || []}
+                    renderInput={(params) => <TextField {...params} label="施工區域" />}
+                    value={editedProject.site_district || ''}
+                    onChange={(event, newValue) => handleDistrictChange(newValue)}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="施工地址"
+                  name="site_address"
+                  value={editedProject.site_address || ''}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>施工狀態</InputLabel>
+                  <Select
+                    name="construction_status"
+                    value={editedProject.construction_status || '未開始'}
+                    onChange={handleChange}
+                  >
+                    {constructionStatusOptions.map((option) => (
+                      <MenuItem key={option} value={option}>{option}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>請款狀態</InputLabel>
+                  <Select
+                    name="billing_status"
+                    value={editedProject.billing_status || '未請款'}
+                    onChange={handleChange}
+                  >
+                    {billingStatusOptions.map((option) => (
+                      <MenuItem key={option} value={option}>{option}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Box>
+          <Box mb={3}>
+            <Typography variant="subtitle1" fontWeight="bold">施工資訊</Typography>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="開始日期"
+                  type="date"
+                  name="start_date"
+                  value={editedProject.start_date || ''}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="結束日期"
+                  type="date"
+                  name="end_date"
+                  value={editedProject.end_date || ''}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="施工項目"
+                  name="construction_item"
+                  value={editedProject.construction_item || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="施工天數"
+                  type="number"
+                  name="construction_days"
+                  value={editedProject.construction_days || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="施工金額"
+                  type="number"
+                  name="construction_fee"
+                  value={editedProject.construction_fee || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="施工範圍"
+                  name="construction_scope"
+                  value={editedProject.construction_scope || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="注意事項"
+                  name="project_notes"
+                  value={editedProject.project_notes || ''}
+                  onChange={handleChange}
+                  multiline
+                  rows={3}
+                  margin="normal"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+          <Box mb={3}>
+            <Typography variant="subtitle1" fontWeight="bold">收款資訊</Typography>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="收款方式"
+                  name="payment_method"
+                  value={editedProject.payment_method || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="收款日期"
+                  type="date"
+                  name="payment_date"
+                  value={editedProject.payment_date || ''}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
+                  margin="normal"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+          <Box>
+            <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}><Typography variant="subtitle2">聯絡人 1</Typography></Grid>
+              <Grid item xs={3}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>職位</InputLabel>
+                  <Select
+                    name="contact1_role"
+                    value={editedProject.contact1_role || ''}
+                    onChange={handleChange}
+                  >
+                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
+                      <MenuItem key={role} value={role}>{role}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label="名字"
+                  name="contact1_name"
+                  value={editedProject.contact1_name || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>聯絡方式類型</InputLabel>
+                  <Select
+                    name="contact1_type"
+                    value={editedProject.contact1_type || ''}
+                    onChange={handleChange}
+                  >
+                    {["電話", "市話", "LineID", "Email"].map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label="聯絡方式"
+                  name="contact1_contact"
+                  value={editedProject.contact1_contact || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}><Typography variant="subtitle2">聯絡人 2</Typography></Grid>
+              <Grid item xs={3}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>職位</InputLabel>
+                  <Select
+                    name="contact2_role"
+                    value={editedProject.contact2_role || ''}
+                    onChange={handleChange}
+                  >
+                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
+                      <MenuItem key={role} value={role}>{role}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label="名字"
+                  name="contact2_name"
+                  value={editedProject.contact2_name || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>聯絡方式類型</InputLabel>
+                  <Select
+                    name="contact2_type"
+                    value={editedProject.contact2_type || ''}
+                    onChange={handleChange}
+                  >
+                    {["電話", "市話", "LineID", "Email"].map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label="聯絡方式"
+                  name="contact2_contact"
+                  value={editedProject.contact2_contact || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}><Typography variant="subtitle2">聯絡人 3</Typography></Grid>
+              <Grid item xs={3}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>職位</InputLabel>
+                  <Select
+                    name="contact3_role"
+                    value={editedProject.contact3_role || ''}
+                    onChange={handleChange}
+                  >
+                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
+                      <MenuItem key={role} value={role}>{role}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label="名字"
+                  name="contact3_name"
+                  value={editedProject.contact3_name || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>聯絡方式類型</InputLabel>
+                  <Select
+                    name="contact3_type"
+                    value={editedProject.contact3_type || ''}
+                    onChange={handleChange}
+                  >
+                    {["電話", "市話", "LineID", "Email"].map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={3}>
+                <TextField
+                  fullWidth
+                  label="聯絡方式"
+                  name="contact3_contact"
+                  value={editedProject.contact3_contact || ''}
+                  onChange={handleChange}
+                  margin="normal"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseProjectDialog}>取消</Button>
+          <Button onClick={handleUpdateProject} variant="contained" color="primary">儲存</Button>
+        </DialogActions>
+      </Dialog>
+
       <Box mt={3}>
         <Card sx={{ borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -930,7 +890,6 @@ export default function OrderDetail() {
           </Box>
           <Divider sx={{ mb: 2 }} />
 
-          {/* 篩選區塊 */}
           <Box sx={{ mb: 3 }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={2}>
@@ -1072,7 +1031,6 @@ export default function OrderDetail() {
         </Card>
       </Box>
 
-      {/* 新增日誌對話框 */}
       <Dialog
         open={openLogDialog}
         onClose={() => setOpenLogDialog(false)}
@@ -1140,7 +1098,6 @@ export default function OrderDetail() {
         </DialogActions>
       </Dialog>
 
-      {/* 刪除確認對話框 */}
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
@@ -1159,7 +1116,6 @@ export default function OrderDetail() {
         </DialogActions>
       </Dialog>
 
-      {/* 編輯日誌對話框 */}
       <Dialog
         open={openEditLogDialog}
         onClose={() => {
@@ -1237,7 +1193,6 @@ export default function OrderDetail() {
         </DialogActions>
       </Dialog>
 
-      {/* 刪除日誌確認對話框 */}
       <Dialog
         open={openDeleteLogDialog}
         onClose={() => {
@@ -1271,4 +1226,4 @@ export default function OrderDetail() {
       </Dialog>
     </Box>
   );
-} 
+}
