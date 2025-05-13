@@ -201,12 +201,15 @@ const AppContent = () => {
       <CssBaseline />
       {user && <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
       
-      <Container
+      <Box
         sx={{
           marginLeft: user ? (sidebarCollapsed ? "64px" : "240px") : "0",
           padding: "20px",
           transition: "margin 0.3s",
           width: user ? (sidebarCollapsed ? "calc(100% - 64px)" : "calc(100% - 240px)") : "100%",
+          height: "100%", // ✅ 讓內頁能撐滿高度
+          display: "flex",
+          flexDirection: "column"
         }}
       >
         <TransitionGroup>
@@ -345,7 +348,7 @@ const AppContent = () => {
             </div>
           </CSSTransition>
         </TransitionGroup>
-      </Container>
+      </Box>
     </>
   );
 };
