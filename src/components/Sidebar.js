@@ -37,7 +37,7 @@ const StyledDrawer = styled(Drawer)(({ theme, collapsed }) => ({
   '& .MuiDrawer-paper': {
     width: collapsed ? 64 : 240,
     boxSizing: 'border-box',
-    background: `linear-gradient(180deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+    background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.main} 100%)`,
     color: theme.palette.common.white,
     borderRight: 'none',
     overflowX: 'hidden',
@@ -288,7 +288,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                     <ListItemText 
                       primary={item.text} 
                       primaryTypographyProps={{
-                        color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                        color: isActivePage(item.path) ? 'primary.dark' : 'inherit',
                         fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
                       }}
                     />
@@ -338,7 +338,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                   <ListItemText 
                     primary={item.text}
                     primaryTypographyProps={{
-                      color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                      color: isActivePage(item.path) ? 'primary.dark' : 'inherit',
                       fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
                     }}
                   />
