@@ -493,7 +493,7 @@ export default function OrderDetail() {
                 <ContactPhone sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡人資訊</Typography>
               </Box>
-              <>
+              <> 
                 {project.contact1_name && (
                   <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
                     <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 1</Typography></Grid>
@@ -717,9 +717,11 @@ export default function OrderDetail() {
           </Box>
           <Box>
             <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}><Typography variant="subtitle2">聯絡人 1</Typography></Grid>
-              <Grid item xs={3}>
+            {/* Contact rows: one per person */}
+            {/* 聯絡人 1 */}
+            <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+              <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 1</Typography></Box>
+              <Box sx={{ flex: 1 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>職位</InputLabel>
                   <Select
@@ -732,8 +734,8 @@ export default function OrderDetail() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="名字"
@@ -742,8 +744,8 @@ export default function OrderDetail() {
                   onChange={handleChange}
                   margin="normal"
                 />
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>聯絡方式類型</InputLabel>
                   <Select
@@ -756,8 +758,8 @@ export default function OrderDetail() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="聯絡方式"
@@ -766,9 +768,12 @@ export default function OrderDetail() {
                   onChange={handleChange}
                   margin="normal"
                 />
-              </Grid>
-              <Grid item xs={12}><Typography variant="subtitle2">聯絡人 2</Typography></Grid>
-              <Grid item xs={3}>
+              </Box>
+            </Grid>
+            {/* 聯絡人 2 */}
+            <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+              <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 2</Typography></Box>
+              <Box sx={{ flex: 1 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>職位</InputLabel>
                   <Select
@@ -781,8 +786,8 @@ export default function OrderDetail() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="名字"
@@ -791,8 +796,8 @@ export default function OrderDetail() {
                   onChange={handleChange}
                   margin="normal"
                 />
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>聯絡方式類型</InputLabel>
                   <Select
@@ -805,8 +810,8 @@ export default function OrderDetail() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="聯絡方式"
@@ -815,9 +820,12 @@ export default function OrderDetail() {
                   onChange={handleChange}
                   margin="normal"
                 />
-              </Grid>
-              <Grid item xs={12}><Typography variant="subtitle2">聯絡人 3</Typography></Grid>
-              <Grid item xs={3}>
+              </Box>
+            </Grid>
+            {/* 聯絡人 3 */}
+            <Grid container alignItems="center" sx={{ mb: 1, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+              <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 3</Typography></Box>
+              <Box sx={{ flex: 1 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>職位</InputLabel>
                   <Select
@@ -830,8 +838,8 @@ export default function OrderDetail() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="名字"
@@ -840,8 +848,8 @@ export default function OrderDetail() {
                   onChange={handleChange}
                   margin="normal"
                 />
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>聯絡方式類型</InputLabel>
                   <Select
@@ -854,8 +862,8 @@ export default function OrderDetail() {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={3}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
                   label="聯絡方式"
@@ -864,7 +872,7 @@ export default function OrderDetail() {
                   onChange={handleChange}
                   margin="normal"
                 />
-              </Grid>
+              </Box>
             </Grid>
           </Box>
         </DialogContent>
