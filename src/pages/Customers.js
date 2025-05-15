@@ -129,7 +129,7 @@ const Customers = ({
     start_date: "",
     end_date: "",
     invoice_title: "",
-    note: "",
+    notes: "",
     company_phone: "",
     fax: "",
     contacts: [
@@ -170,7 +170,7 @@ const Customers = ({
         email: customerData.email,
         tax_id: customerData.taxid,
         invoice_title: customerData.Title,
-        notes: customerData.note,
+        notes: customerData.notes,
         company_phone: customerData.company_phone,
         fax: customerData.fax,
         contact1_role: customerData.contacts[0]?.role || "",
