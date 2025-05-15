@@ -7,6 +7,27 @@ import { assignRolePermissions } from '../lib/permissionUtils';
 // Create context
 const AuthContext = createContext(null);
 
+// authUtils.js (or at the top of AuthContext.js)
+
+// 🔑 This lives *outside* your AuthProvider
+export async function fetchFullUser(email) {
+  const { data: u, error: uErr } = await supabase
+    .from('users')
+    .select('id, email, name, role, is_approved')
+    .eq('email', email)
+    .single();
+  if (uErr) throw uErr;
+
+
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    roles: [u.role],
+    isApproved: u.is_approved,
+  };
+}
+
 // Auth provider component
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
@@ -39,16 +60,18 @@ export const AuthProvider = ({ children }) => {
 
       debugLog('Successfully authenticated with Supabase');
 
+      
       // Set user data
+      const fulluser = await fetchFullUser(profile.getEmail());
+
+  // 2) store the roles array you just got
+      localStorage.setItem("userRoles", JSON.stringify(fulluser.roles));
+
+    // 3) set React state
       setUser({
-        id: data.user.id,
-        email: profile.getEmail(),
-        roles: ["user"],
+        ...fulluser,
         loginMethod: "google"
       });
-
-      localStorage.setItem("loginMethod", "google");
-      localStorage.setItem("userRoles", JSON.stringify(["user"]));
       
       // 移除自動導航到 /customers
       // navigate("/customers");
@@ -58,121 +81,6 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
   }, [navigate]);
-
-  // Google login function
-  const googleLogin = async () => {
-    try {
-      // Trigger Google OAuth login
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-      });
-  
-      if (error) throw error;
-  
-      // Wait for the session to be established
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData || !sessionData.session) throw new Error('Session not established.');
-  
-      const userId = sessionData.session.user.id;
-      const userEmail = sessionData.session.user.email;
-      const userName = sessionData.session.user.user_metadata?.full_name || userEmail.split('@')[0];
-  
-      // Check if the user exists in your custom users table
-      let { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email, name, role, is_approved')
-        .eq('id', userId)
-        .single();
-  
-      // If the user does not exist, add them to your custom users table
-      if (!userData || userError) {
-        console.log("User not found in 'users' table, adding...");
-        const roleName = (userEmail === "admin@example.com" || userEmail === "b12705058@g.ntu.edu.tw") ? "admin" : "user";
-  
-        // Insert the new user into your custom users table
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: userId,
-            email: userEmail,
-            name: userName,
-            role: roleName,
-            is_approved: roleName === 'admin' // Auto-approve admins
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error("Error inserting user:", insertError);
-          throw insertError;
-        }
-  
-        // Assign default permissions to the new user
-        await assignRolePermissions(userId, roleName);
-          
-        userData = newUser;
-      }
-
-      // Check if user is approved
-      if (!userData.is_approved && userData.role !== 'admin') {
-        setUser({
-          id: userData.id,
-          email: userData.email,
-          name: userData.name,
-          roles: [userData.role],
-          isApproved: false,
-          loginMethod: "google"
-        });
-        navigate("/pending-approval");
-        return;
-      }
-  
-      // Fetch user permissions from the database
-      const { data: permissionData, error: permissionError } = await supabase
-        .from('userpermissions')
-        .select(`
-          module:modules(name),
-          permission:permissions(name)
-        `)
-        .eq('user_id', userData.id);
-  
-      if (permissionError) {
-        console.error("Error fetching permissions:", permissionError);
-        throw permissionError;
-      }
-  
-      // Transform permissions into a structured object
-      const permissions = {};
-      permissionData.forEach((perm) => {
-        if (!permissions[perm.module.name]) {
-          permissions[perm.module.name] = {};
-        }
-        permissions[perm.module.name][perm.permission.name] = true;
-      });
-  
-      // Store the user in context
-      setUser({
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        roles: [userData.role],
-        permissions,
-        isApproved: true,
-        loginMethod: "google"
-      });
-
-      // Store login method in localStorage
-      localStorage.setItem("loginMethod", "google");
-      localStorage.setItem("userRoles", JSON.stringify([userData.role]));
-  
-      console.log("Google sign-in successful!");
-      navigate("/customers");
-    } catch (error) {
-      console.error("Error during Google sign-in:", error.message);
-      setError(error.message);
-      throw error;
-    }
-  };
 
   // Initialize Google API client
   useEffect(() => {
@@ -436,7 +344,6 @@ const login = async (email, password) => {
       value={{
         user,
         login,
-        googleLogin,
         signUp,
         logout,
         hasRole,

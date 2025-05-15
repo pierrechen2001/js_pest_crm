@@ -4,7 +4,7 @@ import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import {
   Typography, Container, Button, Dialog, DialogTitle, DialogContent,
-  TextField, DialogActions
+  TextField, DialogActions, Box
 } from "@mui/material";
 
 const localizer = momentLocalizer(moment);
@@ -75,7 +75,7 @@ const InventoryCalendar = () => {
   };
 
   return (
-    <Container>
+    <Box>
       <Typography variant="h4" gutterBottom>
         庫存行事曆
       </Typography>
@@ -134,7 +134,7 @@ const InventoryCalendar = () => {
           <Button onClick={handleAddNewEvent} color="primary">保存</Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

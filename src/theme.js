@@ -3,12 +3,13 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2', // 主色調
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#fdb2b0', // 主色調
+      light: '#fcd3d3',
+      dark: '#a55f54',
+      black: '#191515',
     },
     secondary: {
-      main: '#f50057', // 次要色調
+      main: '#b9d6d7', // 次要色調
     },
     background: {
       default: '#f5f5f5',

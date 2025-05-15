@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect} from "react";
 import { 
   Drawer, 
   List, 
@@ -37,7 +37,7 @@ const StyledDrawer = styled(Drawer)(({ theme, collapsed }) => ({
   '& .MuiDrawer-paper': {
     width: collapsed ? 64 : 240,
     boxSizing: 'border-box',
-    background: `linear-gradient(180deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+    background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.main} 100%)`,
     color: theme.palette.common.white,
     borderRight: 'none',
     overflowX: 'hidden',
@@ -56,8 +56,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   
-  // Check if user is approved or admin
-  const canAccessNavigation = user?.isApproved || user?.roles?.includes('admin');
+  // Check if user is approved or an admin
+  const isUserApproved = user?.isApproved === true || user?.roles?.includes('admin');
   
   // Handle menu open/close
   const handleClick = (event) => {
@@ -88,6 +88,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     return location.pathname === path;
   };
 
+  
   // Menu items
   const menuItems = [
     {
@@ -135,6 +136,13 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       path: '/user-approvals',
     }
   ];
+  
+  useEffect(() => {
+    if (user) {
+      console.log('Current user roles:', user.roles[0]);
+      console.log('User approval status:', user.isApproved);
+    }
+  }, [user]);
 
   return (
     <StyledDrawer
@@ -179,28 +187,31 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
               </Typography>
               <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 {user?.roles?.[0] || 'User'}
+                {!isUserApproved && <span style={{ color: '#ff9800', marginLeft: '5px' }}>(待審核)</span>}
               </Typography>
             </Box>
-            <Tooltip title="帳號設定">
-              <IconButton
-                onClick={handleClick}
-                size="small"
-                sx={{ ml: 1 }}
-                aria-controls={open ? 'account-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={open ? 'true' : undefined}
-              >
-                <SecurityIcon />
-              </IconButton>
-            </Tooltip>
+            {isUserApproved && (
+              <Tooltip title="帳號設定">
+                <IconButton
+                  onClick={handleClick}
+                  size="small"
+                  sx={{ ml: 1 }}
+                  aria-controls={open ? 'account-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={open ? 'true' : undefined}
+                >
+                  <SecurityIcon />
+                </IconButton>
+              </Tooltip>
+            )}
           </>
         )}
       </Box>
       
       <Divider />
       
-      {/* 收合按鈕 */}
-      {canAccessNavigation && (
+      {/* 收合按鈕 - 只有已審核用戶可見 */}
+      {isUserApproved && (
         <Box sx={{ 
           display: 'flex', 
           justifyContent: collapsed ? 'center' : 'flex-end',
@@ -235,8 +246,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </Box>
       )}
       
-      {/* 導航鏈接 */}
-      {canAccessNavigation && (
+
+      {/* 導航鏈接 - 只有已審核用戶可見 */}
+      {isUserApproved && (
         <>
           <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
             {menuItems.map((item) => (
@@ -257,6 +269,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                       '&:hover': {
                         backgroundColor: 'rgba(255,255,255,0.2)',
                       },
+
                     },
                     '&:hover': {
                       backgroundColor: 'rgba(255,255,255,0.1)',
@@ -277,7 +290,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                     <ListItemText 
                       primary={item.text} 
                       primaryTypographyProps={{
-                        color: isActivePage(item.path) ? 'primary.main' : 'inherit',
+                        color: isActivePage(item.path) ? 'primary.dark' : 'inherit',
                         fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
                       }}
                     />
@@ -288,28 +301,47 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           </List>
           
           <Divider sx={{ mx: 2 }} />
-          
-          {/* 管理員選項 */}
-          {user?.roles?.includes('admin') && (
-            <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
-              {adminMenuItems.map((item) => (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton 
-                    component={Link} 
-                    to={item.path}
-                    selected={isActivePage(item.path)}
-                    sx={{ 
-                      borderRadius: 1,
-                      mb: 0.5,
-                      justifyContent: collapsed ? 'center' : 'flex-start',
-                      minHeight: 48,
-                      px: collapsed ? 1 : 3,
-                      '&.Mui-selected': {
-                        backgroundColor: 'primary.light',
-                        '&:hover': {
-                          backgroundColor: 'primary.light',
-                        },
-                      }
+        </>
+      )}
+      
+      {/* 管理員選項 - 只有管理員角色可見 */}
+      {isUserApproved && user?.roles?.includes('admin') && (
+        <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
+          {adminMenuItems.map((item) => (
+            <ListItem key={item.text} disablePadding>
+              <ListItemButton 
+                component={Link} 
+                to={item.path}
+                selected={isActivePage(item.path)}
+                sx={{ 
+                  borderRadius: 1,
+                  mb: 0.5,
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  minHeight: 48,
+                  px: collapsed ? 1 : 3,
+                  '&.Mui-selected': {
+                    backgroundColor: 'primary.light',
+                    '&:hover': {
+                      backgroundColor: 'primary.light',
+                    },
+                  }
+                }}
+              >
+                <Tooltip title={collapsed ? item.text : ""} placement="right">
+                  <ListItemIcon sx={{ 
+                    minWidth: collapsed ? 0 : 36,
+                    mr: collapsed ? 0 : 3,
+                    justifyContent: 'center',
+                  }}>
+                    {item.icon}
+                  </ListItemIcon>
+                </Tooltip>
+                {!collapsed && (
+                  <ListItemText 
+                    primary={item.text}
+                    primaryTypographyProps={{
+                      color: isActivePage(item.path) ? 'primary.dark' : 'inherit',
+                      fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
                     }}
                   >
                     <Tooltip title={collapsed ? item.text : ""} placement="right">
@@ -338,10 +370,43 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </>
       )}
       
+      {/* 未審核用戶提示 */}
+      {!isUserApproved && (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 2,
+          mt: 2
+        }}>
+          <Typography 
+            variant="body2" 
+            align="center" 
+            sx={{ 
+              color: 'rgba(255,255,255,0.7)',
+              mb: 1
+            }}
+          >
+            您的帳號正在等待審核
+          </Typography>
+          <Typography 
+            variant="caption" 
+            align="center" 
+            sx={{ 
+              color: 'rgba(255,255,255,0.5)',
+              mb: 2
+            }}
+          >
+            審核通過後即可使用系統功能
+          </Typography>
+        </Box>
+      )}
+      
       <Box sx={{ flexGrow: 1 }} />
       <Divider />
       
-      {/* 登出按鈕 */}
+      {/* 登出按鈕 - 所有用戶可見 */}
       <List component="nav" sx={{ p: 1 }}>
         <ListItem disablePadding>
           <ListItemButton 

@@ -30,7 +30,6 @@ const UserApprovals = () => {
         .from('users')
         .select('*')
         .eq('is_approved', false)
-        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPendingUsers(data || []);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabaseClient';
-import { Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton} from "@mui/material";
+import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton} from "@mui/material";
 import { Add } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
@@ -370,7 +370,26 @@ const updateContact = (index, field, value) => {
   return (
     <div style={{ padding: 20 }}>
       {/* ... (Button, Search, Filter UI remains the same) ... */}
-      <Button 
+      <Box sx={{ position: 'relative', mb: 4 }}>
+      <Paper
+        elevation={3}
+        sx={{
+          backgroundColor: 'primary.light', // or use "#935F4D"
+          padding: 4,
+          borderRadius: 3,
+          mb: 4,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 4,
+        }}
+        >
+        <Box sx={{ zIndex: 1, position: 'relative' }}>
+          <Typography variant="h2" sx={{ color: 'primary.black', fontWeight: 'bold' , mb: 10}}>
+            工程管理
+          </Typography>
+        <Button 
         variant="contained" 
         startIcon={<Add />} 
         onClick={() => {
@@ -378,10 +397,32 @@ const updateContact = (index, field, value) => {
           setSelectedCustomer(null); // 重置選擇的客戶
           setOpenDialog(true);
         }}
-        style={{ marginBottom: 20 }}
-      >
-        新增專案
-      </Button>
+        style={{ marginBottom: 10 }}
+        >
+          新增專案
+        </Button>
+
+
+        </Box>
+
+
+        {/* 右側：插圖 */}
+        <Box
+          component="img"
+          src="/order-page.svg"
+          alt="客戶管理圖"
+          sx={{
+            height: 200,
+            maxWidth: '100%',
+          }}
+        />
+
+
+      </Paper>
+      </Box>
+
+
+      
 
       {/* 搜尋與篩選條件 */}
       <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: 20 }}>

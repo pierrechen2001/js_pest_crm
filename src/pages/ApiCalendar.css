@@ -102,14 +102,14 @@
   font-size: 14px !important;
   text-transform: none !important;
   border-radius: 6px !important;
-  background-color: #1976d2;
+  /* background-color: #1976d2; */
   color: white;
   padding: 6px 16px;
 }
 
-.add-event-button:hover {
+/* .add-event-button:hover {
   background-color: #1565c0;
-}
+} */
 
 /* 新增活動對話框 */
 .event-dialog .MuiDialogTitle-root {
@@ -129,13 +129,13 @@
   border-top: 1px solid #f0f0f0;
 }
 
-.event-dialog .MuiButton-contained {
+/* .event-dialog .MuiButton-contained {
   background-color: #1976d2;
 }
 
 .event-dialog .MuiButton-contained:hover {
   background-color: #1565c0;
-}
+} */
 
 /* 表單控制項樣式 */
 .event-dialog .MuiFormControl-root {
@@ -158,9 +158,9 @@
   border-color: #bdbdbd;
 }
 
-.event-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+/* .event-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
   border-color: #1976d2;
-}
+} */
 
 /* 各類事件顏色 */
 .fc-event-title {

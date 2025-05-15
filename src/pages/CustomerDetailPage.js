@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useParams, useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
+  IconButton,
   Box,
   Card,
   CardContent,
@@ -28,6 +30,15 @@ import {
   Divider,
   useTheme
 } from '@mui/material';
+
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+} from '@mui/material';
+
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
 
 const taiwanCities = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"];
 const taiwanDistricts = {
@@ -373,40 +384,152 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     <Box sx={{ background: '#f5f6fa', minHeight: '100vh', p: 4 }}>
       {/* 頂部標題區 */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" fontWeight="bold" color="primary">{customer.customer_name}</Typography>
+        <Box display="flex" alignItems="center">
+          <IconButton
+            onClick={() => navigate('/customers')}
+            sx={{ color: 'primary.main', mr: 1 }}
+          >
+            <ArrowBackIcon fontSize="medium" />
+          </IconButton>
+          <Typography variant="h4" fontWeight="bold" color="primary.black">
+            {customer.customer_name}
+          </Typography>
+        </Box>
+
         <Box>
           <Button variant="contained" color="primary" sx={{ mr: 2, borderRadius: 2, textTransform: 'none', px: 3 }} onClick={() => setOpenEditDialog(true)}>編輯客戶</Button>
           <Button variant="outlined" color="error" sx={{ borderRadius: 2, textTransform: 'none', px: 3 }} onClick={handleDeleteCustomer}>刪除客戶</Button>
         </Box>
       </Box>
 
-      {/* 客戶資訊卡片 */}
-      <Card sx={{ mb: 4, borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-        <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>客戶資訊</Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Typography sx={{ mb: 1 }}><b>公司名稱：</b>{customer.customer_name}</Typography>
-            <Typography sx={{ mb: 1 }}><b>統一編號：</b>{customer.tax_id}</Typography>
-            <Typography sx={{ mb: 1 }}><b>抬頭：</b>{customer.invoice_title}</Typography>
-            <Typography sx={{ mb: 1 }}><b>公司地址：</b>{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
-            <Typography sx={{ mb: 1 }}><b>公司電話：</b>{customer.company_phone}</Typography>
-            <Typography sx={{ mb: 1 }}><b>傳真：</b>{customer.fax}</Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {customer.contact1_name && (
-              <Typography sx={{ mb: 1 }}><b>{customer.contact1_role ? customer.contact1_role + '：' : ''}</b>{customer.contact1_name} {customer.contact1_type && <span style={{ color: '#888', marginLeft: 8 }}>{customer.contact1_type}：</span>}{customer.contact1_contact && <span style={{ marginLeft: 8 }}>{customer.contact1_contact}</span>}</Typography>
-            )}
-            {customer.contact2_name && (
-              <Typography sx={{ mb: 1 }}><b>{customer.contact2_role ? customer.contact2_role + '：' : ''}</b>{customer.contact2_name} {customer.contact2_type && <span style={{ color: '#888', marginLeft: 8 }}>{customer.contact2_type}：</span>}{customer.contact2_contact && <span style={{ marginLeft: 8 }}>{customer.contact2_contact}</span>}</Typography>
-            )}
-            {customer.contact3_name && (
-              <Typography sx={{ mb: 1 }}><b>{customer.contact3_role ? customer.contact3_role + '：' : ''}</b>{customer.contact3_name} {customer.contact3_type && <span style={{ color: '#888', marginLeft: 8 }}>{customer.contact3_type}：</span>}{customer.contact3_contact && <span style={{ marginLeft: 8 }}>{customer.contact3_contact}</span>}</Typography>
-            )}
-            <Typography sx={{ mb: 1 }}><b>注意事項：</b>{customer.notes}</Typography>
-          </Grid>
-        </Grid>
-      </Card>
+
+<Card
+  sx={{
+    width: '100%',
+    mb: 4,
+    borderRadius: 2,
+    p: 3,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    overflow: 'hidden',
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+  }}
+>
+  <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
+    客戶資訊
+  </Typography>
+  <Divider sx={{ mb: 2 }} />
+
+  <Grid container spacing={2} wrap="nowrap" sx={{ width: '100%' }}>
+    {/* 公司資料 */}
+    <Grid item xs={12} md={4} sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,         // ✅ 防止內容把欄位撐寬
+      flexBasis: 0,        // ✅ 保證三欄等寬
+      flexGrow: 1,         // ✅ 撐滿整排空間
+    }}>
+      <Accordion
+        defaultExpanded={true}
+        sx={{
+
+          width: '100%',
+          display: 'block',
+          flexDirection: 'column',
+          '& .MuiAccordionSummary-content': {
+            margin: 0,
+          },
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography fontWeight="bold">公司資訊</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ flex: 1, width: '100%', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}><b>公司名稱：</b>{customer.customer_name}</Typography>
+          <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}><b>公司地址：</b>{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
+          <Typography sx={{ mb: 1 }}><b>公司電話：</b>{customer.company_phone}</Typography>
+          <Typography sx={{ mb: 1 }}><b>傳真：</b>{customer.fax}</Typography>
+          <Typography sx={{ mb: 1 }}><b>統一編號：</b>{customer.tax_id}</Typography>
+          <Typography sx={{ mb: 1 }}><b>抬頭：</b>{customer.invoice_title}</Typography>
+        </AccordionDetails>
+      </Accordion>
+    </Grid>
+
+    {/* 聯絡人資料 */}
+   <Grid item xs={12} md={4} sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,         // ✅ 防止內容把欄位撐寬
+      flexBasis: 0,        // ✅ 保證三欄等寬
+      flexGrow: 1,         // ✅ 撐滿整排空間
+    }}>
+      <Accordion
+        defaultExpanded={true}
+        sx={{
+
+          width: '100%',
+          display: 'block',
+          flexDirection: 'column',
+          '& .MuiAccordionSummary-content': {
+            margin: 0,
+          },
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography fontWeight="bold">聯絡人資訊</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ flex: 1, width: '100%', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {[1, 2, 3].map(i => {
+            const name = customer[`contact${i}_name`];
+            if (!name) return null;
+            return (
+              <Typography sx={{ mb: 1 }} key={i}>
+                <b>{customer[`contact${i}_role`] ? customer[`contact${i}_role`] + '：' : ''}</b>
+                {name}
+                {customer[`contact${i}_type`] && <span style={{ color: '#888', marginLeft: 8 }}>{customer[`contact${i}_type`]}：</span>}
+                {customer[`contact${i}_contact`] && <span style={{ marginLeft: 8 }}>{customer[`contact${i}_contact`]}</span>}
+              </Typography>
+            );
+          })}
+        </AccordionDetails>
+      </Accordion>
+    </Grid>
+
+    {/* 注意事項 */}
+    <Grid item xs={12} md={4} sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,         // ✅ 防止內容把欄位撐寬
+      flexBasis: 0,        // ✅ 保證三欄等寬
+      flexGrow: 1,         // ✅ 撐滿整排空間
+    }}>
+      <Accordion
+        defaultExpanded={false}
+        sx={{
+
+          width: '100%',
+          display: 'block',
+          flexDirection: 'column',
+          '& .MuiAccordionSummary-content': {
+            margin: 0,
+          },
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography fontWeight="bold">注意事項</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ flex: 1, width: '100%', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {customer.notes || '（無）'}
+          </Typography>
+        </AccordionDetails>
+      </Accordion>
+    </Grid>
+  </Grid>
+</Card>
+
+
 
       {/* 專案資訊卡片 */}
       <Card sx={{ borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { CssBaseline, CircularProgress, Box, Container, Typography, Button } from "@mui/material";
+import { ThemeProvider, CssBaseline, CircularProgress, Box, Container, Typography, Button } from "@mui/material";
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from "./components/Sidebar";
 import Customers from "./pages/Customers";
@@ -15,10 +15,12 @@ import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
 import PendingApproval from './pages/PendingApproval';
 import UserApprovals from './pages/UserApprovals';
-import { TransitionGroup, CSSTransition } from 'react-transition-group';
+import { CSSTransition } from 'react-transition-group';
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from './lib/supabaseClient';
+import theme from './theme.js'; // Assuming you have a theme.js file for MUI theme
+
 
 // Protected Route component
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -39,9 +41,11 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
   // Check if user is approved
   if (!user.isApproved && user.roles[0] !== 'admin' && location.pathname !== '/pending-approval') {
+    console.log('User not approved, redirecting to pending approval page');
     return <Navigate to="/pending-approval" replace />;
   }
 
+  // Check for required role
   if (requiredRole && !hasRole(requiredRole)) {
     return <Navigate to="/customers" replace />;
   }
@@ -199,15 +203,18 @@ const AppContent = () => {
       <CssBaseline />
       {user && <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
       
-      <Container
+      <Box
         sx={{
           marginLeft: user ? (sidebarCollapsed ? "64px" : "240px") : "0",
           padding: "20px",
           transition: "margin 0.3s",
           width: user ? (sidebarCollapsed ? "calc(100% - 64px)" : "calc(100% - 240px)") : "100%",
+          height: "100%", // ✅ 讓內頁能撐滿高度
+          display: "flex",
+          flexDirection: "column"
         }}
       >
-        <TransitionGroup>
+
           <CSSTransition
             key={location.key}
             nodeRef={nodeRef}
@@ -342,8 +349,8 @@ const AppContent = () => {
               </Routes>
             </div>
           </CSSTransition>
-        </TransitionGroup>
-      </Container>
+
+      </Box>
     </>
   );
 };
@@ -351,11 +358,13 @@ const AppContent = () => {
 // Main App Component
 const App = () => {
   return (
+    <ThemeProvider theme={theme}>
     <Router>
       <AuthProvider>
         <AppContent />
       </AuthProvider>
     </Router>
+    </ThemeProvider>
   );
 };
 

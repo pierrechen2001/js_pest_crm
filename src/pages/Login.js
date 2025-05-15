@@ -143,6 +143,33 @@ const Login = () => {
         .select('id, email, is_approved, role')
         .eq('email', email)
         .single();
+
+        if (existingUser) {
+          try {
+            // Check if the user is the speciific admin email
+            const role = (existingUser.email === "jongshingpest@gmail.com") ? "admin" : "user";
+            if (existingUser.email === "jongshingpest@gmail.com"){
+              console.log("is jonghsingpest")
+            }else{
+              console.log("is not pest")
+            }
+            // Update the user's role in the database
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ role })
+              .eq('email', existingUser.email);
+        
+            if (updateError) {
+              console.error("Error updating user role:", updateError.message);
+            } else {
+              console.log(`User role updated to ${role} for ${existingUser.email}`);
+            }
+          } catch (err) {
+            console.error("Failed to update role:", err.message);
+          }
+        } else {
+          console.log("User not found.");
+        }
   
       if (!existingUser) {
         console.log("User not found in database, creating a new one...");
