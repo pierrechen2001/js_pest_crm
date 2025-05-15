@@ -609,9 +609,7 @@ const ApiCalendar = () => {
     } 
     // 處理 Google Calendar 事件點擊
     else if (info.event.url) {
-      // 將成功初始化的標誌設置為 ref，防止重複獲取
-    }
-  }, []);
+  // 將成功初始化的標誌設置為 ref，防止重複獲取
 
   // 初始化時也獲取專案日期
   useEffect(() => {
@@ -688,7 +686,7 @@ const ApiCalendar = () => {
   }
 
   return (
-    <Container maxWidth="lg" className="calendar-container" sx={{ overflow: 'hidden' }}>
+    <Container maxWidth="lg" className="calendar-container">
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -716,7 +714,6 @@ const ApiCalendar = () => {
           <Button 
             variant="outlined" 
             onClick={() => {
-              hasFetchedProjectsRef.current = false;
               fetchEvents();
               fetchProjectDates();
             }} 
@@ -756,16 +753,7 @@ const ApiCalendar = () => {
           <CircularProgress color="secondary" />
         </Box>
       ) : (
-        <Box 
-          sx={{ 
-            height: '630px', 
-            mt: 2,
-            overflow: 'hidden',
-            position: 'relative',
-            mb: 4 // 增加底部間距
-          }} 
-          className="modern-calendar-wrapper"
-        >
+        <Box sx={{ height: '630px', mt: 2 }} className="modern-calendar-wrapper">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
@@ -788,19 +776,9 @@ const ApiCalendar = () => {
             dayMaxEvents={3}
             eventDisplay="block"
             eventClassNames="calendar-event"
-            eventContent={(eventInfo) => {
-              // 自定義事件內容，只顯示標題
-              return (
-                <div className="fc-event-main-frame">
-                  <div className="fc-event-title-container">
-                    <div className="fc-event-title">{eventInfo.event.title}</div>
-                  </div>
-                </div>
-              );
-            }}
             eventDidMount={(info) => {
               // 為事件添加工具提示
-              if (info.event.extendedProps && info.event.extendedProps.isProjectEvent) {
+              if (info.event.extendedProps.isProjectEvent) {
                 const tooltip = document.createElement('div');
                 tooltip.className = 'project-tooltip';
                 tooltip.innerHTML = `
@@ -810,9 +788,6 @@ const ApiCalendar = () => {
                   </div>
                 `;
                 document.body.appendChild(tooltip);
-                
-                // 保存工具提示引用，便於後續清理
-                info.el.tooltip = tooltip;
                 
                 info.el.addEventListener('mouseover', function() {
                   const rect = info.el.getBoundingClientRect();
@@ -836,13 +811,6 @@ const ApiCalendar = () => {
                   tooltip.style.left = `${e.pageX + 10}px`;
                   tooltip.style.top = `${e.pageY + 10}px`;
                 });
-              }
-            }}
-            eventWillUnmount={(info) => {
-              // 清理工具提示元素，避免 DOM 中累積無用元素
-              if (info.el && info.el.tooltip) {
-                document.body.removeChild(info.el.tooltip);
-                delete info.el.tooltip;
               }
             }}
           />
@@ -984,11 +952,6 @@ const ApiCalendar = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
-      {/* 隱藏可能誤顯示的專案詳細資訊 */}
-      <div style={{ height: 0, overflow: 'hidden', visibility: 'hidden' }}>
-        {/* 此處可能放置了專案詳細資訊的渲染 */}
-      </div>
     </Container>
   );
 };

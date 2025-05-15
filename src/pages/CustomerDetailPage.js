@@ -28,7 +28,8 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  useTheme
+  useTheme,
+  Checkbox
 } from '@mui/material';
 
 import {
@@ -155,18 +156,56 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     payment_date: "",
     construction_status: "未開始",
     billing_status: "未請款",
-    contact1_role: "",
-    contact1_name: "",
-    contact1_type: "",
-    contact1_contact: "",
-    contact2_role: "",
-    contact2_name: "",
-    contact2_type: "",
-    contact2_contact: ""
+    contacts: [
+      { role: "", name: "", contactType: "", contact: "" },
+    ]
   });
   const theme = useTheme();
 
   const customer = customers.find((c) => c.customer_id === customerId);
+
+  // 使用客戶資訊自動填入專案聯絡人
+  useEffect(() => {
+    if (customer) {
+      // 當客戶資訊改變時，更新專案聯絡人資訊
+      const contacts = [];
+      
+      if (customer.contact1_name) {
+        contacts.push({
+          role: customer.contact1_role || "",
+          name: customer.contact1_name || "",
+          contactType: customer.contact1_type || "",
+          contact: customer.contact1_contact || ""
+        });
+      }
+      
+      if (customer.contact2_name) {
+        contacts.push({
+          role: customer.contact2_role || "",
+          name: customer.contact2_name || "",
+          contactType: customer.contact2_type || "",
+          contact: customer.contact2_contact || ""
+        });
+      }
+      
+      if (customer.contact3_name) {
+        contacts.push({
+          role: customer.contact3_role || "",
+          name: customer.contact3_name || "",
+          contactType: customer.contact3_type || "",
+          contact: customer.contact3_contact || ""
+        });
+      }
+      
+      if (contacts.length > 0) {
+        setProjectData(prev => ({
+          ...prev,
+          customer_id: customerId,
+          contacts: contacts
+        }));
+      }
+    }
+  }, [customer, customerId]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -208,14 +247,18 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
           payment_date: projectData.payment_date,
           construction_status: projectData.construction_status,
           billing_status: projectData.billing_status,
-          contact1_role: projectData.contact1_role,
-          contact1_name: projectData.contact1_name,
-          contact1_type: projectData.contact1_type,
-          contact1_contact: projectData.contact1_contact,
-          contact2_role: projectData.contact2_role,
-          contact2_name: projectData.contact2_name,
-          contact2_type: projectData.contact2_type,
-          contact2_contact: projectData.contact2_contact
+          contact1_role: projectData.contacts[0]?.role || "",
+          contact1_name: projectData.contacts[0]?.name || "",
+          contact1_type: projectData.contacts[0]?.contactType || "",
+          contact1_contact: projectData.contacts[0]?.contact || "",
+          contact2_role: projectData.contacts[1]?.role || "",
+          contact2_name: projectData.contacts[1]?.name || "",
+          contact2_type: projectData.contacts[1]?.contactType || "",
+          contact2_contact: projectData.contacts[1]?.contact || "",
+          contact3_role: projectData.contacts[2]?.role || "",
+          contact3_name: projectData.contacts[2]?.name || "",
+          contact3_type: projectData.contacts[2]?.contactType || "",
+          contact3_contact: projectData.contacts[2]?.contact || "",
         }])
         .select();
   
@@ -223,6 +266,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   
       setProjects(prev => [...prev, data[0]]);
       setOpenDialog(false);
+      // 重置表單
       setProjectData({
         project_name: "",
         customer_id: customerId,
@@ -240,14 +284,9 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
         payment_date: "",
         construction_status: "未開始",
         billing_status: "未請款",
-        contact1_role: "",
-        contact1_name: "",
-        contact1_type: "",
-        contact1_contact: "",
-        contact2_role: "",
-        contact2_name: "",
-        contact2_type: "",
-        contact2_contact: ""
+        contacts: [
+          { role: "", name: "", contactType: "", contact: "" },
+        ]
       });
     } catch (error) {
       console.error('Error saving project:', error);
@@ -277,6 +316,28 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       ...prev,
       site_district: newValue,
     }));
+  };
+
+  // 處理聯絡人更新
+  const updateContact = (index, field, value) => {
+    const updated = [...projectData.contacts];
+    if (!updated[index]) {
+      updated[index] = { role: "", name: "", contactType: "", contact: "" };
+    }
+    updated[index] = { ...updated[index], [field]: value };
+    setProjectData({ ...projectData, contacts: updated });
+  };
+
+  // 使用地址同客戶資料
+  const fillCustomerAddress = () => {
+    if (customer) {
+      setProjectData(prev => ({
+        ...prev,
+        site_city: customer.contact_city || "",
+        site_district: customer.contact_district || "",
+        site_address: customer.contact_address || ""
+      }));
+    }
   };
 
   const handleDeleteCustomer = async () => {
@@ -610,6 +671,240 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
           </TableContainer>
         )}
       </Card>
+
+      {/* 新增專案對話框 */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>新增專案</DialogTitle>
+        <DialogContent>
+          <Typography variant="h6" gutterBottom>基本資訊</Typography>
+          <TextField
+            name="project_name"
+            label="專案名稱"
+            fullWidth
+            margin="normal"
+            value={projectData.project_name}
+            onChange={handleChange}
+            required
+          />
+          
+          {customer && (
+            <FormControl component="fieldset" style={{ marginTop: 10, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <Checkbox
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      fillCustomerAddress();
+                    }
+                  }}
+                />
+                <Typography>地址同客戶資料</Typography>
+              </div>
+            </FormControl>
+          )}
+          
+          <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
+            {projectData.contacts.map((contact, index) => (
+              <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <TextField
+                  label="職位"
+                  fullWidth
+                  value={contact.role || ""}
+                  onChange={(e) => updateContact(index, "role", e.target.value)}
+                />
+                <TextField
+                  label="名字"
+                  fullWidth
+                  value={contact.name || ""}
+                  onChange={(e) => updateContact(index, "name", e.target.value)}
+                />
+                <FormControl fullWidth>
+                  <InputLabel>聯絡方式類型</InputLabel>
+                  <Select
+                    value={contact.contactType || ""}
+                    onChange={(e) => updateContact(index, "contactType", e.target.value)}
+                  >
+                    {["電話", "市話", "LineID", "Email"].map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  label={contact.contactType || "聯絡方式"}
+                  fullWidth
+                  value={contact.contact || ""}
+                  onChange={(e) => {
+                    let formattedValue = e.target.value;
+
+                    if (contact.contactType === "電話") {
+                      formattedValue = formattedValue
+                        .replace(/[^\d]/g, "")
+                        .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+                    } else if (contact.contactType === "市話") {
+                      formattedValue = formattedValue
+                        .replace(/[^\d]/g, "")
+                        .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                    }
+
+                    updateContact(index, "contact", formattedValue);
+                  }}
+                />
+                {index > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      const updatedContacts = projectData.contacts.filter((_, i) => i !== index);
+                      setProjectData({ ...projectData, contacts: updatedContacts });
+                    }}
+                  >
+                    刪除
+                  </Button>
+                )}
+              </div>
+            ))}
+            
+            <Button
+              variant="outlined"
+              onClick={() => {
+                const updatedContacts = [
+                  ...projectData.contacts,
+                  { role: "", name: "", contactType: "", contact: "" }
+                ];
+                setProjectData({ ...projectData, contacts: updatedContacts });
+              }}
+              disabled={projectData.contacts.length >= 3}
+            >
+              新增聯絡人
+            </Button>
+          </div>
+
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="h6" gutterBottom>施工資訊</Typography>
+
+          {/* 施工地址 */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
+            <div style={{ flex: 1 }}>
+              <Autocomplete
+                options={taiwanCities}
+                renderInput={(params) => <TextField {...params} label="施工縣市" fullWidth />}
+                value={projectData.site_city || ""}
+                onChange={(event, newValue) => handleCityChange(newValue)}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <Autocomplete
+                options={taiwanDistricts[projectData.site_city] || []}
+                renderInput={(params) => <TextField {...params} label="施工區域" fullWidth />}
+                value={projectData.site_district || ""}
+                onChange={(event, newValue) => handleDistrictChange(newValue)}
+              />
+            </div>
+            <div style={{ flex: 3 }}>
+              <TextField
+                name="site_address"
+                label="施工地址"
+                fullWidth
+                value={projectData.site_address || ""}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+      
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+            <TextField
+              name="start_date"
+              label="開始日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={projectData.start_date || ""}
+              onChange={handleChange}
+            />
+            <TextField
+              name="end_date"
+              label="結束日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={projectData.end_date || ""}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* 施工天數、施工範圍、注意事項 */}
+          <TextField
+            name="construction_days"
+            label="施工天數"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={projectData.construction_days || ""}
+            onChange={handleChange}
+          />
+          <TextField
+            name="construction_scope"
+            label="施工範圍"
+            fullWidth
+            margin="normal"
+            value={projectData.construction_scope || ""}
+            onChange={handleChange}
+          />
+        
+          <TextField
+            name="construction_notes"
+            label="注意事項"
+            fullWidth
+            multiline
+            rows={3}
+            margin="normal"
+            value={projectData.construction_notes || ""}
+            onChange={handleChange}
+          />
+
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="h6" gutterBottom>收款資訊</Typography>
+
+          {/* 收款方式和收款時間 */}
+          <TextField
+            name="construction_fee"
+            label="施工金額"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={projectData.construction_fee || ""}
+            onChange={handleChange}
+          />
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+            <TextField
+              name="payment_method"
+              label="收款方式"
+              fullWidth
+              value={projectData.payment_method || ""}
+              onChange={handleChange}
+            />
+            <TextField
+              name="payment_date"
+              label="收款日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={projectData.payment_date || ""}
+              onChange={handleChange}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>取消</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveProject}
+            disabled={!projectData.project_name}
+          >
+            儲存
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
