@@ -343,31 +343,12 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                       color: isActivePage(item.path) ? 'primary.dark' : 'inherit',
                       fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
                     }}
-                  >
-                    <Tooltip title={collapsed ? item.text : ""} placement="right">
-                      <ListItemIcon sx={{ 
-                        minWidth: collapsed ? 0 : 36,
-                        mr: collapsed ? 0 : 3,
-                        justifyContent: 'center',
-                      }}>
-                        {item.icon}
-                      </ListItemIcon>
-                    </Tooltip>
-                    {!collapsed && (
-                      <ListItemText 
-                        primary={item.text}
-                        primaryTypographyProps={{
-                          color: isActivePage(item.path) ? 'primary.main' : 'inherit',
-                          fontWeight: isActivePage(item.path) ? 'medium' : 'normal',
-                        }}
-                      />
-                    )}
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </>
+                  />
+                )}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
       )}
       
       {/* 未審核用戶提示 */}
