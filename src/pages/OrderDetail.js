@@ -387,7 +387,7 @@ export default function OrderDetail() {
       >
         <Grid item xs={12} md={4} sx={{ flexBasis: { xs: '100%', md: '30%' }, flexShrink: 0, minWidth: '300px', }}>
           <Card sx={{ mb: 0, borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: '100%' }}>
-            <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>客戶資訊</Typography>
+            <Typography variant="h5" fontWeight="bold" color="primary.black" gutterBottom>客戶資訊</Typography>
             <Divider sx={{ mb: 2 }} />
             
             <Box mb={2}>
@@ -472,7 +472,7 @@ export default function OrderDetail() {
         </Grid>
         <Grid item xs={12} md={8} sx={{ flexBasis: { xs: '100%', md: '70%' }, flexGrow: 1, minWidth: '300px', }}>
           <Card sx={{ mb: 0, borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: '100%' }}>
-            <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>專案資訊</Typography>
+            <Typography variant="h5" fontWeight="bold" color="primary.black" gutterBottom>專案資訊</Typography>
             <Divider sx={{ mb: 2 }} />
             <Box mb={3}>
               <Box display="flex" alignItems="center" mb={1}>
