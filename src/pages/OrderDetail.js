@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import {
   Box,
   Card,
@@ -1031,56 +1033,73 @@ export default function OrderDetail() {
       <Dialog
         open={openLogDialog}
         onClose={() => setOpenLogDialog(false)}
-        maxWidth="sm"
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>新增專案日誌</DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>日誌類型</InputLabel>
-                <Select
-                  value={newLog.log_type}
-                  onChange={(e) => setNewLog({ ...newLog, log_type: e.target.value })}
-                >
-                  <MenuItem value="工程">工程</MenuItem>
-                  <MenuItem value="財務">財務</MenuItem>
-                  <MenuItem value="行政">行政</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="日期"
-                value={newLog.log_date}
-                onChange={(e) => setNewLog({ ...newLog, log_date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="內容"
-                multiline
-                rows={3}
-                value={newLog.content}
-                onChange={(e) => setNewLog({ ...newLog, content: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="備註"
-                multiline
-                rows={2}
-                value={newLog.notes}
-                onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
-              />
-            </Grid>
-          </Grid>
+<Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+  {/* 日期 */}
+  <Box sx={{ flex: 2 }}>
+    <TextField
+      fullWidth
+      type="date"
+      label="日期"
+      value={newLog.log_date}
+      onChange={(e) => setNewLog({ ...newLog, log_date: e.target.value })}
+      InputLabelProps={{ shrink: true }}
+      margin="normal"
+    />
+  </Box>
+
+  {/* 日誌類型 */}
+  <Box sx={{ flex: 3 }}>
+    <FormControl fullWidth margin="normal">
+      <InputLabel>日誌類型</InputLabel>
+      <Select
+        value={newLog.log_type}
+        onChange={(e) => setNewLog({ ...newLog, log_type: e.target.value })}
+      >
+        <MenuItem value="工程">工程</MenuItem>
+        <MenuItem value="財務">財務</MenuItem>
+        <MenuItem value="行政">行政</MenuItem>
+      </Select>
+    </FormControl>
+  </Box>
+
+  {/* 備註 */}
+  <Box sx={{ flex: 5 }}>
+    <TextField
+      fullWidth
+      label="備註"
+      value={newLog.notes}
+      onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
+      margin="normal"
+      sx={{
+        '& .MuiInputBase-root': {
+          height: '56px',
+          alignItems: 'center',
+        },
+        '& input': {
+          height: '100%',
+          boxSizing: 'border-box',
+        },
+      }}
+    />
+  </Box>
+</Grid>
+
+{/* 內容輸入區（整行） */}
+<Box>
+  <Typography sx={{ mb: 1 }}>內容</Typography>
+  <ReactQuill
+    theme="snow"
+    value={newLog.content}
+    onChange={(value) => setNewLog({ ...newLog, content: value })}
+    style={{ height: '200px', backgroundColor: 'white' }}
+  />
+</Box>
+
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenLogDialog(false)}>取消</Button>
@@ -1119,14 +1138,27 @@ export default function OrderDetail() {
           setOpenEditLogDialog(false);
           setEditingLog(null);
         }}
-        maxWidth="sm"
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>編輯專案日誌</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
+        <DialogContent sx={{ flexGrow: 1, overflowY: 'auto', px: 2 }}>
+          {/* 日期 / 類型 / 備註 */}
+          <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            <Box sx={{ flex: 2 }}>
+              <TextField
+                fullWidth
+                type="date"
+                label="日期"
+                value={editingLog?.log_date || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, log_date: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+              />
+            </Box>
+
+            <Box sx={{ flex: 3 }}>
+              <FormControl fullWidth margin="normal">
                 <InputLabel>日誌類型</InputLabel>
                 <Select
                   value={editingLog?.log_type || ''}
@@ -1137,38 +1169,40 @@ export default function OrderDetail() {
                   <MenuItem value="行政">行政</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="日期"
-                value={editingLog?.log_date || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, log_date: e.target.value }))}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="內容"
-                multiline
-                rows={3}
-                value={editingLog?.content || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, content: e.target.value }))}
-              />
-            </Grid>
-            <Grid item xs={12}>
+            </Box>
+
+            <Box sx={{ flex: 5 }}>
               <TextField
                 fullWidth
                 label="備註"
-                multiline
-                rows={2}
                 value={editingLog?.notes || ''}
                 onChange={(e) => setEditingLog(prev => ({ ...prev, notes: e.target.value }))}
+                margin="normal"
+                // 👇 保證高度與 Select/TextField 對齊
+                sx={{
+                  '& .MuiInputBase-root': {
+                    height: '56px',
+                    alignItems: 'center',
+                  },
+                  '& input': {
+                    height: '100%',
+                    boxSizing: 'border-box',
+                  },
+                }}
               />
-            </Grid>
+            </Box>
           </Grid>
+
+          {/* 內容欄位 */}
+          <Box>
+            <Typography sx={{ mb: 1 }}>內容</Typography>
+            <ReactQuill
+              theme="snow"
+              value={editingLog?.content || ''}
+              onChange={(value) => setEditingLog(prev => ({ ...prev, content: value }))}
+              style={{ height: '200px', backgroundColor: 'white' }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button 
