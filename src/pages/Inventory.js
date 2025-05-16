@@ -22,13 +22,67 @@ const initialMedicines = [
 
 const initialMaterials = [
   {
-    id: 3,
+    id: 1,
     name: "水管",
+    type: "灌溉設備",
     components: [
-      { id: 1, status: "正常" },
-      { id: 2, status: "需更換" }
-    ],
-    lastMaintenance: ""
+      { 
+        id: 1, 
+        name: "第一支水管",
+        status: "正常",
+        lastMaintenance: "2024-03-01"
+      },
+      { 
+        id: 2, 
+        name: "第二支水管",
+        status: "需更換",
+        lastMaintenance: "2024-02-15"
+      },
+      { 
+        id: 3, 
+        name: "第三支水管",
+        status: "正常",
+        lastMaintenance: "2024-03-10"
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: "抽水機",
+    type: "灌溉設備",
+    components: [
+      { 
+        id: 1, 
+        name: "主抽水機",
+        status: "正常",
+        lastMaintenance: "2024-03-05"
+      },
+      { 
+        id: 2, 
+        name: "備用抽水機",
+        status: "待維修",
+        lastMaintenance: "2024-02-20"
+      }
+    ]
+  },
+  {
+    id: 3,
+    name: "噴頭",
+    type: "灌溉設備",
+    components: [
+      { 
+        id: 1, 
+        name: "噴頭A",
+        status: "正常",
+        lastMaintenance: "2024-03-08"
+      },
+      { 
+        id: 2, 
+        name: "噴頭B",
+        status: "正常",
+        lastMaintenance: "2024-03-08"
+      }
+    ]
   }
 ];
 
@@ -39,6 +93,15 @@ const Inventory = () => {
   const [materials, setMaterials] = useState(initialMaterials);
   const [mode, setMode] = useState("overview");
   const [newRecord, setNewRecord] = useState({ type: "order", quantity: "", date: "", project: "", vendor: "" });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newItem, setNewItem] = useState({
+    materialName: "",
+    materialType: "灌溉設備",
+    componentName: "",
+    status: "正常",
+    lastMaintenance: ""
+  });
 
   const handleAddRecord = (id, onSuccess) => {
     setMedicines(medicines.map(item =>
@@ -113,6 +176,64 @@ const Inventory = () => {
   
   const handleDeleteMedicine = (id) => {
     setMedicines(medicines.filter(item => item.id !== id));
+  };
+
+  const filteredMaterials = materials.filter(material => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      material.name.toLowerCase().includes(searchLower) ||
+      material.components.some(component => 
+        component.name.toLowerCase().includes(searchLower)
+      )
+    );
+  });
+
+  const handleAddItem = () => {
+    if (!newItem.materialName.trim() || !newItem.componentName.trim()) return;
+    
+    const existingMaterial = materials.find(m => m.name === newItem.materialName);
+    
+    if (existingMaterial) {
+      // 如果耗材種類已存在，只新增物品
+      setMaterials(materials.map(item =>
+        item.id === existingMaterial.id ? {
+          ...item,
+          components: [
+            ...item.components,
+            {
+              id: Math.max(...item.components.map(c => c.id), 0) + 1,
+              name: newItem.componentName,
+              status: newItem.status,
+              lastMaintenance: newItem.lastMaintenance
+            }
+          ]
+        } : item
+      ));
+    } else {
+      // 如果耗材種類不存在，新增種類和物品
+      const newId = Math.max(...materials.map(m => m.id)) + 1;
+      const newMaterialItem = {
+        id: newId,
+        name: newItem.materialName,
+        type: newItem.materialType,
+        components: [{
+          id: 1,
+          name: newItem.componentName,
+          status: newItem.status,
+          lastMaintenance: newItem.lastMaintenance
+        }]
+      };
+      setMaterials([...materials, newMaterialItem]);
+    }
+    
+    setNewItem({
+      materialName: "",
+      materialType: "灌溉設備",
+      componentName: "",
+      status: "正常",
+      lastMaintenance: ""
+    });
+    setShowAddForm(false);
   };
 
   return (
@@ -238,36 +359,122 @@ const Inventory = () => {
       )}
 
       {currentCategory === "耗材" && (
-        <TableContainer component={Paper} style={{ marginTop: 20 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>名稱</TableCell>
-                <TableCell>保養時間</TableCell>
-                <TableCell>狀態</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {materials.map(item => (
-                <React.Fragment key={item.id}>
-                  <TableRow>
-                    <TableCell rowSpan={item.components.length + 1}>{item.name}</TableCell>
-                    <TableCell rowSpan={item.components.length + 1}>
-                      <TextField type="date" size="small" value={item.lastMaintenance} onChange={(e) => handleMaintenanceChange(item.id, e.target.value)} />
-                    </TableCell>
-                  </TableRow>
-                  {item.components.map(comp => (
-                    <TableRow key={comp.id}>
+        <>
+          <div style={{ marginTop: 20, marginBottom: 20, display: 'flex', gap: '20px', alignItems: 'center' }}>
+            <TextField
+              label="搜尋耗材"
+              size="small"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="輸入種類或物品名稱"
+              style={{ width: 300 }}
+            />
+            {!showAddForm ? (
+              <Button 
+                variant="contained" 
+                onClick={() => setShowAddForm(true)}
+              >
+                新增耗材
+              </Button>
+            ) : (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                <TextField
+                  label="耗材種類"
+                  size="small"
+                  value={newItem.materialName}
+                  onChange={(e) => setNewItem({ ...newItem, materialName: e.target.value })}
+                  style={{ width: 150 }}
+                />
+                <TextField
+                  label="物品名稱"
+                  size="small"
+                  value={newItem.componentName}
+                  onChange={(e) => setNewItem({ ...newItem, componentName: e.target.value })}
+                  style={{ width: 150 }}
+                />
+                <TextField
+                  label="狀態"
+                  size="small"
+                  value={newItem.status}
+                  onChange={(e) => setNewItem({ ...newItem, status: e.target.value })}
+                  style={{ width: 150 }}
+                />
+                <TextField
+                  label="保養日期"
+                  type="date"
+                  size="small"
+                  value={newItem.lastMaintenance}
+                  onChange={(e) => setNewItem({ ...newItem, lastMaintenance: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <Button 
+                  variant="contained" 
+                  onClick={handleAddItem}
+                  disabled={!newItem.materialName.trim() || !newItem.componentName.trim()}
+                >
+                  確認新增
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewItem({
+                      materialName: "",
+                      materialType: "灌溉設備",
+                      componentName: "",
+                      status: "正常",
+                      lastMaintenance: ""
+                    });
+                  }}
+                >
+                  取消
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <TableContainer component={Paper} style={{ marginTop: 20 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>種類</TableCell>
+                  <TableCell>物品名稱</TableCell>
+                  <TableCell>狀態</TableCell>
+                  <TableCell>上次保養日期</TableCell>
+                  <TableCell>操作</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredMaterials.map((material) => (
+                  material.components.map((component) => (
+                    <TableRow key={`${material.id}-${component.id}`}>
+                      <TableCell>{material.name}</TableCell>
+                      <TableCell>{component.name}</TableCell>
                       <TableCell>
-                        <TextField size="small" value={comp.status} onChange={(e) => handleStatusChange(item.id, comp.id, e.target.value)} />
+                        <TextField
+                          size="small"
+                          value={component.status}
+                          onChange={(e) => handleStatusChange(material.id, component.id, e.target.value)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          type="date"
+                          value={component.lastMaintenance}
+                          onChange={(e) => handleMaintenanceChange(material.id, e.target.value)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button size="small" color="primary">編輯</Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  ))
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
       )}
     </div>
   );
