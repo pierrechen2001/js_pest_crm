@@ -53,6 +53,8 @@ export default function OrderDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [customerNoteExpanded, setCustomerNoteExpanded] = useState(false);
+  const [projectNoteExpanded, setProjectNoteExpanded] = useState(false);
   const [error, setError] = useState(null);
   const [project, setProject] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -372,8 +374,18 @@ export default function OrderDetail() {
         </Box>
       </Box>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row', 
+          gap: 3,
+          alignItems: 'flex-start',
+          flexWrap: 'nowrap', 
+          overflowX: 'auto',  
+          alignItems: 'stretch',
+        }}
+      >
+        <Grid item xs={12} md={4} sx={{ flexBasis: { xs: '100%', md: '30%' }, flexShrink: 0, minWidth: '300px', }}>
           <Card sx={{ mb: 0, borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: '100%' }}>
             <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>客戶資訊</Typography>
             <Divider sx={{ mb: 2 }} />
@@ -381,7 +393,7 @@ export default function OrderDetail() {
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Business sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="subtitle1" fontWeight="bold">基本資訊</Typography>
+                <Typography variant="subtitle1" fontWeight="bold" color="primary" >基本資訊</Typography>
               </Box>
               <Typography sx={{ mb: 1 }}><b>公司名稱：</b>{customer?.customer_name}</Typography>
               <Typography sx={{ mb: 1 }}><b>統一編號：</b>{customer?.tax_id}</Typography>
@@ -392,7 +404,7 @@ export default function OrderDetail() {
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="subtitle1" fontWeight="bold">聯絡資訊</Typography>
+                <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡資訊</Typography>
               </Box>
               <Typography sx={{ mb: 1 }}><b>公司地址：</b>{`${customer?.contact_city || ''}${customer?.contact_district || ''}${customer?.contact_address || ''}`}</Typography>
               <Typography sx={{ mb: 1 }}><b>公司電話：</b>{customer?.company_phone}</Typography>
@@ -403,7 +415,7 @@ export default function OrderDetail() {
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <Person sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
+                <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡人資訊</Typography>
               </Box>
               {customer?.contact1_name && (
                 <Typography sx={{ mb: 1 }}><b>{customer?.contact1_role ? customer?.contact1_role + '：' : ''}</b>{customer?.contact1_name} {customer?.contact1_type && <span style={{ color: '#888', marginLeft: 8 }}>{customer?.contact1_type}：</span>}{customer?.contact1_contact && <span style={{ marginLeft: 8 }}>{customer?.contact1_contact}</span>}</Typography>
@@ -421,16 +433,45 @@ export default function OrderDetail() {
             <Divider sx={{ my: 2 }} />
 
             <Box sx={{ flexGrow: 1 }}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <Note sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="subtitle1" fontWeight="bold">注意事項</Typography>
+              <Box sx={{ flexGrow: 1 }}>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <Note sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary">注意事項</Typography>
+                </Box>
+
+                {(() => {
+                  const note = customer?.notes || '無';
+                  const previewLength = 100;
+                  const isLong = note.length > previewLength;
+                  const preview = isLong ? note.slice(0, previewLength) + '...' : note;
+
+                  return (
+                    <Typography color="textSecondary">
+                      {customerNoteExpanded || !isLong ? note : preview}
+                      {isLong && (
+                        <Typography
+                          component="span"
+                          onClick={() => setCustomerNoteExpanded(!customerNoteExpanded)}
+                          sx={{
+                            color: 'primary.main',
+                            cursor: 'pointer',
+                            ml: 1,
+                            fontWeight: 'bold',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {customerNoteExpanded ? '收起' : '顯示更多'}
+                        </Typography>
+                      )}
+                    </Typography>
+                  );
+                })()}
               </Box>
-              <Typography color="textSecondary">{customer?.notes || '無'}</Typography>
             </Box>
           </Card>
         </Grid>
-        <Grid item xs={12} md={8}>
-          <Card sx={{ borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <Grid item xs={12} md={8} sx={{ flexBasis: { xs: '100%', md: '70%' }, flexGrow: 1, minWidth: '300px', }}>
+          <Card sx={{ mb: 0, borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: '100%' }}>
             <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>專案資訊</Typography>
             <Divider sx={{ mb: 2 }} />
             <Box mb={3}>
@@ -469,10 +510,47 @@ export default function OrderDetail() {
                   <Typography><strong>施工金額：</strong> ${project.construction_fee?.toLocaleString()}</Typography>
                   <Typography><strong>施工範圍：</strong> {project.construction_scope}</Typography>
                 </Grid>
-                <Grid item xs={12}>
+                {/* <Grid item xs={12}>
                   <Typography><strong>注意事項：</strong> {project.project_notes}</Typography>
-                </Grid>
+                </Grid> */}
               </Grid>
+                {/* 🆕 注意事項區塊 */}
+                <Divider sx={{ my: 2 }} />
+                <Box>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <Note sx={{ mr: 1, color: 'primary.main' }} />
+                    <Typography variant="subtitle1" fontWeight="bold" color="primary">注意事項</Typography>
+                  </Box>
+
+                  {/* 展開文字控制邏輯 */}
+                  {(() => {
+                    const note = project.project_notes || '無';
+                    const previewLength = 100;
+                    const isLong = note.length > previewLength;
+                    const preview = isLong ? note.slice(0, previewLength) + '...' : note;
+
+                    return (
+                      <Typography color="textSecondary">
+                        {projectNoteExpanded || !isLong ? note : preview}
+                        {isLong && (
+                          <Typography
+                            component="span"
+                            onClick={() => setProjectNoteExpanded(!projectNoteExpanded)}
+                            sx={{
+                              color: 'primary.main',
+                              cursor: 'pointer',
+                              ml: 1,
+                              fontWeight: 'bold',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            {projectNoteExpanded ? '收起' : '顯示更多'}
+                          </Typography>
+                        )}
+                      </Typography>
+                    );
+                  })()}
+                </Box>
             </Box>
             <Divider sx={{ mb: 3 }} />
             <Box mb={3}>
@@ -494,40 +572,57 @@ export default function OrderDetail() {
               <Box display="flex" alignItems="center" mb={1}>
                 <ContactPhone sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡人資訊</Typography>
-              </Box>
-              <> 
-                {project.contact1_name && (
-                  <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                    <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 1</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact1_role}</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact1_name}</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>{project.contact1_type}：</strong> {project.contact1_contact}</Typography></Grid>
-                  </Grid>
-                )}
-                {project.contact2_name && (
-                  <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                    <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 2</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact2_role}</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact2_name}</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>{project.contact2_type}：</strong> {project.contact2_contact}</Typography></Grid>
-                  </Grid>
-                )}
-                {project.contact3_name && (
-                  <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                    <Grid item xs={12} md={2}><Typography variant="subtitle2">聯絡人 3</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>職位：</strong> {project.contact3_role}</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>姓名：</strong> {project.contact3_name}</Typography></Grid>
-                    <Grid item xs={12} md={2}><Typography><strong>{project.contact3_type}：</strong> {project.contact3_contact}</Typography></Grid>
-                  </Grid>
-                )}
-                {!project.contact1_name && !project.contact2_name && !project.contact3_name && (
-                  <Grid container spacing={2}><Grid item xs={12}><Typography color="textSecondary">尚未設定聯絡人資訊</Typography></Grid></Grid>
-                )}
-              </>
-            </Box>
+                </Box>
+                <>
+                  {[
+                    {
+                      role: project.contact1_role,
+                      name: project.contact1_name,
+                      type: project.contact1_type,
+                      contact: project.contact1_contact,
+                    },
+                    {
+                      role: project.contact2_role,
+                      name: project.contact2_name,
+                      type: project.contact2_type,
+                      contact: project.contact2_contact,
+                    },
+                    {
+                      role: project.contact3_role,
+                      name: project.contact3_name,
+                      type: project.contact3_type,
+                      contact: project.contact3_contact,
+                    },
+                  ].map((c, idx) =>
+                    c.name ? (
+                      <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }} key={idx}>
+                        <Grid item xs={12} md={4}>
+                          <Typography>
+                            <strong>{c.role}：</strong>{c.name}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                          <Typography>
+                            <strong>{c.type}：</strong>{c.contact}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    ) : null
+                  )}
+
+                  {!project.contact1_name && !project.contact2_name && !project.contact3_name && (
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <Typography color="textSecondary">尚未設定聯絡人資訊</Typography>
+                      </Grid>
+                    </Grid>
+                  )}
+                </>
+                </Box>
+
           </Card>
         </Grid>
-      </Grid>
+      </Box>
 
       <Dialog
         open={openEditProjectDialog}
@@ -538,7 +633,7 @@ export default function OrderDetail() {
         <DialogTitle>編輯專案資訊</DialogTitle>
         <DialogContent>
           <Box mb={3}>
-      <Typography variant="subtitle1" fontWeight="bold">基本資訊</Typography>
+      <Typography variant="subtitle1" fontWeight="bold ">基本資訊</Typography>
 
 {/* 第一行：專案名稱、施工狀態、請款狀態 */}
 <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
