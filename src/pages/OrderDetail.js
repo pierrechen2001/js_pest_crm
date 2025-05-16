@@ -536,186 +536,175 @@ export default function OrderDetail() {
         <DialogTitle>編輯專案資訊</DialogTitle>
         <DialogContent>
           <Box mb={3}>
-            <Typography variant="subtitle1" fontWeight="bold">基本資訊</Typography>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="專案名稱"
-                  name="project_name"
-                  value={editedProject.project_name || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Autocomplete
-                    fullWidth
-                    options={taiwanCities}
-                    renderInput={(params) => <TextField {...params} label="施工縣市" />}
-                    value={editedProject.site_city || ''}
-                    onChange={(event, newValue) => handleCityChange(newValue)}
-                  />
-                  <Autocomplete
-                    fullWidth
-                    options={taiwanDistricts[editedProject.site_city] || []}
-                    renderInput={(params) => <TextField {...params} label="施工區域" />}
-                    value={editedProject.site_district || ''}
-                    onChange={(event, newValue) => handleDistrictChange(newValue)}
-                  />
-                </Box>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="施工地址"
-                  name="site_address"
-                  value={editedProject.site_address || ''}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>施工狀態</InputLabel>
-                  <Select
-                    name="construction_status"
-                    value={editedProject.construction_status || '未開始'}
-                    onChange={handleChange}
-                  >
-                    {constructionStatusOptions.map((option) => (
-                      <MenuItem key={option} value={option}>{option}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>請款狀態</InputLabel>
-                  <Select
-                    name="billing_status"
-                    value={editedProject.billing_status || '未請款'}
-                    onChange={handleChange}
-                  >
-                    {billingStatusOptions.map((option) => (
-                      <MenuItem key={option} value={option}>{option}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </Box>
-          <Box mb={3}>
-            <Typography variant="subtitle1" fontWeight="bold">施工資訊</Typography>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="開始日期"
-                  type="date"
-                  name="start_date"
-                  value={editedProject.start_date || ''}
-                  onChange={handleChange}
-                  InputLabelProps={{ shrink: true }}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="結束日期"
-                  type="date"
-                  name="end_date"
-                  value={editedProject.end_date || ''}
-                  onChange={handleChange}
-                  InputLabelProps={{ shrink: true }}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="施工項目"
-                  name="construction_item"
-                  value={editedProject.construction_item || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="施工天數"
-                  type="number"
-                  name="construction_days"
-                  value={editedProject.construction_days || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="施工金額"
-                  type="number"
-                  name="construction_fee"
-                  value={editedProject.construction_fee || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="施工範圍"
-                  name="construction_scope"
-                  value={editedProject.construction_scope || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="注意事項"
-                  name="project_notes"
-                  value={editedProject.project_notes || ''}
-                  onChange={handleChange}
-                  multiline
-                  rows={3}
-                  margin="normal"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-          <Box mb={3}>
-            <Typography variant="subtitle1" fontWeight="bold">收款資訊</Typography>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="收款方式"
-                  name="payment_method"
-                  value={editedProject.payment_method || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="收款日期"
-                  type="date"
-                  name="payment_date"
-                  value={editedProject.payment_date || ''}
-                  onChange={handleChange}
-                  InputLabelProps={{ shrink: true }}
-                  margin="normal"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-          <Box>
+      <Typography variant="subtitle1" fontWeight="bold">基本資訊</Typography>
+
+{/* 第一行：專案名稱、施工狀態、請款狀態 */}
+<Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+  <Box sx={{ flex: 1 }}>
+    <TextField
+      fullWidth
+      label="專案名稱"
+      name="project_name"
+      value={editedProject.project_name || ''}
+      onChange={handleChange}
+      margin="normal"
+    />
+  </Box>
+  <Box sx={{ flex: 1 }}>
+    <FormControl fullWidth margin="normal">
+      <InputLabel>施工狀態</InputLabel>
+      <Select
+        name="construction_status"
+        value={editedProject.construction_status || '未開始'}
+        onChange={handleChange}
+      >
+        {constructionStatusOptions.map((option) => (
+          <MenuItem key={option} value={option}>{option}</MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  </Box>
+  <Box sx={{ flex: 1 }}>
+    <FormControl fullWidth margin="normal">
+      <InputLabel>請款狀態</InputLabel>
+      <Select
+        name="billing_status"
+        value={editedProject.billing_status || '未請款'}
+        onChange={handleChange}
+      >
+        {billingStatusOptions.map((option) => (
+          <MenuItem key={option} value={option}>{option}</MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  </Box>
+</Grid>
+
+{/* 第二行：縣市（2）、區域（2）、地址（6） */}
+<Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+  <Box sx={{ flex: 2 }}>
+    <Autocomplete
+      fullWidth
+      options={taiwanCities}
+      renderInput={(params) => <TextField {...params} label="施工縣市" margin="normal" />}
+      value={editedProject.site_city || ''}
+      onChange={(event, newValue) => handleCityChange(newValue)}
+    />
+  </Box>
+  <Box sx={{ flex: 2 }}>
+    <Autocomplete
+      fullWidth
+      options={taiwanDistricts[editedProject.site_city] || []}
+      renderInput={(params) => <TextField {...params} label="施工區域" margin="normal" />}
+      value={editedProject.site_district || ''}
+      onChange={(event, newValue) => handleDistrictChange(newValue)}
+    />
+  </Box>
+  <Box sx={{ flex: 6 }}>
+    <TextField
+      fullWidth
+      label="施工地址"
+      name="site_address"
+      value={editedProject.site_address || ''}
+      onChange={handleChange}
+      margin="normal"
+    />
+  </Box>
+</Grid>
+
+      <Typography variant="subtitle1" fontWeight="bold">施工資訊</Typography>
+
+      {/* 第一行：開始日期、結束日期、施工項目 */}
+      <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="開始日期"
+            type="date"
+            name="start_date"
+            value={editedProject.start_date || ''}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            margin="normal"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="結束日期"
+            type="date"
+            name="end_date"
+            value={editedProject.end_date || ''}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            margin="normal"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="施工項目"
+            name="construction_item"
+            value={editedProject.construction_item || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+      </Grid>
+
+      {/* 第二行：施工天數、施工金額、施工範圍 */}
+      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="施工天數"
+            type="number"
+            name="construction_days"
+            value={editedProject.construction_days || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="施工金額"
+            type="number"
+            name="construction_fee"
+            value={editedProject.construction_fee || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="施工範圍"
+            name="construction_scope"
+            value={editedProject.construction_scope || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+      </Grid>
+
+      {/* 第三行：注意事項 */}
+      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="注意事項"
+            name="project_notes"
+            value={editedProject.project_notes || ''}
+            onChange={handleChange}
+            multiline
+            minRows={4}
+            margin="normal"
+          />
+        </Box>
+      </Grid>
+
+
             <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
             {/* Contact rows: one per person */}
             {/* 聯絡人 1 */}
