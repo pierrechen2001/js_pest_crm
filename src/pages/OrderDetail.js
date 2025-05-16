@@ -801,6 +801,32 @@ export default function OrderDetail() {
         </Box>
       </Grid>
 
+      <Typography variant="subtitle1" fontWeight="bold">收款資訊</Typography>
+      {/* 收款資訊 */}
+      <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="收款方式"
+            name="payment_method"
+            value={editedProject.payment_method || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="收款日期"
+            type="date"
+            name="payment_date"
+            value={editedProject.payment_date || ''}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            margin="normal"
+          />
+        </Box>
+      </Grid>
 
             <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
             {/* Contact rows: one per person */}

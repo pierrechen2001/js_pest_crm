@@ -15,6 +15,7 @@ import UserManagement from "./pages/UserManagement";
 import RoleManagement from "./pages/RoleManagement";
 import PendingApproval from './pages/PendingApproval';
 import UserApprovals from './pages/UserApprovals';
+import HomePage from "./pages/HomePage";
 import { CSSTransition } from 'react-transition-group';
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
@@ -201,155 +202,150 @@ const AppContent = () => {
   return (
     <>
       <CssBaseline />
-      {user && <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
+      {location.pathname !== '/login' && (
+        <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+      )}
       
-      <Box
-        sx={{
-          marginLeft: user ? (sidebarCollapsed ? "64px" : "240px") : "0",
-          padding: "20px",
-          transition: "margin 0.3s",
-          width: user ? (sidebarCollapsed ? "calc(100% - 64px)" : "calc(100% - 240px)") : "100%",
-          height: "100%", // ✅ 讓內頁能撐滿高度
-          display: "flex",
-          flexDirection: "column"
-        }}
-      >
+      <Box sx={{
+        flexGrow: 1,
+        pt: 2,
+        ml: { xs: 0, sm: sidebarCollapsed ? '64px' : '240px' },
+        transition: theme => theme.transitions.create(['margin', 'width'], {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.leavingScreen,
+        }),
+      }}>
+        <Suspense fallback={
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            <CircularProgress />
+          </Box>
+        }>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/pending-approval" element={<PendingApproval />} />
 
-          <CSSTransition
-            key={location.key}
-            nodeRef={nodeRef}
-            classNames="fade"
-            timeout={300}
-          >
-            <div ref={nodeRef}>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={!user ? <Login /> : <Navigate to="/customers" />} />
-
-                {/* Protected Routes */}
-                <Route
-                  path="/customers"
-                  element={
-                    <ProtectedRoute>
-                      <Customers 
-                        customers={customers} 
-                        setCustomers={setCustomers}
-                        loading={isInitialising} 
-                        error={fetchError} 
-                        addCustomer={addCustomer} 
-                        updateCustomer={updateCustomer} 
-                        deleteCustomer={deleteCustomer} 
-                      />
-                    </ProtectedRoute>
-                  }
+            {/* 首頁 */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/customers" element={
+              <ProtectedRoute>
+                <Customers 
+                  customers={customers} 
+                  setCustomers={setCustomers}
+                  loading={isInitialising} 
+                  error={fetchError} 
+                  addCustomer={addCustomer} 
+                  updateCustomer={updateCustomer} 
+                  deleteCustomer={deleteCustomer} 
                 />
+              </ProtectedRoute>
+            } />
+            
+            {/* Protected Routes */}
+            <Route
+              path="/customer/:customerId"
+              element={
+                <ProtectedRoute>
+                  <CustomerDetailPage
+                    customers={customers}
+                    fetchProjectsByCustomerId={fetchProjectsByCustomerId}
+                  />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/customer/:customerId"
-                  element={
-                    <ProtectedRoute>
-                      <CustomerDetailPage
-                        customers={customers}
-                        fetchProjectsByCustomerId={fetchProjectsByCustomerId}
-                      />
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <Orders projects={projects} customers={customers} />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/orders"
-                  element={
-                    <ProtectedRoute>
-                      <Orders projects={projects} customers={customers} />
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/order/:projectId"
+              element={
+                <ProtectedRoute>
+                  <OrderDetail />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/order/:projectId"
-                  element={
-                    <ProtectedRoute>
-                      <OrderDetail />
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/inventory"
+              element={
+                <ProtectedRoute>
+                  <Inventory />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/inventory"
-                  element={
-                    <ProtectedRoute>
-                      <Inventory />
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/apicalendar" replace />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/calendar"
-                  element={
-                    <ProtectedRoute>
-                      <Navigate to="/apicalendar" replace />
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/apicalendar"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<CircularProgress />}>
+                    <ApiCalendar />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/apicalendar"
-                  element={
-                    <ProtectedRoute>
-                      <Suspense fallback={<CircularProgress />}>
-                        <ApiCalendar />
-                      </Suspense>
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/map"
+              element={
+                <ProtectedRoute>
+                  <MapComponent projects={projects} />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/map"
-                  element={
-                    <ProtectedRoute>
-                      <MapComponent projects={projects} />
-                    </ProtectedRoute>
-                  }
-                />
+            {/* Admin Routes */}
+            <Route
+              path="/user-management"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <UserManagement />
+                </ProtectedRoute>
+              }
+            />
 
-                {/* Admin Routes */}
-                <Route
-                  path="/user-management"
-                  element={
-                    <ProtectedRoute requiredRole="admin">
-                      <UserManagement />
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/role-management"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <RoleManagement />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/role-management"
-                  element={
-                    <ProtectedRoute requiredRole="admin">
-                      <RoleManagement />
-                    </ProtectedRoute>
-                  }
-                />
+            <Route
+              path="/user-approvals"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <UserApprovals />
+                </ProtectedRoute>
+              }
+            />
 
-                <Route
-                  path="/user-approvals"
-                  element={
-                    <ProtectedRoute requiredRole="admin">
-                      <UserApprovals />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Public Routes */}
-                <Route path="/pending-approval" element={<PendingApproval />} />
-
-                {/* Default Routes */}
-                <Route path="/" element={<Navigate to={user ? "/customers" : "/login"} />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
-          </CSSTransition>
-
+            {/* Default Routes */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </Box>
     </>
   );

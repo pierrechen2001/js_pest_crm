@@ -26,6 +26,7 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SecurityIcon from "@mui/icons-material/Security";
 import LogoutIcon from "@mui/icons-material/Logout";
+import HomeIcon from '@mui/icons-material/Home';
 import { Assignment as AssignmentIcon, Map as MapIcon } from '@mui/icons-material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -91,6 +92,11 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   
   // Menu items
   const menuItems = [
+    {
+      text: '首頁',
+      icon: <HomeIcon />,
+      path: '/',
+    },
     {
       text: '客戶管理',
       icon: <PeopleIcon />,
