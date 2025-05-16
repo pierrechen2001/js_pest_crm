@@ -456,7 +456,11 @@ const updateContact = (index, field, value) => {
         <DialogContent>
           <Typography variant="h6" gutterBottom>基本資訊</Typography>
           <Autocomplete
-            options={customers} // Use customers from props/state
+            options={
+              [...customers].sort((a, b) => 
+                (b.customer_id || 0) - (a.customer_id || 0)
+              )
+            }            
             getOptionLabel={(option) => option.customer_name}
             value={selectedCustomer}
             onChange={(event, newValue) => {

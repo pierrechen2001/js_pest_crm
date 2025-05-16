@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography } from "@mui/material";
 import { useNavigate } from 'react-router-dom';
-
+import { Add } from "@mui/icons-material";
 
 const customerTypes = ["古蹟、政府機關", "一般住家", "建築師", "營造、設計公司"];
 const filterOptions = ["客戶名稱", "聯絡人姓名", "聯絡電話", "地址"];
@@ -280,7 +280,7 @@ const Customers = ({
             客戶管理
           </Typography>
 
-          <Button variant="contained" onClick={handleOpen} style={{ marginBottom: 10 }}>新增客戶</Button>
+          <Button startIcon={<Add />} variant="contained" onClick={handleOpen} style={{ marginBottom: 10 }}>新增客戶</Button>
           <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
             <DialogTitle>新增客戶</DialogTitle>
             <DialogContent>
