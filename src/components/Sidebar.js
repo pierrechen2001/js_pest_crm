@@ -126,18 +126,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
   // Admin menu items
   const adminMenuItems = [
+
     {
       text: '用戶管理',
-      icon: <PeopleIcon />,
-      path: '/user-management',
-    },
-    {
-      text: '角色管理',
-      icon: <AdminPanelSettingsIcon />,
-      path: '/role-management',
-    },
-    {
-      text: '用戶審核',
       icon: <SecurityIcon />,
       path: '/user-approvals',
     }
@@ -156,101 +147,12 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       anchor="left"
       collapsed={collapsed}
     >
-      {/* 使用者資料區 - 用白色文字 */}
-      <Box sx={{ 
-        p: collapsed ? 1 : 3, 
-        display: "flex", 
-        alignItems: "center",
-        justifyContent: collapsed ? "center" : "flex-start",
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
-      }}>
-        {collapsed ? (
-          <Avatar 
-            sx={{ 
-              bgcolor: 'common.white', 
-              color: 'primary.dark',
-              width: 42,
-              height: 42
-            }}
-          >
-            {user?.email?.charAt(0).toUpperCase()}
-          </Avatar>
-        ) : (
-          <>
-            <Avatar 
-              sx={{ 
-                bgcolor: 'common.white', 
-                color: 'primary.dark',
-                width: 42,
-                height: 42
-              }}
-            >
-              {user?.email?.charAt(0).toUpperCase()}
-            </Avatar>
-            <Box sx={{ ml: 2, overflow: "hidden" }}>
-              <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
-                {user?.email}
-              </Typography>
-              <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                {user?.roles?.[0] || 'User'}
-                {!isUserApproved && <span style={{ color: '#ff9800', marginLeft: '5px' }}>(待審核)</span>}
-              </Typography>
-            </Box>
-            {isUserApproved && (
-              <Tooltip title="帳號設定">
-                <IconButton
-                  onClick={handleClick}
-                  size="small"
-                  sx={{ ml: 1 }}
-                  aria-controls={open ? 'account-menu' : undefined}
-                  aria-haspopup="true"
-                  aria-expanded={open ? 'true' : undefined}
-                >
-                  <SecurityIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-          </>
-        )}
-      </Box>
+
       
       <Divider />
       
       {/* 收合按鈕 - 只有已審核用戶可見 */}
-      {isUserApproved && (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: collapsed ? 'center' : 'flex-end',
-          p: collapsed ? 1 : 0,
-          position: 'relative',
-          height: collapsed ? 'auto' : 0
-        }}>
-          <IconButton 
-            onClick={toggleCollapsed} 
-            sx={{ 
-              color: 'white',
-              bgcolor: collapsed ? 'transparent' : 'rgba(255,255,255,0.15)',
-              borderRadius: '50%',
-              width: 30,
-              height: 30,
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.25)',
-                transform: 'scale(1.1)',
-              },
-              transition: 'all 0.2s ease-in-out',
-              position: collapsed ? 'static' : 'absolute',
-              right: collapsed ? 'auto' : 12,
-              top: collapsed ? 'auto' : -15,
-              zIndex: 1200,
-              boxShadow: collapsed ? 'none' : '0 2px 5px rgba(0,0,0,0.2)',
-            }}
-            size="small"
-            aria-label={collapsed ? "展開側邊欄" : "收合側邊欄"}
-          >
-            {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
-          </IconButton>
-        </Box>
-      )}
+      
       
 
       {/* 導航鏈接 - 只有已審核用戶可見 */}
@@ -308,8 +210,42 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           
           <Divider sx={{ mx: 2 }} />
         </>
+        
       )}
-      
+      {isUserApproved && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: collapsed ? 'center' : 'flex-end',
+          p: collapsed ? 1 : 0,
+          position: 'relative',
+          height: collapsed ? 'auto' : 0
+        }}>
+          <IconButton 
+            onClick={toggleCollapsed} 
+            sx={{ 
+              color: 'white',
+              bgcolor: collapsed ? 'transparent' : 'rgb(250, 190, 190)',
+              borderRadius: '50%',
+              width: 30,
+              height: 30,
+              '&:hover': {
+                bgcolor: 'rgb(252, 202, 202)',
+                transform: 'scale(1.1)',
+              },
+              transition: 'all 0.2s ease-in-out',
+              position: collapsed ? 'static' : 'absolute',
+              right: collapsed ? 'auto' : 12,
+              top: collapsed ? 'auto' : -15,
+              zIndex: 1200,
+              boxShadow: collapsed ? 'none' : '0 2px 5px rgba(0,0,0,0.2)',
+            }}
+            size="small"
+            aria-label={collapsed ? "展開側邊欄" : "收合側邊欄"}
+          >
+            {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+      )}
       {/* 管理員選項 - 只有管理員角色可見 */}
       {isUserApproved && user?.roles?.includes('admin') && (
         <List component="nav" sx={{ p: collapsed ? 1 : 2 }}>
@@ -393,39 +329,63 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       <Box sx={{ flexGrow: 1 }} />
       <Divider />
       
-      {/* 登出按鈕 - 所有用戶可見 */}
-      <List component="nav" sx={{ p: 1 }}>
-        <ListItem disablePadding>
-          <ListItemButton 
-            onClick={handleLogout}
+            {/* 使用者資料區 - 用白色文字 */}
+            <Box sx={{ 
+        p: collapsed ? 1 : 3, 
+        display: "flex", 
+        alignItems: "center",
+        justifyContent: collapsed ? "center" : "flex-start",
+        borderBottom: '1px solid rgba(255,255,255,0.1)'
+      }}>
+        {collapsed ? (
+          <Avatar 
             sx={{ 
-              borderRadius: 1,
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              minHeight: 48,
-              px: collapsed ? 1 : 3,
+              bgcolor: 'common.white', 
+              color: 'primary.dark',
+              width: 42,
+              height: 42
             }}
           >
-            <Tooltip title={collapsed ? "登出" : ""} placement="right">
-              <ListItemIcon sx={{ 
-                color: 'common.white',
-                minWidth: collapsed ? 0 : 36,
-                mr: collapsed ? 0 : 3,
-                justifyContent: 'center',
-              }}>
-                <LogoutIcon />
-              </ListItemIcon>
-            </Tooltip>
-            {!collapsed && (
-              <ListItemText 
-                primary="登出"
-                primaryTypographyProps={{
-                  color: 'inherit',
-                }}
-              />
+            {user?.email?.charAt(0).toUpperCase()}
+          </Avatar>
+        ) : (
+          <>
+            <Avatar 
+              sx={{ 
+                bgcolor: 'common.white', 
+                color: 'primary.dark',
+                width: 42,
+                height: 42
+              }}
+            >
+              {user?.email?.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ ml: 2, overflow: "hidden" }}>
+              <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
+                {user?.email}
+              </Typography>
+              <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                {user?.roles?.[0] || 'User'}
+                {!isUserApproved && <span style={{ color: '#ff9800', marginLeft: '5px' }}>(待審核)</span>}
+              </Typography>
+            </Box>
+            {isUserApproved && (
+              <Tooltip title="帳號設定">
+                <IconButton
+                  onClick={handleClick}
+                  size="small"
+                  sx={{ ml: 1 }}
+                  aria-controls={open ? 'account-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={open ? 'true' : undefined}
+                >
+                  <SecurityIcon />
+                </IconButton>
+              </Tooltip>
             )}
-          </ListItemButton>
-        </ListItem>
-      </List>
+          </>
+        )}
+      </Box>
       
       {/* User menu */}
       <Menu

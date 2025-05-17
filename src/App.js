@@ -315,23 +315,6 @@ const AppContent = () => {
             />
 
             {/* Admin Routes */}
-            <Route
-              path="/user-management"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <UserManagement />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/role-management"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <RoleManagement />
-                </ProtectedRoute>
-              }
-            />
 
             <Route
               path="/user-approvals"
