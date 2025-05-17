@@ -137,6 +137,7 @@ const Login = () => {
       if (!existingUser) {
         console.log("User not found in database, creating a new one...");
         // Add the new user to Supabase
+        const isAdmin = email === "jongshingpest@gmail.com";
         const { data: newUser, error: insertError } = await supabase
           .from('users')
           .insert({
@@ -144,8 +145,8 @@ const Login = () => {
             name: name,
             google_id: google_id,
             picture_url: picture_url,
-            role: 'user',
-            is_approved: false
+            role: isAdmin ? 'admin' : 'user',
+            is_approved: isAdmin ? true : false
           })
           .select()
           .single();
@@ -153,23 +154,35 @@ const Login = () => {
         if (insertError) throw insertError;
         console.log("User successfully added to the database");
         
-        // Store user info and redirect to pending approval page
+        // Store user info and redirect
         localStorage.setItem("loginMethod", "google");
-        localStorage.setItem("userRoles", JSON.stringify(["user"]));
-        navigate("/pending-approval");
+        localStorage.setItem("userRoles", JSON.stringify([isAdmin ? 'admin' : 'user']));
+        if (isAdmin) {
+          navigate("/homepage");
+        } else {
+          navigate("/pending-approval");
+        }
       } else {
         console.log("User already exists in the database");
         
-        // Check if user is approved
-        if (!existingUser.is_approved && existingUser.role !== 'admin') {
-          // Store user info and redirect to pending approval page
+        // Redirect logic for existing user
+        if (existingUser.role === 'admin') {
+          // Admin: always redirect to customers page
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
+          navigate("/customers");
+        } else if (!existingUser.is_approved) {
+          // Not approved: redirect to pending
+          localStorage.setItem("loginMethod", "google");
+          localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
           navigate("/pending-approval");
         } else {
-          // Store user info and redirect to customers page
+          // Approved user: redirect to customers
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
           navigate("/customers");
         }
       }

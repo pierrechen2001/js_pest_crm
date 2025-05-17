@@ -41,7 +41,7 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   // Check if user is approved
-  if (!user.isApproved && user.roles[0] !== 'admin' && location.pathname !== '/pending-approval') {
+  if (user.isApproved === false && user.roles[0] !== 'admin' && location.pathname !== '/pending-approval') {
     console.log('User not approved, redirecting to pending approval page');
     return <Navigate to="/pending-approval" replace />;
   }

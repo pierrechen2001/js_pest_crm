@@ -198,6 +198,7 @@ export const AuthProvider = ({ children }) => {
             id: session.user.id,
             email: session.user.email,
             roles: JSON.parse(localStorage.getItem("userRoles") || '["user"]'),
+            isApproved: JSON.parse(localStorage.getItem("isApproved") || 'false'),
             loginMethod: localStorage.getItem("loginMethod") || "email"
           });
         } else {
@@ -226,6 +227,7 @@ export const AuthProvider = ({ children }) => {
           id: session.user.id,
           email: session.user.email,
           roles: JSON.parse(localStorage.getItem("userRoles") || '["user"]'),
+          isApproved: JSON.parse(localStorage.getItem("isApproved") || 'false'),
           loginMethod: localStorage.getItem("loginMethod") || "email"
         });
       } else if (event === 'SIGNED_OUT') {

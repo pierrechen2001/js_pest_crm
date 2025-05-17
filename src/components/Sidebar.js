@@ -358,7 +358,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       )}
       
       {/* 未審核用戶提示 */}
-      {!isUserApproved && (
+      {isUserApproved === false && (
         <Box sx={{ 
           display: 'flex', 
           flexDirection: 'column',
@@ -448,4 +448,4 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);

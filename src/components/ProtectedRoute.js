@@ -7,7 +7,7 @@ const ProtectedRoute = ({
   redirectPath = "/login" 
 }) => {
   // Check if user is authenticated
-  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const isAuthenticated = localStorage.getItem("isApproved") === "true";
   
   // In a real app, you would verify the token with your backend
   // and retrieve the user's roles from your authentication system
