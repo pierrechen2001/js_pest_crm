@@ -252,7 +252,7 @@ const Inventory = () => {
       }
       return true;
     })
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
 
   // 篩選藥劑
   const filteredMedicines = medicines
@@ -625,6 +625,24 @@ const Inventory = () => {
     }
   };
 
+  // 處理刪除耗材
+  const handleDeleteMaterial = async (material) => {
+    if (!window.confirm(`確定要刪除耗材「${material.name}」嗎？此操作無法復原。`)) {
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('material_components')
+        .delete()
+        .eq('id', material.id);
+      if (error) throw error;
+      setMaterials(prev => prev.filter(m => m.id !== material.id));
+    } catch (error) {
+      console.error('Error deleting material:', error);
+      alert('刪除耗材失敗，請稍後再試！');
+    }
+  };
+
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">{error}</Typography>;
 
@@ -718,6 +736,15 @@ const Inventory = () => {
                         }}
                       >
                         編輯
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="error"
+                        style={{ marginLeft: 8 }}
+                        onClick={() => handleDeleteMaterial(material)}
+                      >
+                        刪除
                       </Button>
                     </TableCell>
                   </TableRow>
