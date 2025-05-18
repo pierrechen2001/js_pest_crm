@@ -103,7 +103,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       path: '/customers',
     },
     {
-      text: '工程管理',
+      text: '專案管理',
       icon: <AssignmentIcon />,
       path: '/orders',
     },

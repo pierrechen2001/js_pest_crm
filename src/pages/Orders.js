@@ -8,6 +8,35 @@ import { useNavigate } from 'react-router-dom';
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款"];
+const getStatusStyle = (status, type) => {
+  if (type === 'construction') {
+    switch (status) {
+      case '未開始':
+        return { bg: 'rgba(128, 128, 128, 0.1)', color: 'gray' };
+      case '進行中':
+        return { bg: 'rgba(25, 118, 210, 0.1)', color: '#1976d2' };
+      case '已完成':
+        return { bg: 'rgba(76, 175, 80, 0.1)', color: 'green' };
+      case '延遲':
+        return { bg: 'rgba(244, 67, 54, 0.1)', color: 'red' };
+      default:
+        return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
+    }
+  }
+  if (type === 'billing') {
+    switch (status) {
+      case '未請款':
+        return { bg: 'rgba(128, 128, 128, 0.1)', color: 'gray' };
+      case '部分請款':
+        return { bg: 'rgba(255, 152, 0, 0.1)', color: '#f57c00' };
+      case '已請款':
+        return { bg: 'rgba(76, 175, 80, 0.1)', color: 'green' };
+      default:
+        return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
+    }
+  }
+};
+
 const taiwanCities = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"];
 const taiwanDistricts = {
   "台北市": [
@@ -398,7 +427,7 @@ const updateContact = (index, field, value) => {
         >
         <Box sx={{ zIndex: 1, position: 'relative' }}>
           <Typography variant="h2" sx={{ color: 'primary.black', fontWeight: 'bold' , mb: 10}}>
-            工程管理
+            專案管理
           </Typography>
         <Button 
         variant="contained" 
@@ -853,7 +882,19 @@ const updateContact = (index, field, value) => {
                   <MenuItem onClick={() => handleStatusFilterClose("")}>全部</MenuItem>
                   {constructionStatusOptions.map((status) => (
                     <MenuItem key={status} onClick={() => handleStatusFilterClose(status)}>
-                      {status}
+                      <Box
+                        sx={{
+                          display: 'inline-block',
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: 1,
+                          backgroundColor: getStatusStyle(status, 'construction').bg,
+                          color: getStatusStyle(status, 'construction').color,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {status}
+                      </Box>
                     </MenuItem>
                   ))}
                 </Menu>
@@ -871,7 +912,19 @@ const updateContact = (index, field, value) => {
                   <MenuItem onClick={() => handleBillingFilterClose("")}>全部</MenuItem>
                   {billingStatusOptions.map((status) => (
                     <MenuItem key={status} onClick={() => handleBillingFilterClose(status)}>
-                      {status}
+                      <Box
+                        sx={{
+                          display: 'inline-block',
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: 1,
+                          backgroundColor: getStatusStyle(status, 'billing').bg,
+                          color: getStatusStyle(status, 'billing').color,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {status}
+                      </Box>
                     </MenuItem>
                   ))}
                 </Menu>
@@ -891,8 +944,38 @@ const updateContact = (index, field, value) => {
                 <TableCell style={{ width: "21%" }}>{project.customer_database?.customer_name}</TableCell>
                 <TableCell style={{ width: "28%" }}>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
                 <TableCell style={{ width: "12%" }}>{project.start_date}</TableCell>
-                <TableCell style={{ width: "12%" }}>{project.construction_status}</TableCell>
-                <TableCell style={{ width: "12%" }}>{project.billing_status}</TableCell>
+                <TableCell style={{ width: "12%" }}>
+                  <Box
+                    sx={{
+                      display: 'inline-block',
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
+                      backgroundColor: getStatusStyle(project.construction_status, 'construction').bg,
+                      color: getStatusStyle(project.construction_status, 'construction').color,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {project.construction_status}
+                  </Box>
+                </TableCell>
+
+                <TableCell style={{ width: "12%" }}>
+                  <Box
+                    sx={{
+                      display: 'inline-block',
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
+                      backgroundColor: getStatusStyle(project.billing_status, 'billing').bg,
+                      color: getStatusStyle(project.billing_status, 'billing').color,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {project.billing_status}
+                  </Box>
+                </TableCell>
+
               </TableRow>
             ))}
           </TableBody>
