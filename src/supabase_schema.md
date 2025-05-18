@@ -98,21 +98,25 @@ create table public.permissions (
   constraint permissions_pkey primary key (id)
 ) TABLESPACE pg_default;
 
+drop table if exists public.project_log;
+
 create table public.project_log (
-  log_id uuid not null default gen_random_uuid (),
+  log_id uuid not null default gen_random_uuid(),
   project_id uuid not null,
-  log_type text not null,
+  log_type text not null check (log_type in ('工程', '財務', '行政', '使用藥劑')),
   log_date date not null,
   created_by text not null,
   content text not null,
   notes text null,
+  medicine_id uuid null,
+  medicine_quantity numeric null,
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null,
   constraint project_log_pkey primary key (log_id),
-  constraint project_log_project_id_fkey foreign KEY (project_id) references project (project_id) on delete CASCADE,
-  constraint project_log_log_type_check check (
-    (
-      log_type = any (array['工程'::text, '財務'::text, '行政'::text])
-    )
-  )
-) TABLESPACE pg_default;
+  constraint project_log_project_id_fkey foreign key (project_id) references project (project_id) on delete cascade,
+  constraint project_log_medicine_id_fkey foreign key (medicine_id) references medicines (id) on delete set null
+) tablespace pg_default;
+
+create index project_log_project_id_idx on public.project_log (project_id);
+create index project_log_log_date_idx on public.project_log (log_date);
+create index project_log_medicine_id_idx on public.project_log (medicine_id);

@@ -64,12 +64,16 @@ export default function OrderDetail() {
     log_type: '工程',
     log_date: new Date().toISOString().split('T')[0],
     content: '',
-    notes: ''
+    notes: '',
+    medicine_id: '',
+    medicine_quantity: ''
   });
 
   const [editedProject, setEditedProject] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openEditProjectDialog, setOpenEditProjectDialog] = useState(false);
+
+  const [medicines, setMedicines] = useState([]);
 
   const handleOpenProjectDialog = () => {
     setEditedProject(project);
@@ -143,6 +147,24 @@ export default function OrderDetail() {
     fetchProjectLogs();
   }, [projectId]);
 
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('medicines')
+          .select('*');
+
+        if (error) throw error;
+        setMedicines(data || []);
+      } catch (error) {
+        console.error('Error fetching medicines:', error);
+        setError('獲取藥劑列表失敗：' + error.message);
+      }
+    };
+
+    fetchMedicines();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditedProject(prev => ({
@@ -168,33 +190,99 @@ export default function OrderDetail() {
 
   const handleAddLog = async () => {
     try {
-      const { data, error } = await supabase
+      // 驗證必填欄位
+      if (!newLog.content) {
+        alert('請輸入日誌內容！');
+        return;
+      }
+
+      // 確保日誌類型是有效的值
+      const validLogTypes = ['工程', '財務', '行政', '使用藥劑'];
+      const logType = newLog.log_type.trim();
+      
+      if (!validLogTypes.includes(logType)) {
+        console.error('無效的日誌類型:', logType);
+        alert('無效的日誌類型！');
+        return;
+      }
+
+      if (logType === '使用藥劑') {
+        if (!newLog.medicine_id || !newLog.medicine_quantity) {
+          alert('請選擇藥劑並輸入使用數量！');
+          return;
+        }
+      }
+
+      // 準備日誌資料
+      const logDataToInsert = {
+        project_id: projectId,
+        log_type: logType, // 使用驗證過的 logType
+        log_date: newLog.log_date,
+        content: newLog.content.trim(),
+        notes: (newLog.notes || '').trim(),
+        created_by: '系統管理員'
+      };
+
+      // 如果是使用藥劑類型，將藥劑資訊加入內容中
+      if (logType === '使用藥劑') {
+        const selectedMedicine = medicines.find(m => m.id === newLog.medicine_id);
+        if (!selectedMedicine) {
+          alert('找不到選擇的藥劑！');
+          return;
+        }
+        logDataToInsert.content = `使用藥劑：${selectedMedicine.name}，數量：${newLog.medicine_quantity}\n\n${newLog.content}`;
+      }
+
+      console.log('準備插入的日誌資料:', JSON.stringify(logDataToInsert, null, 2)); // 使用 JSON.stringify 以便更好地查看資料
+
+      // 插入日誌記錄
+      const { data: insertedLog, error: logError } = await supabase
         .from('project_log')
-        .insert([
-          {
-            project_id: projectId,
-            log_type: newLog.log_type,
-            log_date: newLog.log_date,
-            content: newLog.content,
-            notes: newLog.notes,
-            created_by: '系統管理員'
-          }
-        ])
+        .insert([logDataToInsert])
         .select();
 
-      if (error) throw error;
+      if (logError) {
+        console.error('Error inserting log:', logError);
+        console.error('Failed data:', JSON.stringify(logDataToInsert, null, 2));
+        throw new Error('新增日誌失敗：' + logError.message);
+      }
 
-      setProjectLogs([data[0], ...projectLogs]);
+      // 如果是使用藥劑類型，同時更新藥劑使用記錄
+      if (logType === '使用藥劑') {
+        const { error: usageError } = await supabase
+          .from('medicine_usages')
+          .insert([{
+            medicine_id: newLog.medicine_id,
+            quantity: parseFloat(newLog.medicine_quantity),
+            date: newLog.log_date,
+            project: project.project_name,
+            customer: project.customer_database?.customer_name || '未知客戶'
+          }]);
+
+        if (usageError) {
+          console.error('Error inserting usage:', usageError);
+          throw new Error('新增藥劑使用記錄失敗：' + usageError.message);
+        }
+      }
+
+      // 更新日誌列表
+      setProjectLogs([insertedLog[0], ...projectLogs]);
+      
+      // 重置表單
       setOpenLogDialog(false);
       setNewLog({
         log_type: '工程',
         log_date: new Date().toISOString().split('T')[0],
         content: '',
-        notes: ''
+        notes: '',
+        medicine_id: '',
+        medicine_quantity: ''
       });
+
     } catch (error) {
-      console.error('Error adding project log:', error);
+      console.error('Error in handleAddLog:', error);
       setError('新增日誌時發生錯誤：' + error.message);
+      alert('新增日誌時發生錯誤：' + error.message);
     }
   };
 
@@ -1159,68 +1247,105 @@ export default function OrderDetail() {
       >
         <DialogTitle>新增專案日誌</DialogTitle>
         <DialogContent>
-<Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-  {/* 日期 */}
-  <Box sx={{ flex: 2 }}>
-    <TextField
-      fullWidth
-      type="date"
-      label="日期"
-      value={newLog.log_date}
-      onChange={(e) => setNewLog({ ...newLog, log_date: e.target.value })}
-      InputLabelProps={{ shrink: true }}
-      margin="normal"
-    />
-  </Box>
+          <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            {/* 日期 */}
+            <Box sx={{ flex: 2 }}>
+              <TextField
+                fullWidth
+                type="date"
+                label="日期"
+                value={newLog.log_date}
+                onChange={(e) => setNewLog({ ...newLog, log_date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+              />
+            </Box>
 
-  {/* 日誌類型 */}
-  <Box sx={{ flex: 3 }}>
-    <FormControl fullWidth margin="normal">
-      <InputLabel>日誌類型</InputLabel>
-      <Select
-        value={newLog.log_type}
-        onChange={(e) => setNewLog({ ...newLog, log_type: e.target.value })}
-      >
-        <MenuItem value="工程">工程</MenuItem>
-        <MenuItem value="財務">財務</MenuItem>
-        <MenuItem value="行政">行政</MenuItem>
-      </Select>
-    </FormControl>
-  </Box>
+            {/* 日誌類型 */}
+            <Box sx={{ flex: 3 }}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>日誌類型</InputLabel>
+                <Select
+                  value={newLog.log_type}
+                  onChange={(e) => setNewLog({ ...newLog, log_type: e.target.value })}
+                >
+                  <MenuItem value="工程">工程</MenuItem>
+                  <MenuItem value="財務">財務</MenuItem>
+                  <MenuItem value="行政">行政</MenuItem>
+                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
 
-  {/* 備註 */}
-  <Box sx={{ flex: 5 }}>
-    <TextField
-      fullWidth
-      label="備註"
-      value={newLog.notes}
-      onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
-      margin="normal"
-      sx={{
-        '& .MuiInputBase-root': {
-          height: '56px',
-          alignItems: 'center',
-        },
-        '& input': {
-          height: '100%',
-          boxSizing: 'border-box',
-        },
-      }}
-    />
-  </Box>
-</Grid>
+            {/* 備註 */}
+            <Box sx={{ flex: 5 }}>
+              <TextField
+                fullWidth
+                label="備註"
+                value={newLog.notes}
+                onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
+                margin="normal"
+                sx={{
+                  '& .MuiInputBase-root': {
+                    height: '56px',
+                    alignItems: 'center',
+                  },
+                  '& input': {
+                    height: '100%',
+                    boxSizing: 'border-box',
+                  },
+                }}
+              />
+            </Box>
+          </Grid>
 
-{/* 內容輸入區（整行） */}
-<Box>
-  <Typography sx={{ mb: 1 }}>內容</Typography>
-  <ReactQuill
-    theme="snow"
-    value={newLog.content}
-    onChange={(value) => setNewLog({ ...newLog, content: value })}
-    style={{ height: '200px', backgroundColor: 'white' }}
-  />
-</Box>
+          {/* 藥劑選擇（僅在使用藥劑類型時顯示） */}
+          {newLog.log_type === '使用藥劑' && (
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={6}>
+                <FormControl fullWidth>
+                  <InputLabel>選擇藥劑</InputLabel>
+                  <Select
+                    value={newLog.medicine_id}
+                    onChange={(e) => setNewLog({ ...newLog, medicine_id: e.target.value })}
+                    label="選擇藥劑"
+                  >
+                    {medicines.map((medicine) => (
+                      <MenuItem key={medicine.id} value={medicine.id}>
+                        {medicine.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="使用數量"
+                  type="text"
+                  value={newLog.medicine_quantity}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setNewLog({ ...newLog, medicine_quantity: value });
+                    }
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+          )}
 
+          {/* 內容輸入區（整行） */}
+          <Box>
+            <Typography sx={{ mb: 1 }}>內容</Typography>
+            <ReactQuill
+              theme="snow"
+              value={newLog.content}
+              onChange={(value) => setNewLog({ ...newLog, content: value })}
+              style={{ height: '200px', backgroundColor: 'white' }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenLogDialog(false)}>取消</Button>
@@ -1228,7 +1353,7 @@ export default function OrderDetail() {
             onClick={handleAddLog} 
             variant="contained" 
             color="primary"
-            disabled={!newLog.content}
+            disabled={!newLog.content || (newLog.log_type === '使用藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))}
           >
             新增
           </Button>
@@ -1288,6 +1413,7 @@ export default function OrderDetail() {
                   <MenuItem value="工程">工程</MenuItem>
                   <MenuItem value="財務">財務</MenuItem>
                   <MenuItem value="行政">行政</MenuItem>
+                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
                 </Select>
               </FormControl>
             </Box>
