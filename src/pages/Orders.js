@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabaseClient';
-import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton} from "@mui/material";
+import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton, TablePagination } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
@@ -106,6 +106,8 @@ export default function Orders({ projects: initialProjects = [], customers: init
   const [customers, setCustomers] = useState(initialCustomers);
   const [loading, setLoading] = useState(true); // Loading is now handled by App.js
   const [error, setError] = useState(null); // Error is now handled by App.js
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   
 // ... (rest of the state variables: statusFilter, billingFilter, etc.)
   const [statusFilter, setStatusFilter] = useState("");
@@ -159,6 +161,8 @@ const filteredProjects = (projects || [])
     return new Date(b.start_date || "") - new Date(a.start_date || "");
   }
 });
+
+const paginatedProjects = filteredProjects.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   // Dialog 控制
   const [openDialog, setOpenDialog] = useState(false);
@@ -888,7 +892,7 @@ const updateContact = (index, field, value) => {
       </TableHead>
 
       <TableBody>
-        {filteredProjects
+        {paginatedProjects
           .filter((project) => {
             // 施工狀態篩選
             if (statusFilter && project.construction_status !== statusFilter) return false;
@@ -907,10 +911,6 @@ const updateContact = (index, field, value) => {
             >
               <TableCell style={{ width: "15%" }}>{project.project_name}</TableCell>
               <TableCell style={{ width: "21%" }}>{project.customer_database?.customer_name}</TableCell>
-              <TableCell style={{ width: "28%" }}>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
-              <TableCell style={{ width: "12%" }}>{project.start_date}</TableCell>
-              <TableCell style={{ width: "12%" }}>{project.construction_status}</TableCell>
-              <TableCell style={{ width: "12%" }}>{project.billing_status}</TableCell>
             </TableRow>
           ))}
       </TableBody>

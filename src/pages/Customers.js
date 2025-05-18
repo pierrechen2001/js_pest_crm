@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography } from "@mui/material";
+import { Box, Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, TablePagination } from "@mui/material";
 import { useNavigate } from 'react-router-dom';
 import { Add } from "@mui/icons-material";
 
@@ -139,6 +139,8 @@ const Customers = ({
   
   const [customerData, setCustomerData] = useState(initialCustomerData);  
   
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // When initialCustomers changes, update customersState
   useEffect(() => {
@@ -253,6 +255,8 @@ const Customers = ({
     return true;
   })
   .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const paginatedCustomers = filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">{error}</Typography>;
@@ -647,14 +651,14 @@ const Customers = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredCustomers.map((customer, index) => (
+            {paginatedCustomers.map((customer, index) => (
               <TableRow 
                 key={customer.customer_id} 
                 hover 
                 style={{ cursor: "pointer" }} 
                 onClick={() => navigate(`/customer/${customer.customer_id}`)}
               >
-                <TableCell style={{ width: "7%" }}>{index + 1}</TableCell>
+                <TableCell style={{ width: "7%" }}>{page * rowsPerPage + index + 1}</TableCell>
                 <TableCell style={{ width: "12%" }}>{customer.customer_type}</TableCell>
                 <TableCell style={{ width: "20%" }}>{customer.customer_name}</TableCell>
                 <TableCell style={{ width: "13%" }}>
@@ -674,6 +678,19 @@ const Customers = ({
             ))}
           </TableBody>
         </Table>
+        <TablePagination
+          component="div"
+          count={filteredCustomers.length}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 20, 50, 100]}
+          labelRowsPerPage="每頁顯示筆數"
+        />
       </TableContainer>
     </div>
   );
