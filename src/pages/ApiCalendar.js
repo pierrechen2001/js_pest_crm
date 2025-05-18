@@ -536,39 +536,78 @@ const ApiCalendar = () => {
       // 轉換為行事曆事件格式
       const constructionEvents = projects
         .filter(project => project.start_date)
-        .map(project => ({
-          id: `construction-${project.project_id}`,
-          title: `施工: ${project.project_name}`,
-          start: project.start_date,
-          end: project.end_date || project.start_date,
-          description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.construction_status}`,
-          backgroundColor: '#f0f4ff', // 淡藍色
-          borderColor: '#a0b4ff',
-          textColor: '#333333',
-          type: 'construction', // 自定義標記
-          extendedProps: {
-            projectId: project.project_id,
-            isProjectEvent: true // 標記為專案事件
+        .map(project => {
+          // 處理結束日期，確保結束日期當天也能顯示
+          let endDate = project.end_date || project.start_date;
+          // 將日期字符串轉換為日期對象
+          if (typeof endDate === 'string') {
+            const date = new Date(endDate);
+            // 增加一天
+            date.setDate(date.getDate() + 1);
+            endDate = date.toISOString().split('T')[0];
           }
-        }));
+          
+          return {
+            id: `construction-${project.project_id}`,
+            title: `施工: ${project.project_name}`,
+            start: project.start_date,
+            end: endDate,
+            description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.construction_status}`,
+            backgroundColor: '#f0f4ff', // 淡藍色
+            borderColor: '#a0b4ff',
+            textColor: '#333333',
+            type: 'construction', // 自定義標記
+            extendedProps: {
+              projectId: project.project_id,
+              isProjectEvent: true // 標記為專案事件
+            }
+          };
+        });
         
       const paymentEvents = projects
         .filter(project => project.payment_date)
-        .map(project => ({
-          id: `payment-${project.project_id}`,
-          title: `收款: ${project.project_name}`,
-          start: project.payment_date,
-          end: project.payment_date,
-          description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.billing_status}`,
-          backgroundColor: '#f8f0ff', // 淡紫色
-          borderColor: '#dbb6ff',
-          textColor: '#333333',
-          type: 'payment', // 自定義標記
-          extendedProps: {
-            projectId: project.project_id,
-            isProjectEvent: true // 標記為專案事件
+        .map(project => {
+          // 收款日期處理 - 將結束日期設為隔天，確保當天也顯示
+          let paymentDate = project.payment_date;
+          if (typeof paymentDate === 'string') {
+            const date = new Date(paymentDate);
+            // 增加一天作為結束日期
+            date.setDate(date.getDate() + 1);
+            const endDate = date.toISOString().split('T')[0];
+            
+            return {
+              id: `payment-${project.project_id}`,
+              title: `收款: ${project.project_name}`,
+              start: project.payment_date,
+              end: endDate, // 使用隔天作為結束日期
+              description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.billing_status}`,
+              backgroundColor: '#f8f0ff', // 淡紫色
+              borderColor: '#dbb6ff',
+              textColor: '#333333',
+              type: 'payment', // 自定義標記
+              extendedProps: {
+                projectId: project.project_id,
+                isProjectEvent: true // 標記為專案事件
+              }
+            };
+          } else {
+            return {
+              id: `payment-${project.project_id}`,
+              title: `收款: ${project.project_name}`,
+              start: project.payment_date,
+              end: project.payment_date,
+              description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.billing_status}`,
+              backgroundColor: '#f8f0ff', // 淡紫色
+              borderColor: '#dbb6ff',
+              textColor: '#333333',
+              type: 'payment', // 自定義標記
+              extendedProps: {
+                projectId: project.project_id,
+                isProjectEvent: true // 標記為專案事件
+              }
+            };
           }
-        }));
+        });
       
       // 設置專案事件
       setProjectEvents([...constructionEvents, ...paymentEvents]);

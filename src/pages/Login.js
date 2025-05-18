@@ -3,11 +3,9 @@ import {
   Container, 
   Box, 
   Typography, 
-  Button, 
-  TextField,
+  Button,
   Snackbar,
   Alert,
-  Link,
   Card,
   CardContent,
   Divider
@@ -17,43 +15,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
-
 const Login = () => {
-  const { login, signUp } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    confirmPassword: ""
-  });
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    
-    try {
-      const { email, password, confirmPassword } = formData;
-      
-      if (!email || !password) {
-        throw new Error("請填入所有必填欄位");
-      }
-
-      if (isSignUp) {
-        if (password !== confirmPassword) {
-          throw new Error("密碼與確認密碼不符");
-        }
-        await signUp(email, password);
-      } else {
-        await login(email, password);
-      }
-    } catch (error) {
-      setError(error.message);
-      setOpenSnackbar(true);
-    }
-  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -129,8 +94,6 @@ const Login = () => {
   
       if (supabaseError) throw supabaseError;
   
-      console.log("Login: Supabase authentication successful");
-  
       // 🔥 Add or Update User in Supabase Database
       const email = profile.getEmail();
       const name = profile.getName();
@@ -144,36 +107,37 @@ const Login = () => {
         .eq('email', email)
         .single();
 
-        if (existingUser) {
-          try {
-            // Check if the user is the speciific admin email
-            const role = (existingUser.email === "jongshingpest@gmail.com") ? "admin" : "user";
-            if (existingUser.email === "jongshingpest@gmail.com"){
-              console.log("is jonghsingpest")
-            }else{
-              console.log("is not pest")
-            }
-            // Update the user's role in the database
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({ role })
-              .eq('email', existingUser.email);
-        
-            if (updateError) {
-              console.error("Error updating user role:", updateError.message);
-            } else {
-              console.log(`User role updated to ${role} for ${existingUser.email}`);
-            }
-          } catch (err) {
-            console.error("Failed to update role:", err.message);
+      if (existingUser) {
+        try {
+          // Check if the user is the speciific admin email
+          const role = (existingUser.email === "jongshingpest@gmail.com") ? "admin" : "user";
+          if (existingUser.email === "jongshingpest@gmail.com"){
+            console.log("is jonghsingpest")
+          }else{
+            console.log("is not pest")
           }
-        } else {
-          console.log("User not found.");
+          // Update the user's role in the database
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ role })
+            .eq('email', existingUser.email);
+      
+          if (updateError) {
+            console.error("Error updating user role:", updateError.message);
+          } else {
+            console.log(`User role updated to ${role} for ${existingUser.email}`);
+          }
+        } catch (err) {
+          console.error("Failed to update role:", err.message);
         }
+      } else {
+        console.log("User not found.");
+      }
   
       if (!existingUser) {
         console.log("User not found in database, creating a new one...");
         // Add the new user to Supabase
+        const isAdmin = email === "jongshingpest@gmail.com";
         const { data: newUser, error: insertError } = await supabase
           .from('users')
           .insert({
@@ -181,8 +145,8 @@ const Login = () => {
             name: name,
             google_id: google_id,
             picture_url: picture_url,
-            role: 'user',
-            is_approved: false
+            role: isAdmin ? 'admin' : 'user',
+            is_approved: isAdmin ? true : false
           })
           .select()
           .single();
@@ -190,23 +154,35 @@ const Login = () => {
         if (insertError) throw insertError;
         console.log("User successfully added to the database");
         
-        // Store user info and redirect to pending approval page
+        // Store user info and redirect
         localStorage.setItem("loginMethod", "google");
-        localStorage.setItem("userRoles", JSON.stringify(["user"]));
-        navigate("/pending-approval");
+        localStorage.setItem("userRoles", JSON.stringify([isAdmin ? 'admin' : 'user']));
+        if (isAdmin) {
+          navigate("/homepage");
+        } else {
+          navigate("/pending-approval");
+        }
       } else {
         console.log("User already exists in the database");
         
-        // Check if user is approved
-        if (!existingUser.is_approved && existingUser.role !== 'admin') {
-          // Store user info and redirect to pending approval page
+        // Redirect logic for existing user
+        if (existingUser.role === 'admin') {
+          // Admin: always redirect to customers page
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
+          navigate("/customers");
+        } else if (!existingUser.is_approved) {
+          // Not approved: redirect to pending
+          localStorage.setItem("loginMethod", "google");
+          localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
           navigate("/pending-approval");
         } else {
-          // Store user info and redirect to customers page
+          // Approved user: redirect to customers
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
+          localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
           navigate("/customers");
         }
       }
@@ -215,14 +191,6 @@ const Login = () => {
       setError(error.message || "Google 登入失敗");
       setOpenSnackbar(true);
     }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   return (
@@ -242,7 +210,6 @@ const Login = () => {
         >
           管理系統
         </Typography>
-        
         <Card
           elevation={6}
           sx={{
@@ -260,88 +227,20 @@ const Login = () => {
             }}
           >
             <Typography component="h2" variant="h5" sx={{ mb: 2 }}>
-              {isSignUp ? "註冊帳號" : "登入系統"}
+              Google 登入
             </Typography>
-            
-            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: "100%" }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="電子郵件"
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={formData.email}
-                onChange={handleChange}
-                variant="outlined"
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="密碼"
-                type="password"
-                id="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                value={formData.password}
-                onChange={handleChange}
-                variant="outlined"
-              />
-              
-              {isSignUp && (
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="confirmPassword"
-                  label="確認密碼"
-                  type="password"
-                  id="confirmPassword"
-                  autoComplete="new-password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  variant="outlined"
-                />
-              )}
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
-              >
-                {isSignUp ? "註冊" : "登入"}
-              </Button>
-
-              <Divider sx={{ my: 2 }}>或</Divider>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GoogleIcon />}
-                onClick={handleGoogleLogin}
-                sx={{ mb: 2 }}
-              >
-                使用 Google 帳號{isSignUp ? "註冊" : "登入"}
-              </Button>
-
-              <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <Link
-                  component="button"
-                  variant="body2"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                >
-                  {isSignUp ? "已有帳號？登入" : "沒有帳號？註冊"}
-                </Link>
-              </Box>
-            </Box>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              sx={{ mb: 2 }}
+            >
+              使用 Google 帳號登入
+            </Button>
           </CardContent>
         </Card>
       </Box>
-
       <Snackbar
         open={openSnackbar}
         autoHideDuration={6000}

@@ -198,6 +198,7 @@ export const AuthProvider = ({ children }) => {
             id: session.user.id,
             email: session.user.email,
             roles: JSON.parse(localStorage.getItem("userRoles") || '["user"]'),
+            isApproved: JSON.parse(localStorage.getItem("isApproved") || 'false'),
             loginMethod: localStorage.getItem("loginMethod") || "email"
           });
         } else {
@@ -226,6 +227,7 @@ export const AuthProvider = ({ children }) => {
           id: session.user.id,
           email: session.user.email,
           roles: JSON.parse(localStorage.getItem("userRoles") || '["user"]'),
+          isApproved: JSON.parse(localStorage.getItem("isApproved") || 'false'),
           loginMethod: localStorage.getItem("loginMethod") || "email"
         });
       } else if (event === 'SIGNED_OUT') {
@@ -243,72 +245,6 @@ export const AuthProvider = ({ children }) => {
       subscription?.unsubscribe();
     };
   }, [navigate]);
-
-  // Email/Password login
-
-
-const login = async (email, password) => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('id, email')
-      .eq('id', data.user.id)
-      .single();
-
-    if (!userData) throw new Error('User not found');
-
-    // Fetch permissions
-    const { data: permissionData } = await supabase
-      .from('userpermissions')
-      .select(`
-        module:modules(name),
-        permission:permissions(name)
-      `)
-      .eq('user_id', userData.id);
-
-    const permissions = {};
-    permissionData.forEach((perm) => {
-      if (!permissions[perm.module.name]) {
-        permissions[perm.module.name] = {};
-      }
-      permissions[perm.module.name][perm.permission.name] = true;
-    });
-
-      console.log("yes");
-    setUser({
-      id: userData.id,
-      email: userData.email,
-      roles: ['user'],  // This will change when dynamic roles are implemented
-      permissions,
-      loginMethod: "email"
-    });
-  } catch (error) {
-    console.error("Error logging in:", error.message);
-  }
-};
-
-  // Sign up with email/password
-  const signUp = async (email, password) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-  
-      const roleName = (email === "admin@example.com" || email === "b12705058@g.ntu.edu.tw") ? "admin" : "user";
-      await assignRolePermissions(data.user.id, roleName);
-  
-      setUser({
-        id: data.user.id,
-        email: data.user.email,
-        roles: [roleName],
-        loginMethod: "email"
-      });
-    } catch (error) {
-      console.error("Error signing up:", error.message);
-    }
-  };
 
   // Logout
   const logout = async () => {
@@ -333,20 +269,12 @@ const login = async (email, password) => {
     }
   };
 
-  // Check if user has a specific role
-  const hasRole = (requiredRole) => {
-    return user?.roles?.includes(requiredRole) || false;
-  };
-
   // Provide auth context
   return (
     <AuthContext.Provider
       value={{
         user,
-        login,
-        signUp,
         logout,
-        hasRole,
         isAuthenticated: !!user,
         loading,
         error,
