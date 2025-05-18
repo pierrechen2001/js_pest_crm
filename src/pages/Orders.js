@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabaseClient';
-import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton, TablePagination } from "@mui/material";
+import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton, TablePagination, TableContainer } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
@@ -162,7 +162,14 @@ const filteredProjects = (projects || [])
   }
 });
 
-const paginatedProjects = filteredProjects.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+// 先做狀態與請款篩選
+const filteredAndStatusProjects = filteredProjects.filter((project) => {
+  if (statusFilter && project.construction_status !== statusFilter) return false;
+  if (billingFilter && project.billing_status !== billingFilter) return false;
+  return true;
+});
+// 再做分頁
+const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   // Dialog 控制
   const [openDialog, setOpenDialog] = useState(false);
@@ -818,83 +825,92 @@ const updateContact = (index, field, value) => {
       */}
 
       {/* ... (Table remains the same) ... */}
-      <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell style={{ width: "15%" }}>專案名稱</TableCell>
-          <TableCell style={{ width: "21%" }}>客戶名稱</TableCell>
-          <TableCell style={{ width: "28%" }}>施工地址</TableCell>
-          <TableCell style={{ width: "12%" }}>
-            開始日期
-            <TableSortLabel
-              active
-              direction={sortOrder}
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            />
-          </TableCell>
-          <TableCell style={{ width: "12%" }}>
-            施工狀態
-            <IconButton onClick={handleStatusFilterClick}>
-              <FilterListIcon />
-            </IconButton>
-            <Menu
-              anchorEl={statusAnchorEl}
-              open={Boolean(statusAnchorEl)}
-              onClose={() => handleStatusFilterClose()}
-            >
-              <MenuItem onClick={() => handleStatusFilterClose("")}>全部</MenuItem>
-              {constructionStatusOptions.map((status) => (
-                <MenuItem key={status} onClick={() => handleStatusFilterClose(status)}>
-                  {status}
-                </MenuItem>
-              ))}
-            </Menu>
-          </TableCell>
-          <TableCell style={{ width: "12%" }}>
-            請款狀態
-            <IconButton onClick={handleBillingFilterClick}>
-              <FilterListIcon />
-            </IconButton>
-            <Menu
-              anchorEl={billingAnchorEl}
-              open={Boolean(billingAnchorEl)}
-              onClose={() => handleBillingFilterClose()}
-            >
-              <MenuItem onClick={() => handleBillingFilterClose("")}>全部</MenuItem>
-              {billingStatusOptions.map((status) => (
-                <MenuItem key={status} onClick={() => handleBillingFilterClose(status)}>
-                  {status}
-                </MenuItem>
-              ))}
-            </Menu>
-          </TableCell>
-        </TableRow>
-      </TableHead>
-
-      <TableBody>
-        {paginatedProjects
-          .filter((project) => {
-            // 施工狀態篩選
-            if (statusFilter && project.construction_status !== statusFilter) return false;
-
-            // 請款狀態篩選
-            if (billingFilter && project.billing_status !== billingFilter) return false;
-
-            return true;
-          })
-          .map((project) => (
-            <TableRow 
-              key={project.project_id}
-              hover
-              style={{ cursor: 'pointer' }}
-              onClick={() => navigate(`/order/${project.project_id}`)}
-            >
-              <TableCell style={{ width: "15%" }}>{project.project_name}</TableCell>
-              <TableCell style={{ width: "21%" }}>{project.customer_database?.customer_name}</TableCell>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell style={{ width: "15%" }}>專案名稱</TableCell>
+              <TableCell style={{ width: "21%" }}>客戶名稱</TableCell>
+              <TableCell style={{ width: "28%" }}>施工地址</TableCell>
+              <TableCell style={{ width: "12%" }}>
+                開始日期
+                <TableSortLabel
+                  active
+                  direction={sortOrder}
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                />
+              </TableCell>
+              <TableCell style={{ width: "12%" }}>
+                施工狀態
+                <IconButton onClick={handleStatusFilterClick}>
+                  <FilterListIcon />
+                </IconButton>
+                <Menu
+                  anchorEl={statusAnchorEl}
+                  open={Boolean(statusAnchorEl)}
+                  onClose={() => handleStatusFilterClose()}
+                >
+                  <MenuItem onClick={() => handleStatusFilterClose("")}>全部</MenuItem>
+                  {constructionStatusOptions.map((status) => (
+                    <MenuItem key={status} onClick={() => handleStatusFilterClose(status)}>
+                      {status}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </TableCell>
+              <TableCell style={{ width: "12%" }}>
+                請款狀態
+                <IconButton onClick={handleBillingFilterClick}>
+                  <FilterListIcon />
+                </IconButton>
+                <Menu
+                  anchorEl={billingAnchorEl}
+                  open={Boolean(billingAnchorEl)}
+                  onClose={() => handleBillingFilterClose()}
+                >
+                  <MenuItem onClick={() => handleBillingFilterClose("")}>全部</MenuItem>
+                  {billingStatusOptions.map((status) => (
+                    <MenuItem key={status} onClick={() => handleBillingFilterClose(status)}>
+                      {status}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </TableCell>
             </TableRow>
-          ))}
-      </TableBody>
-      </Table>
+          </TableHead>
+
+          <TableBody>
+            {paginatedProjects.map((project) => (
+              <TableRow 
+                key={project.project_id}
+                hover
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/order/${project.project_id}`)}
+              >
+                <TableCell style={{ width: "15%" }}>{project.project_name}</TableCell>
+                <TableCell style={{ width: "21%" }}>{project.customer_database?.customer_name}</TableCell>
+                <TableCell style={{ width: "28%" }}>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
+                <TableCell style={{ width: "12%" }}>{project.start_date}</TableCell>
+                <TableCell style={{ width: "12%" }}>{project.construction_status}</TableCell>
+                <TableCell style={{ width: "12%" }}>{project.billing_status}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <TablePagination
+          component="div"
+          count={filteredAndStatusProjects.length}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 20, 50, 100]}
+          labelRowsPerPage="每頁顯示筆數"
+        />
+      </TableContainer>
     </div>
   );
 }
