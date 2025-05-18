@@ -217,7 +217,19 @@ const MapComponent = ({ projects = [] }) => {
             const geo = result.results[0].geometry.location;
             // 立即存回 supabase
             if (window.supabase) {
-              window.supabase.from('project').update({ latitude: geo.lat, longitude: geo.lng }).eq('project_id', project.project_id);
+              try {
+                const { error } = await window.supabase
+                  .from('project')
+                  .update({ latitude: geo.lat, longitude: geo.lng })
+                  .eq('project_id', project.project_id);
+                if (error) {
+                  console.error('Supabase update error:', error);
+                } else {
+                  console.log('Supabase updated project', project.project_id, 'with lat/lng:', geo.lat, geo.lng);
+                }
+              } catch (e) {
+                console.error('Supabase update exception:', e);
+              }
             }
             // 直接顯示 marker
             const projectLocation = { lat: geo.lat, lng: geo.lng };
