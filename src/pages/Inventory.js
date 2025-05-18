@@ -1,481 +1,1136 @@
-import React, { useState } from "react";
-import {
-  Button, TextField, MenuItem, Select, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Typography
-} from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { Box, Button, TextField, MenuItem, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, CircularProgress, Typography, TablePagination, Tabs, Tab } from "@mui/material";
+import { Add } from "@mui/icons-material";
+import { supabase } from '../lib/supabaseClient';
 
-// 資料結構
-const initialMedicines = [
-  {
-    id: 1,
-    name: "農藥",
-    orders: [], // {quantity, date, project, vendor}
-    usages: []
-  },
-  {
-    id: 2,
-    name: "酒精",
-    orders: [],
-    usages: []
-  }
-];
-
-const initialMaterials = [
-  {
-    id: 1,
-    name: "水管",
-    type: "灌溉設備",
-    components: [
-      { 
-        id: 1, 
-        name: "第一支水管",
-        status: "正常",
-        lastMaintenance: "2024-03-01"
-      },
-      { 
-        id: 2, 
-        name: "第二支水管",
-        status: "需更換",
-        lastMaintenance: "2024-02-15"
-      },
-      { 
-        id: 3, 
-        name: "第三支水管",
-        status: "正常",
-        lastMaintenance: "2024-03-10"
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: "抽水機",
-    type: "灌溉設備",
-    components: [
-      { 
-        id: 1, 
-        name: "主抽水機",
-        status: "正常",
-        lastMaintenance: "2024-03-05"
-      },
-      { 
-        id: 2, 
-        name: "備用抽水機",
-        status: "待維修",
-        lastMaintenance: "2024-02-20"
-      }
-    ]
-  },
-  {
-    id: 3,
-    name: "噴頭",
-    type: "灌溉設備",
-    components: [
-      { 
-        id: 1, 
-        name: "噴頭A",
-        status: "正常",
-        lastMaintenance: "2024-03-08"
-      },
-      { 
-        id: 2, 
-        name: "噴頭B",
-        status: "正常",
-        lastMaintenance: "2024-03-08"
-      }
-    ]
-  }
-];
+const statusOptions = ["正常", "維修中", "報廢"]
 
 const Inventory = () => {
-  const [currentCategory, setCurrentCategory] = useState("藥劑");
-  const [newMedicineName, setNewMedicineName] = useState("");
-  const [medicines, setMedicines] = useState(initialMedicines);
-  const [materials, setMaterials] = useState(initialMaterials);
-  const [mode, setMode] = useState("overview");
-  const [newRecord, setNewRecord] = useState({ type: "order", quantity: "", date: "", project: "", vendor: "" });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newItem, setNewItem] = useState({
-    materialName: "",
-    materialType: "灌溉設備",
-    componentName: "",
+  const [currentTab, setCurrentTab] = useState(0);
+  const [materials, setMaterials] = useState([]);
+  const [materialTypes, setMaterialTypes] = useState([]);
+  const [medicines, setMedicines] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [selectedType, setSelectedType] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [editingMaterial, setEditingMaterial] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // 新增耗材的狀態
+  const [newMaterial, setNewMaterial] = useState({
+    material_type_id: "",
+    name: "",
     status: "正常",
-    lastMaintenance: ""
+    last_maintenance: null
   });
 
-  const handleAddRecord = (id, onSuccess) => {
-    setMedicines(medicines.map(item =>
-      item.id === id ? {
-        ...item,
-        [newRecord.type === "order" ? "orders" : "usages"]: [
-          ...item[newRecord.type === "order" ? "orders" : "usages"],
-          {
-            quantity: parseInt(newRecord.quantity, 10),
-            date: newRecord.date,
-            project: newRecord.project,
-            vendor: newRecord.vendor
-          }
-        ]
-      } : item
-    ));
-    setNewRecord({ type: "order", quantity: "", date: "", project: "", vendor: "" });
-    if (onSuccess) onSuccess(); // 呼叫傳入的成功後動作
+  // 新增藥劑的狀態
+  const [newMedicine, setNewMedicine] = useState({
+    name: ""
+  });
+
+  // 新增藥劑的編輯狀態
+  const [editingMedicine, setEditingMedicine] = useState(null);
+
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [usageDialogOpen, setUsageDialogOpen] = useState(false);
+  const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [newOrder, setNewOrder] = useState({
+    quantity: 0,
+    date: "",
+    vendor: ""
+  });
+  const [newUsage, setNewUsage] = useState({
+    quantity: 0,
+    date: "",
+    project: "",
+    customer: ""
+  });
+
+  // 獲取專案資料
+  const [projects, setProjects] = useState([]);
+
+  const [viewHistoryDialogOpen, setViewHistoryDialogOpen] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    startDate: "",
+    endDate: ""
+  });
+  const [filteredHistory, setFilteredHistory] = useState([]);
+  const [historyType, setHistoryType] = useState('usage'); // 'usage' 或 'order'
+
+  // 獲取資料
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // 獲取耗材種類
+        const { data: typesData, error: typesError } = await supabase
+          .from('material_types')
+          .select('*');
+
+        if (typesError) throw typesError;
+        setMaterialTypes(typesData || []);
+
+        // 獲取耗材組件
+        const { data: materialsData, error: materialsError } = await supabase
+          .from('material_components')
+          .select(`
+            *,
+            material_types (
+              id,
+              name,
+              type
+            )
+          `);
+
+        if (materialsError) throw materialsError;
+        setMaterials(materialsData || []);
+
+        // 獲取藥劑資料
+        const { data: medicinesData, error: medicinesError } = await supabase
+          .from('medicines')
+          .select(`
+            *,
+            medicine_orders (*),
+            medicine_usages (*)
+          `);
+
+        if (medicinesError) throw medicinesError;
+        setMedicines(medicinesData || []);
+
+        // 獲取專案資料
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('project')
+          .select(`
+            project_id,
+            project_name,
+            customer_database (
+              customer_id,
+              customer_name
+            )
+          `);
+
+        if (projectsError) throw projectsError;
+        setProjects(projectsData || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // 處理新增耗材
+  const handleAddMaterial = async () => {
+    try {
+      // 先新增耗材類型
+      const { data: typeData, error: typeError } = await supabase
+        .from('material_types')
+        .insert([{ name: newMaterial.material_type_id, type: newMaterial.material_type_id }])
+        .select();
+
+      if (typeError) throw typeError;
+
+      // 再新增耗材組件
+      const { data, error } = await supabase
+        .from('material_components')
+        .insert([{
+          ...newMaterial,
+          material_type_id: typeData[0].id
+        }])
+        .select(`
+          *,
+          material_types (
+            id,
+            name,
+            type
+          )
+        `);
+
+      if (error) throw error;
+
+      // 更新耗材列表，確保包含完整的資料結構
+      setMaterials(prev => [...prev, data[0]]);
+      setOpen(false);
+      setNewMaterial({
+        material_type_id: "",
+        name: "",
+        status: "正常",
+        last_maintenance: null
+      });
+    } catch (error) {
+      console.error('Error adding material:', error);
+      alert('新增耗材失敗，請稍後再試！');
+    }
   };
 
-  const handleEditRecord = (id, type, index, field, value) => {
-    setMedicines(medicines.map(item =>
-      item.id === id ? {
-        ...item,
-        [type]: item[type].map((record, i) => i === index ? { ...record, [field]: value } : record)
-      } : item
-    ));
+  // 處理新增藥劑
+  const handleAddMedicine = async () => {
+    try {
+      // 檢查是否已存在相同名稱的藥劑
+      const { data: existingMedicines, error: checkError } = await supabase
+        .from('medicines')
+        .select('name')
+        .ilike('name', newMedicine.name);
+
+      if (checkError) throw checkError;
+
+      if (existingMedicines && existingMedicines.length > 0) {
+        alert('此藥劑種類已存在！');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('medicines')
+        .insert([{ name: newMedicine.name }])
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `);
+
+      if (error) throw error;
+
+      setMedicines(prev => [...prev, data[0]]);
+      setOpen(false);
+      setNewMedicine({
+        name: ""
+      });
+    } catch (error) {
+      console.error('Error adding medicine:', error);
+      alert('新增藥劑失敗，請稍後再試！');
+    }
   };
 
-  const handleDeleteRecord = (id, type, index) => {
-    setMedicines(medicines.map(item =>
-      item.id === id ? {
-        ...item,
-        [type]: item[type].filter((_, i) => i !== index)
-      } : item
-    ));
+  // 處理更新耗材狀態
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      const { data, error } = await supabase
+        .from('material_components')
+        .update({ status: newStatus })
+        .eq('id', id)
+        .select(`
+          *,
+          material_types (
+            id,
+            name,
+            type
+          )
+        `);
+
+      if (error) throw error;
+
+      setMaterials(prev => prev.map(m => m.id === id ? data[0] : m));
+    } catch (error) {
+      console.error('Error updating material status:', error);
+      alert('更新耗材狀態失敗，請稍後再試！');
+    }
   };
 
-  const handleMaintenanceChange = (id, value) => {
-    setMaterials(materials.map(item =>
-      item.id === id ? { ...item, lastMaintenance: value } : item
-    ));
-  };
-
-  const handleStatusChange = (itemId, componentId, value) => {
-    setMaterials(materials.map(item =>
-      item.id === itemId ? {
-        ...item,
-        components: item.components.map(comp => comp.id === componentId ? { ...comp, status: value } : comp)
-      } : item
-    ));
-  };
-
-  const calculateTotal = (item) => {
-    const totalOrders = item.orders.reduce((sum, r) => sum + r.quantity, 0);
-    const totalUsages = item.usages.reduce((sum, r) => sum + r.quantity, 0);
+  // 計算藥劑剩餘量
+  const calculateMedicineQuantity = (medicine) => {
+    const totalOrders = medicine.medicine_orders?.reduce((sum, order) => sum + order.quantity, 0) || 0;
+    const totalUsages = medicine.medicine_usages?.reduce((sum, usage) => sum + usage.quantity, 0) || 0;
     return totalOrders - totalUsages;
   };
 
-  const handleAddMedicine = () => {
-    if (!newMedicineName.trim()) return;
-    const newId = Math.max(...medicines.map(m => m.id)) + 1;
-    const newMedicine = {
-      id: newId,
-      name: newMedicineName,
-      orders: [],
-      usages: []
-    };
-    setMedicines([...medicines, newMedicine]);
-    setNewMedicineName("");
-  };
-  
-  const handleDeleteMedicine = (id) => {
-    setMedicines(medicines.filter(item => item.id !== id));
-  };
+  // 篩選耗材
+  const filteredMaterials = materials
+    .filter((material) => {
+      if (selectedType && material.material_types?.type !== selectedType) return false;
+      if (searchQuery.trim() !== "") {
+        const searchLower = searchQuery.toLowerCase();
+        return material.name.toLowerCase().includes(searchLower);
+      }
+      return true;
+    })
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const filteredMaterials = materials.filter(material => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      material.name.toLowerCase().includes(searchLower) ||
-      material.components.some(component => 
-        component.name.toLowerCase().includes(searchLower)
-      )
-    );
-  });
+  // 篩選藥劑
+  const filteredMedicines = medicines
+    .filter((medicine) => {
+      if (searchQuery.trim() !== "") {
+        const searchLower = searchQuery.toLowerCase();
+        return medicine.name.toLowerCase().includes(searchLower);
+      }
+      return true;
+    })
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const handleAddItem = () => {
-    if (!newItem.materialName.trim() || !newItem.componentName.trim()) return;
-    
-    const existingMaterial = materials.find(m => m.name === newItem.materialName);
-    
-    if (existingMaterial) {
-      // 如果耗材種類已存在，只新增物品
-      setMaterials(materials.map(item =>
-        item.id === existingMaterial.id ? {
-          ...item,
-          components: [
-            ...item.components,
-            {
-              id: Math.max(...item.components.map(c => c.id), 0) + 1,
-              name: newItem.componentName,
-              status: newItem.status,
-              lastMaintenance: newItem.lastMaintenance
-            }
-          ]
-        } : item
-      ));
-    } else {
-      // 如果耗材種類不存在，新增種類和物品
-      const newId = Math.max(...materials.map(m => m.id)) + 1;
-      const newMaterialItem = {
-        id: newId,
-        name: newItem.materialName,
-        type: newItem.materialType,
-        components: [{
-          id: 1,
-          name: newItem.componentName,
-          status: newItem.status,
-          lastMaintenance: newItem.lastMaintenance
-        }]
-      };
-      setMaterials([...materials, newMaterialItem]);
+  const paginatedMaterials = filteredMaterials.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
+  const paginatedMedicines = filteredMedicines.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
+  // 處理編輯耗材
+  const handleEditMaterial = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('material_components')
+        .update({
+          status: editingMaterial.status,
+          last_maintenance: editingMaterial.last_maintenance
+        })
+        .eq('id', editingMaterial.id)
+        .select(`
+          *,
+          material_types (
+            id,
+            name,
+            type
+          )
+        `);
+
+      if (error) throw error;
+
+      setMaterials(prev => prev.map(m => m.id === editingMaterial.id ? data[0] : m));
+      setEditDialogOpen(false);
+      setEditingMaterial(null);
+    } catch (error) {
+      console.error('Error updating material:', error);
+      alert('更新耗材失敗，請稍後再試！');
     }
-    
-    setNewItem({
-      materialName: "",
-      materialType: "灌溉設備",
-      componentName: "",
-      status: "正常",
-      lastMaintenance: ""
-    });
-    setShowAddForm(false);
   };
+
+  // 處理編輯藥劑
+  const handleEditMedicine = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('medicines')
+        .update({
+          name: editingMedicine.name
+        })
+        .eq('id', editingMedicine.id)
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `);
+
+      if (error) throw error;
+
+      setMedicines(prev => prev.map(m => m.id === editingMedicine.id ? data[0] : m));
+      setEditDialogOpen(false);
+      setEditingMedicine(null);
+    } catch (error) {
+      console.error('Error updating medicine:', error);
+      alert('更新藥劑失敗，請稍後再試！');
+    }
+  };
+
+  // 處理新增訂購
+  const handleAddOrder = async () => {
+    try {
+      // 驗證必填欄位
+      if (!newOrder.quantity || !newOrder.date || !newOrder.vendor) {
+        alert('請填寫所有必填欄位！');
+        return;
+      }
+
+      // 確保日期格式正確
+      const orderDate = new Date(newOrder.date);
+      if (isNaN(orderDate.getTime())) {
+        alert('日期格式不正確！');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('medicine_orders')
+        .insert([{
+          medicine_id: selectedMedicine.id,
+          quantity: parseInt(newOrder.quantity),
+          date: newOrder.date,
+          vendor: newOrder.vendor
+        }]);
+
+      if (error) {
+        console.error('Error details:', error);
+        throw error;
+      }
+
+      // 重新獲取藥劑資料以更新列表
+      const { data: updatedData, error: fetchError } = await supabase
+        .from('medicines')
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `);
+
+      if (fetchError) throw fetchError;
+      
+      setMedicines(updatedData || []);
+      setOrderDialogOpen(false);
+      setSelectedMedicine(null);
+      setNewOrder({
+        quantity: 0,
+        date: "",
+        vendor: ""
+      });
+    } catch (error) {
+      console.error('Error adding order:', error);
+      alert('新增訂購記錄失敗：' + (error.message || '請稍後再試！'));
+    }
+  };
+
+  // 處理新增使用記錄
+  const handleAddUsage = async () => {
+    try {
+      // 驗證必填欄位
+      if (!newUsage.quantity || !newUsage.date || !newUsage.project || !newUsage.customer) {
+        alert('請填寫所有必填欄位！');
+        return;
+      }
+
+      // 確保日期格式正確
+      const usageDate = new Date(newUsage.date);
+      if (isNaN(usageDate.getTime())) {
+        alert('日期格式不正確！');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('medicine_usages')
+        .insert([{
+          medicine_id: selectedMedicine.id,
+          quantity: parseInt(newUsage.quantity),
+          date: newUsage.date,
+          project: newUsage.project,
+          customer: newUsage.customer
+        }]);
+
+      if (error) {
+        console.error('Error details:', error);
+        throw error;
+      }
+
+      // 重新獲取藥劑資料以更新列表
+      const { data: updatedData, error: fetchError } = await supabase
+        .from('medicines')
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `);
+
+      if (fetchError) throw fetchError;
+      
+      setMedicines(updatedData || []);
+      setUsageDialogOpen(false);
+      setSelectedMedicine(null);
+      setNewUsage({
+        quantity: 0,
+        date: "",
+        project: "",
+        customer: ""
+      });
+    } catch (error) {
+      console.error('Error adding usage:', error);
+      alert('新增使用記錄失敗：' + (error.message || '請稍後再試！'));
+    }
+  };
+
+  // 處理刪除藥劑
+  const handleDeleteMedicine = async (medicine) => {
+    if (!window.confirm(`確定要刪除藥劑「${medicine.name}」嗎？此操作將同時刪除所有相關的訂購和使用記錄。`)) {
+      return;
+    }
+
+    try {
+      // 先刪除相關的訂購記錄
+      const { error: ordersError } = await supabase
+        .from('medicine_orders')
+        .delete()
+        .eq('medicine_id', medicine.id);
+
+      if (ordersError) throw ordersError;
+
+      // 再刪除相關的使用記錄
+      const { error: usagesError } = await supabase
+        .from('medicine_usages')
+        .delete()
+        .eq('medicine_id', medicine.id);
+
+      if (usagesError) throw usagesError;
+
+      // 最後刪除藥劑本身
+      const { error: medicineError } = await supabase
+        .from('medicines')
+        .delete()
+        .eq('id', medicine.id);
+
+      if (medicineError) throw medicineError;
+
+      // 更新藥劑列表
+      setMedicines(prev => prev.filter(m => m.id !== medicine.id));
+    } catch (error) {
+      console.error('Error deleting medicine:', error);
+      alert('刪除藥劑失敗，請稍後再試！');
+    }
+  };
+
+  // 處理查看歷史記錄
+  const handleViewHistory = async (medicine) => {
+    try {
+      setSelectedMedicine(medicine);
+      setViewHistoryDialogOpen(true);
+      setHistoryType('order'); // 修改這裡：預設顯示訂購記錄
+      
+      // 預設顯示最近一個月的記錄
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 1);
+      setDateRange({
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      });
+
+      // 從資料庫獲取最新的藥劑資料
+      const { data: updatedMedicine, error } = await supabase
+        .from('medicines')
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `)
+        .eq('id', medicine.id)
+        .single();
+
+      if (error) throw error;
+
+      // 更新選中的藥劑資料
+      setSelectedMedicine(updatedMedicine);
+      
+      // 篩選記錄
+      filterHistory(updatedMedicine, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+    } catch (error) {
+      console.error('Error fetching medicine history:', error);
+      alert('獲取記錄失敗，請稍後再試！');
+    }
+  };
+
+  // 處理記錄類型切換
+  const handleHistoryTypeChange = async (type) => {
+    try {
+      // 先更新類型
+      setHistoryType(type);
+      
+      // 從資料庫獲取最新的藥劑資料
+      const { data: updatedMedicine, error } = await supabase
+        .from('medicines')
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `)
+        .eq('id', selectedMedicine.id)
+        .single();
+
+      if (error) throw error;
+
+      // 更新選中的藥劑資料
+      setSelectedMedicine(updatedMedicine);
+
+      // 使用最新的資料進行篩選
+      if (dateRange.startDate && dateRange.endDate) {
+        // 直接從資料庫獲取指定類型的記錄
+        if (type === 'order') {
+          const { data: orders, error: ordersError } = await supabase
+            .from('medicine_orders')
+            .select('*')
+            .eq('medicine_id', updatedMedicine.id)
+            .gte('date', dateRange.startDate)
+            .lte('date', dateRange.endDate)
+            .order('date', { ascending: false });  // 按日期降序排列
+
+          if (ordersError) throw ordersError;
+          setFilteredHistory(orders || []);
+        } else {
+          const { data: usages, error: usagesError } = await supabase
+            .from('medicine_usages')
+            .select('*')
+            .eq('medicine_id', updatedMedicine.id)
+            .gte('date', dateRange.startDate)
+            .lte('date', dateRange.endDate)
+            .order('date', { ascending: false });  // 按日期降序排列
+
+          if (usagesError) throw usagesError;
+          setFilteredHistory(usages || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error switching history type:', error);
+      alert('切換記錄類型失敗，請稍後再試！');
+    }
+  };
+
+  // 篩選歷史記錄
+  const filterHistory = async (medicine, startDate, endDate) => {
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999); // 設定為當天的最後一刻
+
+      // 從資料庫獲取指定時間範圍的記錄
+      if (historyType === 'order') {
+        // 查詢訂購記錄
+        const { data: orders, error } = await supabase
+          .from('medicine_orders')
+          .select('*')
+          .eq('medicine_id', medicine.id)
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date', { ascending: false });  // 按日期降序排列
+
+        if (error) throw error;
+        setFilteredHistory(orders || []);
+      } else if (historyType === 'usage') {
+        // 查詢使用記錄
+        const { data: usages, error } = await supabase
+          .from('medicine_usages')
+          .select('*')
+          .eq('medicine_id', medicine.id)
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date', { ascending: false });  // 按日期降序排列
+
+        if (error) throw error;
+        setFilteredHistory(usages || []);
+      }
+    } catch (error) {
+      console.error('Error filtering history:', error);
+      alert('篩選記錄失敗，請稍後再試！');
+    }
+  };
+
+  // 處理日期範圍變更
+  const handleDateRangeChange = (field, value) => {
+    const newDateRange = { ...dateRange, [field]: value };
+    setDateRange(newDateRange);
+    if (newDateRange.startDate && newDateRange.endDate) {
+      filterHistory(selectedMedicine, newDateRange.startDate, newDateRange.endDate);
+    }
+  };
+
+  if (loading) return <CircularProgress />;
+  if (error) return <Typography color="error">{error}</Typography>;
 
   return (
     <div style={{ padding: 20 }}>
-      <Typography variant="h4">庫存管理</Typography>
+      <Box sx={{ position: 'relative', mb: 4 }}>
+        <Paper
+          elevation={3}
+          sx={{
+            backgroundColor: 'primary.light',
+            padding: 4,
+            borderRadius: 3,
+            mb: 4,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 4,
+          }}
+        >
+          <Box sx={{ zIndex: 1, position: 'relative' }}>
+            <Typography variant="h2" sx={{ color: 'primary.black', fontWeight: 'bold', mb: 10 }}>
+              庫存管理
+            </Typography>
 
-      <div style={{ marginTop: 20 }}>
-        <Button variant={currentCategory === "藥劑" ? "contained" : "outlined"} onClick={() => setCurrentCategory("藥劑")} style={{ marginRight: 10 }}>藥劑</Button>
-        <Button variant={currentCategory === "耗材" ? "contained" : "outlined"} onClick={() => setCurrentCategory("耗材")}>耗材</Button>
-      </div>
-      
-      {currentCategory === "藥劑" && (
-        <>
-          <div style={{ marginTop: 20 }}>
-            <TextField
-              label="新增藥劑名稱"
-              size="small"
-              value={newMedicineName}
-              onChange={(e) => setNewMedicineName(e.target.value)}
-              style={{ marginRight: 10 }}
-            />
-            <Button variant="outlined" onClick={handleAddMedicine}>新增藥劑</Button>
-          </div>
-          {mode === "overview" && (
-            <TableContainer component={Paper} style={{ marginTop: 20 }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>名稱</TableCell>
-                    <TableCell>剩餘量</TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {medicines.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>{calculateTotal(item)}</TableCell>
-                      <TableCell>
-                        <Button onClick={() => setMode(`view-${item.id}`)}>查看</Button>
-                        <Button onClick={() => setMode(`add-${item.id}`)} style={{ marginLeft: 10 }}>新增訂購或使用</Button>
-                        <Button
-                          onClick={() => handleDeleteMedicine(item.id)}
-                          color="error"
-                          style={{ marginLeft: 10 }}
-                        >
-                          刪除
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            
+            <Button startIcon={<Add />} variant="contained" onClick={() => setOpen(true)} style={{ marginBottom: 10 }}>
+              新增{currentTab === 0 ? '耗材' : '藥劑'}
+            </Button>
+          </Box>
+        </Paper>
+
+        {/* 標籤頁 */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
+            <Tab label="耗材管理" />
+            <Tab label="藥劑管理" />
+          </Tabs>
+        </Box>
+
+        {/* 搜尋和篩選區域 */}
+        <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+          {currentTab === 0 && (
+            <>
+              <TextField
+                label="耗材類型"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                sx={{ minWidth: 200 }}
+              />
+
+              <TextField
+                label="搜尋耗材名稱"
+                variant="outlined"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ minWidth: 200 }}
+              />
+            </>
           )}
+        </Box>
 
-          {medicines.map((item) => (
-            <div key={item.id}>
-              {mode === `view-${item.id}` && (
-                <TableContainer component={Paper} style={{ marginTop: 20 }}>
-                  <Button onClick={() => setMode("overview")}>回主頁</Button>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>類型</TableCell>
-                        <TableCell>數量</TableCell>
-                        <TableCell>日期</TableCell>
-                        <TableCell>專案</TableCell>
-                        <TableCell>廠商</TableCell>
-                        <TableCell>操作</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {[...item.orders.map((r, i) => ({ ...r, type: "orders", index: i })),
-                       ...item.usages.map((r, i) => ({ ...r, type: "usages", index: i }))].map(record => (
-                        <TableRow key={record.index + record.type}>
-                          <TableCell>{record.type === "orders" ? "訂貨" : "使用"}</TableCell>
-                          <TableCell><TextField size="small" type="number" value={record.quantity} onChange={(e) => handleEditRecord(item.id, record.type, record.index, "quantity", parseInt(e.target.value, 10))} /></TableCell>
-                          <TableCell><TextField size="small" type="date" value={record.date} onChange={(e) => handleEditRecord(item.id, record.type, record.index, "date", e.target.value)} /></TableCell>
-                          <TableCell><TextField size="small" value={record.project} onChange={(e) => handleEditRecord(item.id, record.type, record.index, "project", e.target.value)} /></TableCell>
-                          <TableCell><TextField size="small" value={record.vendor || ""} onChange={(e) => handleEditRecord(item.id, record.type, record.index, "vendor", e.target.value)} /></TableCell>
-                          <TableCell><Button onClick={() => handleDeleteRecord(item.id, record.type, record.index)}>刪除</Button></TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-
-              {mode === `add-${item.id}` && (
-                <TableContainer component={Paper} style={{ marginTop: 20 }}>
-                  <Button onClick={() => setMode("overview")}>回主頁</Button>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>類型</TableCell>
-                        <TableCell>數量</TableCell>
-                        <TableCell>日期</TableCell>
-                        <TableCell>專案</TableCell>
-                        <TableCell>廠商</TableCell>
-                        <TableCell>操作</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell><Select value={newRecord.type} onChange={(e) => setNewRecord({ ...newRecord, type: e.target.value })}><MenuItem value="order">訂貨</MenuItem><MenuItem value="usage">使用</MenuItem></Select></TableCell>
-                        <TableCell><TextField size="small" type="number" value={newRecord.quantity} onChange={(e) => setNewRecord({ ...newRecord, quantity: e.target.value })} /></TableCell>
-                        <TableCell><TextField size="small" type="date" value={newRecord.date} onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })} /></TableCell>
-                        <TableCell><TextField size="small" value={newRecord.project} onChange={(e) => setNewRecord({ ...newRecord, project: e.target.value })} /></TableCell>
-                        <TableCell><TextField size="small" value={newRecord.vendor} onChange={(e) => setNewRecord({ ...newRecord, vendor: e.target.value })} /></TableCell>
-                        <TableCell><Button onClick={() => handleAddRecord(item.id, () => setMode("overview"))}>新增</Button></TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-
-
-            </div>
-          ))}
-        </>
-      )}
-
-      {currentCategory === "耗材" && (
-        <>
-          <div style={{ marginTop: 20, marginBottom: 20, display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <TextField
-              label="搜尋耗材"
-              size="small"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="輸入種類或物品名稱"
-              style={{ width: 300 }}
-            />
-            {!showAddForm ? (
-              <Button 
-                variant="contained" 
-                onClick={() => setShowAddForm(true)}
-              >
-                新增耗材
-              </Button>
-            ) : (
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
-                <TextField
-                  label="耗材種類"
-                  size="small"
-                  value={newItem.materialName}
-                  onChange={(e) => setNewItem({ ...newItem, materialName: e.target.value })}
-                  style={{ width: 150 }}
-                />
-                <TextField
-                  label="物品名稱"
-                  size="small"
-                  value={newItem.componentName}
-                  onChange={(e) => setNewItem({ ...newItem, componentName: e.target.value })}
-                  style={{ width: 150 }}
-                />
-                <TextField
-                  label="狀態"
-                  size="small"
-                  value={newItem.status}
-                  onChange={(e) => setNewItem({ ...newItem, status: e.target.value })}
-                  style={{ width: 150 }}
-                />
-                <TextField
-                  label="保養日期"
-                  type="date"
-                  size="small"
-                  value={newItem.lastMaintenance}
-                  onChange={(e) => setNewItem({ ...newItem, lastMaintenance: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                />
-                <Button 
-                  variant="contained" 
-                  onClick={handleAddItem}
-                  disabled={!newItem.materialName.trim() || !newItem.componentName.trim()}
-                >
-                  確認新增
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setNewItem({
-                      materialName: "",
-                      materialType: "灌溉設備",
-                      componentName: "",
-                      status: "正常",
-                      lastMaintenance: ""
-                    });
-                  }}
-                >
-                  取消
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <TableContainer component={Paper} style={{ marginTop: 20 }}>
+        {/* 耗材列表 */}
+        {currentTab === 0 && (
+          <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>種類</TableCell>
-                  <TableCell>物品名稱</TableCell>
+                  <TableCell>編號</TableCell>
+                  <TableCell>耗材類型</TableCell>
+                  <TableCell>名稱</TableCell>
                   <TableCell>狀態</TableCell>
-                  <TableCell>上次保養日期</TableCell>
+                  <TableCell>最後維護日期</TableCell>
                   <TableCell>操作</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredMaterials.map((material) => (
-                  material.components.map((component) => (
-                    <TableRow key={`${material.id}-${component.id}`}>
-                      <TableCell>{material.name}</TableCell>
-                      <TableCell>{component.name}</TableCell>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          value={component.status}
-                          onChange={(e) => handleStatusChange(material.id, component.id, e.target.value)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          type="date"
-                          value={component.lastMaintenance}
-                          onChange={(e) => handleMaintenanceChange(material.id, e.target.value)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Button size="small" color="primary">編輯</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                {paginatedMaterials.map((material, index) => (
+                  <TableRow key={material.id}>
+                    <TableCell>{page * rowsPerPage + index + 1}</TableCell>
+                    <TableCell>{material.material_types?.name || '未知類型'}</TableCell>
+                    <TableCell>{material.name}</TableCell>
+                    <TableCell>{material.status}</TableCell>
+                    <TableCell>{material.last_maintenance || '未設定'}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => {
+                          setEditingMaterial(material);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        編輯
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-        </>
-      )}
+        )}
+
+        {/* 藥劑列表 */}
+        {currentTab === 1 && (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>編號</TableCell>
+                  <TableCell>藥劑名稱</TableCell>
+                  <TableCell>剩餘數量</TableCell>
+                  <TableCell>最後更新日期</TableCell>
+                  <TableCell>操作</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedMedicines.map((medicine, index) => (
+                  <TableRow key={medicine.id}>
+                    <TableCell>{page * rowsPerPage + index + 1}</TableCell>
+                    <TableCell>{medicine.name}</TableCell>
+                    <TableCell>{calculateMedicineQuantity(medicine)}</TableCell>
+                    <TableCell>{new Date(medicine.updated_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="primary"
+                          onClick={() => {
+                            setSelectedMedicine(medicine);
+                            setOrderDialogOpen(true);
+                          }}
+                        >
+                          新增訂購
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="secondary"
+                          onClick={() => {
+                            setSelectedMedicine(medicine);
+                            setUsageDialogOpen(true);
+                          }}
+                        >
+                          新增使用
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="info"
+                          onClick={() => handleViewHistory(medicine)}
+                        >
+                          查看記錄
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteMedicine(medicine)}
+                        >
+                          刪除
+                        </Button>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        <TablePagination
+          component="div"
+          count={currentTab === 0 ? filteredMaterials.length : filteredMedicines.length}
+          page={page}
+          onPageChange={(e, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value, 10));
+            setPage(0);
+          }}
+        />
+      </Box>
+
+      {/* 新增對話框 */}
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>新增{currentTab === 0 ? '耗材' : '藥劑'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            {currentTab === 0 ? (
+              <>
+                <TextField
+                  label="耗材類型"
+                  value={newMaterial.material_type_id}
+                  onChange={(e) => setNewMaterial(prev => ({ ...prev, material_type_id: e.target.value }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="耗材名稱"
+                  value={newMaterial.name}
+                  onChange={(e) => setNewMaterial(prev => ({ ...prev, name: e.target.value }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="狀態"
+                  value={newMaterial.status}
+                  onChange={(e) => setNewMaterial(prev => ({ ...prev, status: e.target.value }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="最後維護日期"
+                  type="date"
+                  value={newMaterial.last_maintenance || ''}
+                  onChange={(e) => setNewMaterial(prev => ({ ...prev, last_maintenance: e.target.value }))}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+              </>
+            ) : (
+              <TextField
+                label="藥劑名稱"
+                value={newMedicine.name}
+                onChange={(e) => setNewMedicine(prev => ({ ...prev, name: e.target.value }))}
+                fullWidth
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>取消</Button>
+          <Button 
+            onClick={currentTab === 0 ? handleAddMaterial : handleAddMedicine} 
+            variant="contained"
+          >
+            新增
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 編輯耗材對話框 */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+        <DialogTitle>編輯{currentTab === 0 ? '耗材' : '藥劑'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            {currentTab === 0 ? (
+              <>
+                <TextField
+                  label="耗材類型"
+                  value={editingMaterial?.material_types?.name || ''}
+                  disabled
+                  fullWidth
+                />
+
+                <TextField
+                  label="耗材名稱"
+                  value={editingMaterial?.name || ''}
+                  disabled
+                  fullWidth
+                />
+
+                <TextField
+                  label="狀態"
+                  value={editingMaterial?.status || ''}
+                  onChange={(e) => setEditingMaterial(prev => ({ ...prev, status: e.target.value }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="最後維護日期"
+                  type="date"
+                  value={editingMaterial?.last_maintenance || ''}
+                  onChange={(e) => setEditingMaterial(prev => ({ ...prev, last_maintenance: e.target.value }))}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+              </>
+            ) : (
+              <>
+                <TextField
+                  label="藥劑名稱"
+                  value={editingMedicine?.name || ''}
+                  onChange={(e) => setEditingMedicine(prev => ({ ...prev, name: e.target.value }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="使用數量"
+                  type="number"
+                  value={editingMedicine?.usageQuantity || ''}
+                  onChange={(e) => setEditingMedicine(prev => ({ ...prev, usageQuantity: parseInt(e.target.value) || 0 }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="使用日期"
+                  type="date"
+                  value={editingMedicine?.usageDate || ''}
+                  onChange={(e) => setEditingMedicine(prev => ({ ...prev, usageDate: e.target.value }))}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+
+                <TextField
+                  label="使用專案"
+                  value={editingMedicine?.usageProject || ''}
+                  onChange={(e) => setEditingMedicine(prev => ({ ...prev, usageProject: e.target.value }))}
+                  fullWidth
+                />
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>取消</Button>
+          <Button 
+            onClick={currentTab === 0 ? handleEditMaterial : handleEditMedicine} 
+            variant="contained"
+          >
+            儲存
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新增訂購對話框 */}
+      <Dialog open={orderDialogOpen} onClose={() => setOrderDialogOpen(false)}>
+        <DialogTitle>新增訂購 - {selectedMedicine?.name}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <TextField
+              label="訂購數量"
+              type="number"
+              value={newOrder.quantity}
+              onChange={(e) => setNewOrder(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+              fullWidth
+            />
+
+            <TextField
+              label="訂購日期"
+              type="date"
+              value={newOrder.date}
+              onChange={(e) => setNewOrder(prev => ({ ...prev, date: e.target.value }))}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
+              label="廠商"
+              value={newOrder.vendor}
+              onChange={(e) => setNewOrder(prev => ({ ...prev, vendor: e.target.value }))}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOrderDialogOpen(false)}>取消</Button>
+          <Button onClick={handleAddOrder} variant="contained">
+            新增
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新增使用記錄對話框 */}
+      <Dialog open={usageDialogOpen} onClose={() => setUsageDialogOpen(false)}>
+        <DialogTitle>新增使用記錄 - {selectedMedicine?.name}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <TextField
+              label="使用數量"
+              type="number"
+              value={newUsage.quantity}
+              onChange={(e) => setNewUsage(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+              fullWidth
+            />
+
+            <TextField
+              label="使用日期"
+              type="date"
+              value={newUsage.date}
+              onChange={(e) => setNewUsage(prev => ({ ...prev, date: e.target.value }))}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <Autocomplete
+              options={projects}
+              getOptionLabel={(option) => `${option.project_name} - ${option.customer_database?.customer_name || '未知客戶'}`}
+              value={projects.find(p => p.project_id === newUsage.project) || null}
+              onChange={(event, newValue) => {
+                setNewUsage(prev => ({
+                  ...prev,
+                  project: newValue?.project_id || "",
+                  customer: newValue?.customer_database?.customer_name || ""
+                }));
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="選擇專案"
+                  fullWidth
+                />
+              )}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsageDialogOpen(false)}>取消</Button>
+          <Button onClick={handleAddUsage} variant="contained">
+            新增
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 查看歷史記錄對話框 */}
+      <Dialog 
+        open={viewHistoryDialogOpen} 
+        onClose={() => setViewHistoryDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          記錄查詢 - {selectedMedicine?.name}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Button
+                variant={historyType === 'order' ? 'contained' : 'outlined'}
+                onClick={() => handleHistoryTypeChange('order')}
+              >
+                訂購記錄
+              </Button>
+              <Button
+                variant={historyType === 'usage' ? 'contained' : 'outlined'}
+                onClick={() => handleHistoryTypeChange('usage')}
+              >
+                使用記錄
+              </Button>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <TextField
+                label="開始日期"
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="結束日期"
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>日期</TableCell>
+                    <TableCell>數量</TableCell>
+                    {historyType === 'order' ? (
+                      <TableCell>廠商</TableCell>
+                    ) : (
+                      <>
+                        <TableCell>專案</TableCell>
+                        <TableCell>客戶</TableCell>
+                      </>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredHistory.map((record, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{record.quantity}</TableCell>
+                      {historyType === 'order' ? (
+                        <TableCell>{record.vendor}</TableCell>
+                      ) : (
+                        <>
+                          <TableCell>{record.project}</TableCell>
+                          <TableCell>{record.customer}</TableCell>
+                        </>
+                      )}
+                    </TableRow>
+                  ))}
+                  {filteredHistory.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={historyType === 'order' ? 3 : 4} align="center">
+                        此時間範圍內無{historyType === 'order' ? '訂購' : '使用'}記錄
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewHistoryDialogOpen(false)}>關閉</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
