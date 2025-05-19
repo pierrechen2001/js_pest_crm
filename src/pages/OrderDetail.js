@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { useAuth } from '../context/AuthContext';
 import {
   Box,
   Card,
@@ -52,6 +53,7 @@ const taiwanDistricts = {
 export default function OrderDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [customerNoteExpanded, setCustomerNoteExpanded] = useState(false);
   const [projectNoteExpanded, setProjectNoteExpanded] = useState(false);
@@ -177,7 +179,7 @@ export default function OrderDetail() {
             log_date: newLog.log_date,
             content: newLog.content,
             notes: newLog.notes,
-            created_by: '系統管理員'
+            created_by: user?.name || '未知使用者'
           }
         ])
         .select();
@@ -299,7 +301,8 @@ export default function OrderDetail() {
           log_type: editingLog.log_type,
           log_date: editingLog.log_date,
           content: editingLog.content,
-          notes: editingLog.notes
+          notes: editingLog.notes,
+          updated_at: new Date().toISOString()
         })
         .eq('log_id', editingLog.log_id)
         .select();

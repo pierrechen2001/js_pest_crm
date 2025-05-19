@@ -858,9 +858,10 @@ const updateContact = (index, field, value) => {
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell style={{ width: "7%" }}>編號</TableCell>
               <TableCell style={{ width: "15%" }}>專案名稱</TableCell>
-              <TableCell style={{ width: "21%" }}>客戶名稱</TableCell>
-              <TableCell style={{ width: "28%" }}>施工地址</TableCell>
+              <TableCell style={{ width: "15%" }}>客戶名稱</TableCell>
+              <TableCell style={{ width: "27%" }}>施工地址</TableCell>
               <TableCell style={{ width: "12%" }}>
                 開始日期
                 <TableSortLabel
@@ -933,16 +934,17 @@ const updateContact = (index, field, value) => {
           </TableHead>
 
           <TableBody>
-            {paginatedProjects.map((project) => (
+            {paginatedProjects.map((project, index) => (
               <TableRow 
                 key={project.project_id}
                 hover
                 style={{ cursor: 'pointer' }}
                 onClick={() => navigate(`/order/${project.project_id}`)}
               >
+                <TableCell style={{ width: "7%" }}>{page * rowsPerPage + index + 1}</TableCell>
                 <TableCell style={{ width: "15%" }}>{project.project_name}</TableCell>
-                <TableCell style={{ width: "21%" }}>{project.customer_database?.customer_name}</TableCell>
-                <TableCell style={{ width: "28%" }}>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
+                <TableCell style={{ width: "15%" }}>{project.customer_database?.customer_name}</TableCell>
+                <TableCell style={{ width: "27%" }}>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
                 <TableCell style={{ width: "12%" }}>{project.start_date}</TableCell>
                 <TableCell style={{ width: "12%" }}>
                   <Box
