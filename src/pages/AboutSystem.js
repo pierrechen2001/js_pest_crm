@@ -132,11 +132,11 @@ const AboutSystem = () => {
       quote: '編程不僅是寫程式碼，更是解決問題和創造價值的過程。'
     },
     {
-      name: '林小明',
+      name: '汪芷瑩',
       role: '前端開發',
       avatar: 'https://avatars.githubusercontent.com/u/23456789',
-      email: 'ming@ntu.edu.tw',
-      github: 'https://github.com/xiaoming',
+      email: 'b12705031@g.ntu.edu.tw',
+      github: 'https://github.com/Angelicac-Wang',
       quote: '優秀的用戶界面應該是直觀且能讓用戶感到愉悅的。'
     },
     {

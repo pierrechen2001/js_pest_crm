@@ -175,8 +175,8 @@ export default function Orders({ projects: initialProjects = [], customers: init
 // ... (rest of the state variables: statusFilter, billingFilter, etc.)
   const [statusFilter, setStatusFilter] = useState("");
   const [billingFilter, setBillingFilter] = useState("");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState("created_at"); // 預設用建立時間排序
+  const [sortOrder, setSortOrder] = useState("desc");  const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState([]);
   const filterOptions = ["專案名稱", "客戶名稱", "施工地址"];
 
@@ -218,12 +218,20 @@ const filteredProjects = (projects || [])
   return true;
 })
 .sort((a, b) => {
-  if (sortOrder === "asc") {
-    return new Date(a.start_date || "") - new Date(b.start_date || "");
+  let aValue, bValue;
+  if (sortField === "start_date") {
+    aValue = a.start_date || "";
+    bValue = b.start_date || "";
   } else {
-    return new Date(b.start_date || "") - new Date(a.start_date || "");
+    aValue = a.created_at || "";
+    bValue = b.created_at || "";
   }
-});
+  if (sortOrder === "desc") {
+    return new Date(bValue) - new Date(aValue);
+  } else {
+    return new Date(aValue) - new Date(bValue);
+  }
+})
 
 // 先做狀態與請款篩選
 const filteredAndStatusProjects = filteredProjects.filter((project) => {
@@ -532,7 +540,7 @@ const updateContact = (index, field, value) => {
           <Autocomplete
             options={
               [...customers].sort((a, b) => 
-                (b.customer_id || 0) - (a.customer_id || 0)
+                new Date(b.created_at || 0) - new Date(a.created_at || 0)
               )
             }            
             getOptionLabel={(option) => option.customer_name}
@@ -899,9 +907,18 @@ const updateContact = (index, field, value) => {
               <TableCell style={{ width: "12%" }}>
                 開始日期
                 <TableSortLabel
-                  active
-                  direction={sortOrder}
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  active={sortField === "start_date"}
+                  direction={sortField === "start_date" ? sortOrder : "desc"}
+                  onClick={() => {
+                    if (sortField === "start_date") {
+                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                    } else {
+                      setSortField("start_date");
+                      setSortOrder("asc"); // 預設第一次點為升冪
+                    }
+                  }}
+                  // show both arrows
+                  IconComponent={TableSortLabel.defaultProps?.IconComponent || undefined}
                 />
               </TableCell>
               <TableCell style={{ width: "12%" }}>
