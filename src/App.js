@@ -16,6 +16,7 @@ import RoleManagement from "./pages/RoleManagement";
 import PendingApproval from './pages/PendingApproval';
 import UserApprovals from './pages/UserApprovals';
 import HomePage from "./pages/HomePage";
+import AboutSystem from "./pages/AboutSystem";
 import { CSSTransition } from 'react-transition-group';
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
@@ -321,6 +322,16 @@ const AppContent = () => {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <UserApprovals />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* 關於系統頁面 */}
+            <Route
+              path="/about"
+              element={
+                <ProtectedRoute>
+                  <AboutSystem />
                 </ProtectedRoute>
               }
             />
