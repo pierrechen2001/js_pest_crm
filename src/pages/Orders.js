@@ -138,6 +138,40 @@ export default function Orders({ projects: initialProjects = [], customers: init
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuProject, setMenuProject] = useState(null);
+  const [menuType, setMenuType] = useState('');
+
+  const handleOpenStatusMenu = (event, project, type) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setMenuProject(project);
+    setMenuType(type);
+  };
+
+  const handleCloseStatusMenu = () => {
+    setAnchorEl(null);
+    setMenuProject(null);
+    setMenuType('');
+  };
+
+  const updateStatus = async (value) => {
+    if (!menuProject) return;
+    const field = menuType === 'construction' ? 'construction_status' : 'billing_status';
+    const { data, error } = await supabase
+      .from('project')
+      .update({ [field]: value })
+      .eq('project_id', menuProject.project_id)
+      .select();
+    if (error) {
+      console.error('Error updating status:', error);
+      return;
+    }
+    // Update local state
+    setProjects(prev => prev.map(p => p.project_id === data[0].project_id ? { ...p, [field]: value } : p));
+    handleCloseStatusMenu();
+  };
+
 // ... (rest of the state variables: statusFilter, billingFilter, etc.)
   const [statusFilter, setStatusFilter] = useState("");
   const [billingFilter, setBillingFilter] = useState("");
@@ -948,6 +982,7 @@ const updateContact = (index, field, value) => {
                 <TableCell style={{ width: "12%" }}>{project.start_date}</TableCell>
                 <TableCell style={{ width: "12%" }}>
                   <Box
+                    onClick={(e) => handleOpenStatusMenu(e, project, 'construction')}
                     sx={{
                       display: 'inline-block',
                       px: 1.5,
@@ -956,6 +991,7 @@ const updateContact = (index, field, value) => {
                       backgroundColor: getStatusStyle(project.construction_status, 'construction').bg,
                       color: getStatusStyle(project.construction_status, 'construction').color,
                       fontWeight: 500,
+                      cursor: 'pointer',
                     }}
                   >
                     {project.construction_status}
@@ -964,6 +1000,7 @@ const updateContact = (index, field, value) => {
 
                 <TableCell style={{ width: "12%" }}>
                   <Box
+                    onClick={(e) => handleOpenStatusMenu(e, project, 'billing')}
                     sx={{
                       display: 'inline-block',
                       px: 1.5,
@@ -972,6 +1009,7 @@ const updateContact = (index, field, value) => {
                       backgroundColor: getStatusStyle(project.billing_status, 'billing').bg,
                       color: getStatusStyle(project.billing_status, 'billing').color,
                       fontWeight: 500,
+                      cursor: 'pointer',
                     }}
                   >
                     {project.billing_status}
@@ -996,6 +1034,18 @@ const updateContact = (index, field, value) => {
           labelRowsPerPage="每頁顯示筆數"
         />
       </TableContainer>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseStatusMenu}
+      >
+        {(menuType === 'construction' ? constructionStatusOptions : billingStatusOptions).map(option => (
+          <MenuItem key={option} onClick={() => updateStatus(option)}>
+            {option}
+          </MenuItem>
+        ))}
+      </Menu>
     </div>
   );
 }

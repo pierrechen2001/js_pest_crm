@@ -62,6 +62,10 @@ const Inventory = () => {
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [historyType, setHistoryType] = useState('usage'); // 'usage' 或 'order'
 
+  // 新增編輯記錄的狀態
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [editRecordDialogOpen, setEditRecordDialogOpen] = useState(false);
+
   // 獲取資料
   useEffect(() => {
     const fetchData = async () => {
@@ -252,7 +256,7 @@ const Inventory = () => {
       }
       return true;
     })
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
 
   // 篩選藥劑
   const filteredMedicines = medicines
@@ -402,14 +406,28 @@ const Inventory = () => {
         return;
       }
 
+      // 確保數量為有效數字
+      const quantity = parseFloat(newUsage.quantity);
+      if (isNaN(quantity)) {
+        alert('請輸入有效的數量！');
+        return;
+      }
+
+      // 獲取選中的專案資訊
+      const selectedProject = projects.find(p => p.project_id === newUsage.project);
+      if (!selectedProject) {
+        alert('找不到選擇的專案資訊！');
+        return;
+      }
+
       const { error } = await supabase
         .from('medicine_usages')
         .insert([{
           medicine_id: selectedMedicine.id,
-          quantity: parseInt(newUsage.quantity),
+          quantity: quantity,
           date: newUsage.date,
-          project: newUsage.project,
-          customer: newUsage.customer
+          project: selectedProject.project_name,
+          customer: selectedProject.customer_database?.customer_name || '未知客戶'
         }]);
 
       if (error) {
@@ -432,7 +450,7 @@ const Inventory = () => {
       setUsageDialogOpen(false);
       setSelectedMedicine(null);
       setNewUsage({
-        quantity: 0,
+        quantity: '',
         date: "",
         project: "",
         customer: ""
@@ -487,7 +505,7 @@ const Inventory = () => {
     try {
       setSelectedMedicine(medicine);
       setViewHistoryDialogOpen(true);
-      setHistoryType('order'); // 修改這裡：預設顯示訂購記錄
+      setHistoryType('order'); // 預設顯示訂購記錄
       
       // 預設顯示最近一個月的記錄
       const endDate = new Date();
@@ -514,8 +532,17 @@ const Inventory = () => {
       // 更新選中的藥劑資料
       setSelectedMedicine(updatedMedicine);
       
-      // 篩選記錄
-      filterHistory(updatedMedicine, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+      // 篩選訂購記錄
+      const { data: orders, error: ordersError } = await supabase
+        .from('medicine_orders')
+        .select('*')
+        .eq('medicine_id', updatedMedicine.id)
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0])
+        .order('date', { ascending: false });  // 按日期降序排列
+
+      if (ordersError) throw ordersError;
+      setFilteredHistory(orders || []);
     } catch (error) {
       console.error('Error fetching medicine history:', error);
       alert('獲取記錄失敗，請稍後再試！');
@@ -625,6 +652,164 @@ const Inventory = () => {
     }
   };
 
+  // 處理刪除耗材
+  const handleDeleteMaterial = async (material) => {
+    if (!window.confirm(`確定要刪除耗材「${material.name}」嗎？此操作無法復原。`)) {
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('material_components')
+        .delete()
+        .eq('id', material.id);
+      if (error) throw error;
+      setMaterials(prev => prev.filter(m => m.id !== material.id));
+    } catch (error) {
+      console.error('Error deleting material:', error);
+      alert('刪除耗材失敗，請稍後再試！');
+    }
+  };
+
+  // 處理編輯記錄
+  const handleEditRecord = async () => {
+    try {
+      if (!editingRecord) return;
+
+      // 驗證必填欄位
+      if (!editingRecord.quantity || !editingRecord.date) {
+        alert('請填寫所有必填欄位！');
+        return;
+      }
+
+      // 確保日期格式正確
+      const recordDate = new Date(editingRecord.date);
+      if (isNaN(recordDate.getTime())) {
+        alert('日期格式不正確！');
+        return;
+      }
+
+      // 確保數量為有效數字
+      const quantity = parseFloat(editingRecord.quantity);
+      if (isNaN(quantity)) {
+        alert('請輸入有效的數量！');
+        return;
+      }
+
+      const tableName = historyType === 'order' ? 'medicine_orders' : 'medicine_usages';
+      
+      // 準備更新資料
+      const updateData = {
+        quantity: quantity,
+        date: editingRecord.date
+      };
+
+      // 根據記錄類型添加額外欄位
+      if (historyType === 'order') {
+        if (!editingRecord.vendor) {
+          alert('請填寫廠商資訊！');
+          return;
+        }
+        updateData.vendor = editingRecord.vendor;
+      } else {
+        if (!editingRecord.project || !editingRecord.customer) {
+          alert('請選擇專案！');
+          return;
+        }
+        updateData.project = editingRecord.project;
+        updateData.customer = editingRecord.customer;
+      }
+
+      // 更新資料庫
+      const { error } = await supabase
+        .from(tableName)
+        .update(updateData)
+        .eq('id', editingRecord.id);
+
+      if (error) {
+        console.error('Error details:', error);
+        throw error;
+      }
+
+      // 重新獲取所有藥劑資料
+      const { data: allMedicines, error: fetchError } = await supabase
+        .from('medicines')
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `);
+
+      if (fetchError) throw fetchError;
+
+      // 更新藥劑列表
+      setMedicines(allMedicines || []);
+      
+      // 更新選中的藥劑資料
+      const updatedMedicine = allMedicines.find(m => m.id === selectedMedicine.id);
+      if (updatedMedicine) {
+        setSelectedMedicine(updatedMedicine);
+      }
+      
+      // 更新過濾後的歷史記錄
+      if (dateRange.startDate && dateRange.endDate) {
+        filterHistory(updatedMedicine, dateRange.startDate, dateRange.endDate);
+      }
+
+      setEditRecordDialogOpen(false);
+      setEditingRecord(null);
+    } catch (error) {
+      console.error('Error editing record:', error);
+      alert('編輯記錄失敗：' + (error.message || '請稍後再試！'));
+    }
+  };
+
+  // 處理刪除記錄
+  const handleDeleteRecord = async (record) => {
+    if (!window.confirm(`確定要刪除這筆${historyType === 'order' ? '訂購' : '使用'}記錄嗎？`)) {
+      return;
+    }
+
+    try {
+      const tableName = historyType === 'order' ? 'medicine_orders' : 'medicine_usages';
+      
+      // 刪除記錄
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', record.id);
+
+      if (error) throw error;
+
+      // 重新獲取所有藥劑資料
+      const { data: allMedicines, error: fetchError } = await supabase
+        .from('medicines')
+        .select(`
+          *,
+          medicine_orders (*),
+          medicine_usages (*)
+        `);
+
+      if (fetchError) throw fetchError;
+
+      // 更新藥劑列表
+      setMedicines(allMedicines || []);
+      
+      // 更新選中的藥劑資料
+      const updatedMedicine = allMedicines.find(m => m.id === selectedMedicine.id);
+      if (updatedMedicine) {
+        setSelectedMedicine(updatedMedicine);
+      }
+      
+      // 更新過濾後的歷史記錄
+      if (dateRange.startDate && dateRange.endDate) {
+        filterHistory(updatedMedicine, dateRange.startDate, dateRange.endDate);
+      }
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      alert('刪除記錄失敗：' + (error.message || '請稍後再試！'));
+    }
+  };
+
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">{error}</Typography>;
 
@@ -668,14 +853,14 @@ const Inventory = () => {
         <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
           {currentTab === 0 && (
             <>
-              <TextField
+            <TextField
                 label="耗材類型"
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
                 sx={{ minWidth: 200 }}
               />
 
-              <TextField
+            <TextField
                 label="搜尋耗材名稱"
                 variant="outlined"
                 value={searchQuery}
@@ -689,18 +874,18 @@ const Inventory = () => {
         {/* 耗材列表 */}
         {currentTab === 0 && (
           <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
+              <Table>
+                <TableHead>
+                  <TableRow>
                   <TableCell>編號</TableCell>
                   <TableCell>耗材類型</TableCell>
-                  <TableCell>名稱</TableCell>
+                    <TableCell>名稱</TableCell>
                   <TableCell>狀態</TableCell>
                   <TableCell>最後維護日期</TableCell>
                   <TableCell>操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                 {paginatedMaterials.map((material, index) => (
                   <TableRow key={material.id}>
                     <TableCell>{page * rowsPerPage + index + 1}</TableCell>
@@ -708,8 +893,8 @@ const Inventory = () => {
                     <TableCell>{material.name}</TableCell>
                     <TableCell>{material.status}</TableCell>
                     <TableCell>{material.last_maintenance || '未設定'}</TableCell>
-                    <TableCell>
-                      <Button
+                      <TableCell>
+                        <Button
                         variant="outlined"
                         size="small"
                         onClick={() => {
@@ -719,28 +904,37 @@ const Inventory = () => {
                       >
                         編輯
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                        <Button
+                        variant="outlined"
+                        size="small"
+                          color="error"
+                        style={{ marginLeft: 8 }}
+                        onClick={() => handleDeleteMaterial(material)}
+                        >
+                          刪除
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
         )}
 
         {/* 藥劑列表 */}
         {currentTab === 1 && (
           <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
                   <TableCell>編號</TableCell>
                   <TableCell>藥劑名稱</TableCell>
                   <TableCell>剩餘數量</TableCell>
                   <TableCell>最後更新日期</TableCell>
-                  <TableCell>操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
+                        <TableCell>操作</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
                 {paginatedMedicines.map((medicine, index) => (
                   <TableRow key={medicine.id}>
                     <TableCell>{page * rowsPerPage + index + 1}</TableCell>
@@ -789,12 +983,12 @@ const Inventory = () => {
                         </Button>
                       </Box>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
 
         <TablePagination
           component="div"
@@ -936,8 +1130,8 @@ const Inventory = () => {
                   onChange={(e) => setEditingMedicine(prev => ({ ...prev, usageProject: e.target.value }))}
                   fullWidth
                 />
-              </>
-            )}
+        </>
+      )}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -996,9 +1190,15 @@ const Inventory = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <TextField
               label="使用數量"
-              type="number"
+              type="text"
               value={newUsage.quantity}
-              onChange={(e) => setNewUsage(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                // 允許輸入數字和小數點
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setNewUsage(prev => ({ ...prev, quantity: value }));
+                }
+              }}
               fullWidth
             />
 
@@ -1027,6 +1227,7 @@ const Inventory = () => {
                   {...params}
                   label="選擇專案"
                   fullWidth
+                  required
                 />
               )}
             />
@@ -1085,11 +1286,11 @@ const Inventory = () => {
             </Box>
 
             <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
+          <Table>
+            <TableHead>
+              <TableRow>
                     <TableCell>日期</TableCell>
-                    <TableCell>數量</TableCell>
+                        <TableCell>數量</TableCell>
                     {historyType === 'order' ? (
                       <TableCell>廠商</TableCell>
                     ) : (
@@ -1098,9 +1299,10 @@ const Inventory = () => {
                         <TableCell>客戶</TableCell>
                       </>
                     )}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
+                        <TableCell>操作</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
                   {filteredHistory.map((record, index) => (
                     <TableRow key={index}>
                       <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
@@ -1111,24 +1313,114 @@ const Inventory = () => {
                         <>
                           <TableCell>{record.project}</TableCell>
                           <TableCell>{record.customer}</TableCell>
-                        </>
-                      )}
+        </>
+      )}
+                      <TableCell>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            setEditingRecord(record);
+                            setEditRecordDialogOpen(true);
+                          }}
+                        >
+                          編輯
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="error"
+                          style={{ marginLeft: 8 }}
+                          onClick={() => handleDeleteRecord(record)}
+                        >
+                          刪除
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {filteredHistory.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={historyType === 'order' ? 3 : 4} align="center">
+                      <TableCell colSpan={historyType === 'order' ? 4 : 5} align="center">
                         此時間範圍內無{historyType === 'order' ? '訂購' : '使用'}記錄
                       </TableCell>
                     </TableRow>
                   )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            </TableBody>
+          </Table>
+        </TableContainer>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setViewHistoryDialogOpen(false)}>關閉</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 編輯記錄對話框 */}
+      <Dialog open={editRecordDialogOpen} onClose={() => setEditRecordDialogOpen(false)}>
+        <DialogTitle>編輯{historyType === 'order' ? '訂購' : '使用'}記錄</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <TextField
+              label="數量"
+              type="text"
+              value={editingRecord?.quantity || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setEditingRecord(prev => ({ ...prev, quantity: value }));
+                }
+              }}
+              fullWidth
+              required
+            />
+
+            <TextField
+              label="日期"
+              type="date"
+              value={editingRecord?.date || ''}
+              onChange={(e) => setEditingRecord(prev => ({ ...prev, date: e.target.value }))}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              required
+            />
+
+            {historyType === 'order' ? (
+              <TextField
+                label="廠商"
+                value={editingRecord?.vendor || ''}
+                onChange={(e) => setEditingRecord(prev => ({ ...prev, vendor: e.target.value }))}
+                fullWidth
+                required
+              />
+            ) : (
+              <Autocomplete
+                options={projects}
+                getOptionLabel={(option) => `${option.project_name} - ${option.customer_database?.customer_name || '未知客戶'}`}
+                value={projects.find(p => p.project_name === editingRecord?.project) || null}
+                onChange={(event, newValue) => {
+                  setEditingRecord(prev => ({
+                    ...prev,
+                    project: newValue?.project_name || "",
+                    customer: newValue?.customer_database?.customer_name || ""
+                  }));
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="選擇專案"
+                    fullWidth
+                    required
+                  />
+                )}
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditRecordDialogOpen(false)}>取消</Button>
+          <Button onClick={handleEditRecord} variant="contained">
+            儲存
+          </Button>
         </DialogActions>
       </Dialog>
     </div>
