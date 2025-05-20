@@ -11,8 +11,6 @@ import Calendar from "./pages/Calendar";
 import ApiCalendar from "./pages/ApiCalendar";
 import MapComponent from './pages/Map';
 import Login from "./pages/Login";
-import UserManagement from "./pages/UserManagement";
-import RoleManagement from "./pages/RoleManagement";
 import PendingApproval from './pages/PendingApproval';
 import UserApprovals from './pages/UserApprovals';
 import HomePage from "./pages/HomePage";
@@ -48,7 +46,7 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   // Check for required role
-  if (requiredRole && !hasRole(requiredRole)) {
+  if (requiredRole && user.roles[0] !== requiredRole) {
     return <Navigate to="/customers" replace />;
   }
 
@@ -318,7 +316,7 @@ const AppContent = () => {
             {/* Admin Routes */}
 
             <Route
-              path="/user-approvals"
+              path="/UserApprovals"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <UserApprovals />

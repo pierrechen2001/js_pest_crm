@@ -129,7 +129,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     {
       text: '用戶管理',
       icon: <SecurityIcon />,
-      path: '/user-approvals',
+      path: '/UserApprovals',
     },
     {
       text: '關於系統',
@@ -373,7 +373,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                 {!isUserApproved && <span style={{ color: '#ff9800', marginLeft: '5px' }}>(待審核)</span>}
               </Typography>
             </Box>
-            {isUserApproved && (
+            {(
               <Tooltip title="帳號設定">
                 <IconButton
                   onClick={handleClick}
