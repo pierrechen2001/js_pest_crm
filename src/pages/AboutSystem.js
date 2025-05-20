@@ -140,11 +140,11 @@ const AboutSystem = () => {
       quote: '優秀的用戶界面應該是直觀且能讓用戶感到愉悅的。'
     },
     {
-      name: '王大華',
+      name: '丁崇耘',
       role: '後端開發',
-      avatar: 'https://avatars.githubusercontent.com/u/34567890',
+      avatar: 'https://github.com/account',
       email: 'hua@ntu.edu.tw',
-      github: 'https://github.com/dahua',
+      github: 'https://github.com/dinosaur1020',
       quote: '穩定、高效的後端系統是任何成功產品的基石。'
     },
     {
