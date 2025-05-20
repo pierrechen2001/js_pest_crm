@@ -57,6 +57,7 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [customerNoteExpanded, setCustomerNoteExpanded] = useState(false);
   const [projectNoteExpanded, setProjectNoteExpanded] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState(null);
   const [error, setError] = useState(null);
   const [project, setProject] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -1212,7 +1213,34 @@ export default function OrderDetail() {
                       </Box>
                     </TableCell>
                     <TableCell>{log.log_date}</TableCell>
-                    <TableCell>{log.content}</TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          display: '-webkit-box',
+                          WebkitLineClamp: expandedLogId === log.log_id ? 'none' : 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          wordBreak: 'break-word',
+                          maxHeight: expandedLogId === log.log_id ? 'none' : '3.2em',
+                        }}
+                        dangerouslySetInnerHTML={{ __html: log.content }}
+                      />
+                      {log.content?.length > 60 && ( // 如果內容稍長就顯示按鈕（你可視情況調整閾值）
+                        <Typography
+                          variant="body2"
+                          color="primary"
+                          sx={{ cursor: 'pointer', mt: 1 }}
+                          onClick={() =>
+                            setExpandedLogId(prev => (prev === log.log_id ? null : log.log_id))
+                          }
+                        >
+                          {expandedLogId === log.log_id ? '收起' : '顯示更多'}
+                        </Typography>
+                      )}
+                    </TableCell>
+
                     <TableCell>{log.notes}</TableCell>
                     <TableCell>{log.created_by}</TableCell>
                     <TableCell align="center">
