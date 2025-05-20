@@ -1,17 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import {
   Typography, Container, Button, Dialog, DialogTitle, DialogContent,
-  TextField, DialogActions, Box
+  TextField, DialogActions, Box, Checkbox, FormControlLabel
 } from "@mui/material";
+import { supabase } from "../lib/supabaseClient"; // 請確認你的 supabaseClient 路徑
 
 const localizer = momentLocalizer(moment);
 
 const InventoryCalendar = () => {
-  const [events, setEvents] = useState([]);
+  // 讀取 localStorage 事件
+  const [events, setEvents] = useState(() => {
+    const saved = localStorage.getItem('crm_events');
+    if (saved) {
+      // 轉換日期字串為 Date 物件
+      return JSON.parse(saved).map(ev => ({
+        ...ev,
+        start: new Date(ev.start),
+        end: new Date(ev.end),
+      }));
+    }
+    return [];
+  });
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [trackEvents, setTrackEvents] = useState([]);
+  const [showTrackDates, setShowTrackDates] = useState(true);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [eventDetails, setEventDetails] = useState({
@@ -21,15 +36,75 @@ const InventoryCalendar = () => {
     detail: ''
   });
 
+  // 若有事件變動，寫回 localStorage
+  useEffect(() => {
+      const saved = localStorage.getItem('crm_events');
+      if (saved) {
+        setEvents(JSON.parse(saved).map(ev => ({
+          ...ev,
+          start: new Date(ev.start),
+          end: new Date(ev.end),
+        })));
+      }
+    const onStorage = () => {
+      const saved = localStorage.getItem('crm_events');
+      if (saved) {
+        setEvents(JSON.parse(saved).map(ev => ({
+          ...ev,
+          start: new Date(ev.start),
+          end: new Date(ev.end),
+        })));
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // 讀取 supabase 追蹤事件
+  useEffect(() => {
+    const fetchTrackEvents = async () => {
+      const { data, error } = await supabase
+        .from('project')
+        .select('project_id, project_name, track_remind_date')
+        .eq('is_tracked', true)
+        .not('track_remind_date', 'is', null);
+
+      if (error) {
+        console.error('載入追蹤事件失敗', error);
+        return;
+      }
+
+      const trackEvents = (data || []).map(proj => ({
+        title: `追蹤：${proj.project_name}`,
+        start: new Date(proj.track_remind_date),
+        end: new Date(proj.track_remind_date),
+        allDay: true,
+        projectId: proj.project_id,
+        type: 'track'
+      }));
+
+      setTrackEvents(trackEvents);
+    };
+
+    fetchTrackEvents();
+  }, []);
+
+  const allEvents = showTrackDates ? [...events, ...trackEvents] : events;
+
   const handleEventClick = (event) => {
-    setSelectedEvent(event);
-    setEventDetails({
-      title: event.title,
-      start: moment(event.start).format('YYYY-MM-DDTHH:mm'),
-      end: moment(event.end).format('YYYY-MM-DDTHH:mm'),
-      detail: event.detail
-    });
-    setOpenEditDialog(true);
+    if (event.projectId) {
+      // 跳轉到專案詳情頁
+      window.location.href = `/order/${event.projectId}`;
+    } else {
+      setSelectedEvent(event);
+      setEventDetails({
+        title: event.title,
+        start: moment(event.start).format('YYYY-MM-DDTHH:mm'),
+        end: moment(event.end).format('YYYY-MM-DDTHH:mm'),
+        detail: event.detail
+      });
+      setOpenEditDialog(true);
+    }
   };
 
   const handleSaveEvent = () => {
@@ -75,7 +150,23 @@ const InventoryCalendar = () => {
   };
 
   return (
+    
     <Box>
+      <Container>
+        <Box display="flex" justifyContent="flex-end" alignItems="center" mb={2}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={showTrackDates}
+                onChange={e => setShowTrackDates(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="顯示追蹤提醒"
+          />
+        </Box>
+      </Container>
+
       <Typography variant="h4" gutterBottom>
         庫存行事曆
       </Typography>

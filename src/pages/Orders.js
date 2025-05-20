@@ -155,6 +155,10 @@ export default function Orders({ projects: initialProjects = [], customers: init
     setMenuType('');
   };
 
+  const [trackDialogOpen, setTrackDialogOpen] = useState(false);
+  const [trackProject, setTrackProject] = useState(null);
+  const [trackType, setTrackType] = useState(""); // "construction" or "billing"
+
   const updateStatus = async (value) => {
     if (!menuProject) return;
     const field = menuType === 'construction' ? 'construction_status' : 'billing_status';
@@ -165,11 +169,26 @@ export default function Orders({ projects: initialProjects = [], customers: init
       .select();
     if (error) {
       console.error('Error updating status:', error);
-      return;
+        return;
     }
-    // Update local state
     setProjects(prev => prev.map(p => p.project_id === data[0].project_id ? { ...p, [field]: value } : p));
     handleCloseStatusMenu();
+
+    // 取得另一個欄位的狀態
+    const otherStatus =
+      field === 'construction_status'
+        ? menuProject.billing_status
+        : menuProject.construction_status;
+
+    // 判斷兩個欄位都已達指定狀態
+    if (
+      (field === 'construction_status' && value === '已完成' && otherStatus === '已請款') ||
+      (field === 'billing_status' && value === '已請款' && otherStatus === '已完成')
+    ) {
+      setTrackProject(menuProject);
+      setTrackType(field);
+      setTrackDialogOpen(true);
+    }
   };
 
 // ... (rest of the state variables: statusFilter, billingFilter, etc.)
@@ -290,7 +309,6 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
     setBillingAnchorEl(null);
     if (billing !== undefined) setBillingFilter(billing);
   };
-  // 獲取數據
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1063,6 +1081,30 @@ const updateContact = (index, field, value) => {
           </MenuItem>
         ))}
       </Menu>
+
+
+      // 追蹤 Dialog
+      <Dialog open={trackDialogOpen} onClose={() => setTrackDialogOpen(false)}>
+        <DialogTitle>是否要繼續追蹤此專案？</DialogTitle>
+        <DialogContent>
+          <Typography>
+            此專案已完成，是否要設定後續追蹤提醒？
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTrackDialogOpen(false)}>否</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setTrackDialogOpen(false);
+              // 跳轉到專案頁面並帶參數（或開啟追蹤設定 Dialog）
+              navigate(`/order/${trackProject.project_id}?setTrack=1`);
+            }}
+          >
+            是
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
