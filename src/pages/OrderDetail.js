@@ -265,6 +265,23 @@ export default function OrderDetail() {
         }
         // 修改內容格式為 "藥劑種類-使用量"
         logDataToInsert.content = `${selectedMedicine.name}-${newLog.medicine_quantity}`;
+
+        // 新增使用記錄到 medicine_usages
+        const { error: usageError } = await supabase
+          .from('medicine_usages')
+          .insert([{
+            medicine_id: newLog.medicine_id,
+            medicine_name: selectedMedicine.name,
+            quantity: parseFloat(newLog.medicine_quantity),
+            date: newLog.log_date,
+            project_name: project.project_name,
+            customer_name: project.customer_database?.customer_name || '未知客戶'
+          }]);
+
+        if (usageError) {
+          console.error('Error inserting usage:', usageError);
+          throw new Error('新增藥劑使用記錄失敗：' + usageError.message);
+        }
       }
 
       console.log('=== 準備插入的資料 ===');
@@ -299,24 +316,6 @@ export default function OrderDetail() {
         }
         
         throw new Error(errorMessage);
-      }
-
-      // 如果是使用藥劑類型，同時更新藥劑使用記錄
-      if (logType === '使用藥劑') {
-        const { error: usageError } = await supabase
-          .from('medicine_usages')
-          .insert([{
-            medicine_id: newLog.medicine_id,
-            quantity: parseFloat(newLog.medicine_quantity),
-            date: newLog.log_date,
-            project: project.project_name,
-            customer: project.customer_database?.customer_name || '未知客戶'
-          }]);
-
-        if (usageError) {
-          console.error('Error inserting usage:', usageError);
-          throw new Error('新增藥劑使用記錄失敗：' + usageError.message);
-        }
       }
 
       // 更新日誌列表
