@@ -465,6 +465,50 @@ export default function OrderDetail() {
 
   const handleDeleteLog = async () => {
     try {
+      // 先獲取要刪除的日誌記錄
+      const logToDelete = projectLogs.find(log => log.log_id === deletingLogId);
+      
+      if (!logToDelete) {
+        throw new Error('找不到要刪除的日誌記錄');
+      }
+
+      // 如果是使用藥劑的日誌，先刪除對應的使用記錄
+      if (logToDelete.log_type === '使用藥劑') {
+        // 從內容中解析藥劑名稱和數量
+        const [medicineName, quantity] = logToDelete.content.split('-');
+        
+        // 找到對應的藥劑 ID
+        const { data: medicineData, error: medicineError } = await supabase
+          .from('medicines')
+          .select('id')
+          .eq('name', medicineName)
+          .single();
+
+        if (medicineError) {
+          console.error('Error finding medicine:', medicineError);
+          throw medicineError;
+        }
+
+        if (!medicineData) {
+          throw new Error('找不到對應的藥劑');
+        }
+
+        // 刪除使用記錄
+        const { error: usageError } = await supabase
+          .from('medicine_usages')
+          .delete()
+          .eq('medicine_id', medicineData.id)
+          .eq('quantity', parseFloat(quantity))
+          .eq('date', logToDelete.log_date)
+          .eq('project', project.project_name);
+
+        if (usageError) {
+          console.error('Error deleting medicine usage:', usageError);
+          throw usageError;
+        }
+      }
+
+      // 刪除日誌記錄
       const { error } = await supabase
         .from('project_log')
         .delete()

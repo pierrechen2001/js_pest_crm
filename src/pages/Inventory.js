@@ -428,7 +428,8 @@ const Inventory = () => {
         return;
       }
 
-      const { error } = await supabase
+      // 新增藥劑使用記錄
+      const { error: usageError } = await supabase
         .from('medicine_usages')
         .insert([{
           medicine_id: selectedMedicine.id,
@@ -437,9 +438,26 @@ const Inventory = () => {
           project: selectedProject.project_name
         }]);
 
-      if (error) {
-        console.error('Error details:', error);
-        throw error;
+      if (usageError) {
+        console.error('Error details:', usageError);
+        throw usageError;
+      }
+
+      // 新增專案日誌
+      const { error: logError } = await supabase
+        .from('project_log')
+        .insert([{
+          project_id: newUsage.project,
+          log_type: '使用藥劑',
+          log_date: newUsage.date,
+          content: `${selectedMedicine.name}-${quantity}`,
+          notes: '',
+          created_by: '庫存頁面'
+        }]);
+
+      if (logError) {
+        console.error('Error adding project log:', logError);
+        throw logError;
       }
 
       // 重新獲取藥劑資料以更新列表
@@ -821,6 +839,39 @@ const Inventory = () => {
 
     try {
       const tableName = historyType === 'order' ? 'medicine_orders' : 'medicine_usages';
+      
+      // 如果是使用記錄，先刪除對應的專案日誌
+      if (historyType === 'usage') {
+        // 先找到對應的專案 ID
+        const { data: projectData, error: projectError } = await supabase
+          .from('project')
+          .select('project_id')
+          .eq('project_name', record.project)
+          .single();
+
+        if (projectError) {
+          console.error('Error finding project:', projectError);
+          throw projectError;
+        }
+
+        if (!projectData) {
+          throw new Error('找不到對應的專案');
+        }
+
+        // 刪除專案日誌
+        const { error: logError } = await supabase
+          .from('project_log')
+          .delete()
+          .eq('project_id', projectData.project_id)
+          .eq('log_type', '使用藥劑')
+          .eq('log_date', record.date)
+          .eq('content', `${selectedMedicine.name}-${record.quantity}`);
+
+        if (logError) {
+          console.error('Error deleting project log:', logError);
+          throw logError;
+        }
+      }
       
       // 刪除記錄
       const { error } = await supabase
