@@ -487,12 +487,32 @@ const Inventory = () => {
 
   // 處理刪除藥劑
   const handleDeleteMedicine = async (medicine) => {
-    if (!window.confirm(`確定要刪除藥劑「${medicine.name}」嗎？此操作將同時刪除所有相關的訂購和使用記錄。`)) {
+    if (!window.confirm(`確定要刪除藥劑「${medicine.name}」嗎？此操作將同時刪除所有相關的訂購、使用記錄和專案日誌。`)) {
       return;
     }
 
     try {
-      // 先刪除相關的訂購記錄
+      // 先找到所有使用此藥劑的專案日誌
+      const { data: projectLogs, error: logsError } = await supabase
+        .from('project_log')
+        .select('*')
+        .eq('log_type', '使用藥劑')
+        .ilike('content', `${medicine.name}-%`);
+
+      if (logsError) throw logsError;
+
+      // 刪除相關的專案日誌
+      if (projectLogs && projectLogs.length > 0) {
+        const { error: deleteLogsError } = await supabase
+          .from('project_log')
+          .delete()
+          .eq('log_type', '使用藥劑')
+          .ilike('content', `${medicine.name}-%`);
+
+        if (deleteLogsError) throw deleteLogsError;
+      }
+
+      // 刪除相關的訂購記錄
       const { error: ordersError } = await supabase
         .from('medicine_orders')
         .delete()
@@ -500,7 +520,7 @@ const Inventory = () => {
 
       if (ordersError) throw ordersError;
 
-      // 再刪除相關的使用記錄
+      // 刪除相關的使用記錄
       const { error: usagesError } = await supabase
         .from('medicine_usages')
         .delete()
