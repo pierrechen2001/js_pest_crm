@@ -185,6 +185,25 @@ export default function Orders({ projects: initialProjects = [], customers: init
       (field === 'construction_status' && value === '已完成' && otherStatus === '已請款') ||
       (field === 'billing_status' && value === '已請款' && otherStatus === '已完成')
     ) {
+      // 先查詢該專案是否已設置追蹤
+      const { data: projectDetail, error: detailError } = await supabase
+        .from('project')
+        .select('is_tracked, track_remind_date')
+        .eq('project_id', menuProject.project_id)
+        .single();
+
+      if (detailError) {
+        console.error('Error fetching project detail:', detailError);
+        return;
+      }
+
+      // 如果已設置追蹤，不再提醒
+      if (projectDetail?.is_tracked && projectDetail?.track_remind_date) {
+        // 已設置追蹤，不彈 Dialog
+        return;
+      }
+
+      // 尚未設置追蹤，才彈 Dialog
       setTrackProject(menuProject);
       setTrackType(field);
       setTrackDialogOpen(true);

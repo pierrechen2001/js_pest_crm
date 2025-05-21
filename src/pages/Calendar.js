@@ -180,7 +180,7 @@ const InventoryCalendar = () => {
 
       <Calendar
         localizer={localizer}
-        events={events}
+        events={allEvents}
         startAccessor="start"
         endAccessor="end"
         style={{ height: 670, marginTop: 20 }}

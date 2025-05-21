@@ -445,6 +445,24 @@ export default function OrderDetail() {
   // 並讓 isTracked 依賴 trackRefresh
   const isTracked = !!project?.is_tracked;
 
+  const handleCancelTrack = async () => {
+    try {
+      const { error } = await supabase
+        .from('project')
+        .update({
+          is_tracked: false,
+          track_remind_date: null
+        })
+        .eq('project_id', project.project_id);
+
+      if (error) throw error;
+      setTrackRefresh(r => r + 1); // 重新 fetch project
+      alert('已取消追蹤！');
+    } catch (err) {
+      alert('取消追蹤失敗：' + err.message);
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get("setTrack") === "1") {
@@ -1582,7 +1600,9 @@ export default function OrderDetail() {
         <DialogTitle>設定追蹤提醒</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>
-            請選擇要幾個月或幾年後提醒追蹤此專案：
+            {isTracked && project.track_remind_date
+              ? `目前已設定追蹤日期：${project.track_remind_date}，你可以重設或取消追蹤。`
+              : '請選擇要幾個月或幾年後提醒追蹤此專案：'}
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <TextField
@@ -1605,7 +1625,31 @@ export default function OrderDetail() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTrackDialogOpen(false)}>取消</Button>
+          <Button onClick={() => setTrackDialogOpen(false)}>關閉</Button>
+          {isTracked && (
+            <Button
+              color="warning"
+              onClick={async () => {
+                try {
+                  const { error } = await supabase
+                    .from('project')
+                    .update({
+                      is_tracked: false,
+                      track_remind_date: null
+                    })
+                    .eq('project_id', project.project_id);
+                  if (error) throw error;
+                  setTrackDialogOpen(false);
+                  setTrackRefresh(r => r + 1);
+                  alert('已取消追蹤！');
+                } catch (err) {
+                  alert('取消追蹤失敗：' + err.message);
+                }
+              }}
+            >
+              取消追蹤
+            </Button>
+          )}
           <Button
             variant="contained"
             onClick={async () => {
@@ -1627,23 +1671,15 @@ export default function OrderDetail() {
                   })
                   .eq('project_id', project.project_id);
                 if (error) throw error;
-                // 重新抓 project
                 setTrackDialogOpen(false);
                 setTrackRefresh(r => r + 1);
-                // 重新 fetch project
-                const { data: updated, error: fetchError } = await supabase
-                  .from('project')
-                  .select('*')
-                  .eq('project_id', project.project_id)
-                  .single();
-                if (!fetchError && updated) setProject(updated);
-                alert('已設定追蹤，可至行事曆頁面查看！');
+                alert(isTracked ? '已重設追蹤！' : '已設定追蹤，可至行事曆頁面查看！');
               } catch (err) {
                 alert('設定追蹤失敗：' + err.message);
               }
             }}
           >
-            確認
+            {isTracked ? '重設追蹤' : '確認'}
           </Button>
         </DialogActions>
       </Dialog>

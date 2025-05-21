@@ -60,6 +60,8 @@ const ApiCalendar = () => {
   // 新增：顯示控制
   const [showConstructionDates, setShowConstructionDates] = useState(true); // 顯示施工日期
   const [showPaymentDates, setShowPaymentDates] = useState(true); // 顯示收款日期
+  const [showTrackDates, setShowTrackDates] = useState(true); // 顯示追蹤提醒
+  const [trackEvents, setTrackEvents] = useState([]); // 追蹤事件
 
   // Add debug information
   const addDebugInfo = (message) => {
@@ -525,11 +527,13 @@ const ApiCalendar = () => {
           payment_date,
           construction_status,
           billing_status,
+          is_tracked,               
+          track_remind_date,
           customer_database (
             customer_name
           )
         `)
-        .not('start_date', 'is', null);
+        // .not('start_date', 'is', null);
         
       if (error) throw error;
       
@@ -608,9 +612,29 @@ const ApiCalendar = () => {
             };
           }
         });
-      
-      // 設置專案事件
-      setProjectEvents([...constructionEvents, ...paymentEvents]);
+
+      // 新增追蹤事件
+      const trackEvents = projects
+        .filter(project => project.is_tracked && project.track_remind_date)
+        .map(project => ({
+          id: `track-${project.project_id}`,
+          title: `追蹤: ${project.project_name}`,
+          start: project.track_remind_date,
+          end: project.track_remind_date,
+          description: `客戶: ${project.customer_database?.customer_name || '未知'}`,
+          backgroundColor: '#f5e6d3', // 淺咖啡色
+          borderColor: '#bfa980',
+          textColor: '#333333',
+          type: 'track',
+          extendedProps: {
+            projectId: project.project_id,
+            isProjectEvent: true
+          }
+        }));
+        console.log('trackEvents:', trackEvents); // ← 加這行
+
+      setTrackEvents(trackEvents);
+      setProjectEvents([...constructionEvents, ...paymentEvents, ...trackEvents]);
     } catch (error) {
       console.error("Error fetching project dates:", error);
       setProjectError(`無法獲取專案日期: ${error.message}`);
@@ -634,9 +658,12 @@ const ApiCalendar = () => {
         ...projectEvents.filter(event => event.type === 'payment')];
     }
     
+    if (showTrackDates) {
+      filteredProjectEvents = [...filteredProjectEvents, ...trackEvents];
+    }
     // 返回合併後的事件列表
     return [...events, ...filteredProjectEvents];
-  }, [events, projectEvents, showConstructionDates, showPaymentDates]);
+  }, [events, projectEvents, trackEvents, showConstructionDates, showPaymentDates, showTrackDates]);
 
   // 添加專案事件點擊處理
   const handleEventClick = useCallback((info) => {
@@ -786,6 +813,16 @@ const ApiCalendar = () => {
               />
             }
             label="顯示收款日期"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox 
+                checked={showTrackDates} 
+                onChange={(e) => setShowTrackDates(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="顯示追蹤提醒"
           />
         </Box>
       </Box>

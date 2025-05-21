@@ -519,7 +519,7 @@ const HomePage = () => {
     
     // 合併所有事件
     return [...calendarEvents, ...filteredProjectEvents];
-  }, [calendarEvents, projectEvents, showConstructionDates, showPaymentDates]);
+  }, [calendarEvents, projectEvents, showTrackDates, showConstructionDates, showPaymentDates]);
   
   // 在初始化完成後獲取專案日期
   useEffect(() => {
