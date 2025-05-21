@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from "react-router-dom";
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import ReactQuill from 'react-quill';
@@ -32,7 +33,7 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import { Edit, Delete, ArrowBack, Add, Business, Receipt, LocationOn, Phone, Fax, Person, Note, Info, Build, Payment, ContactPhone } from '@mui/icons-material';
+import { Edit, Delete, ArrowBack, Add, Business, Receipt, LocationOn, Phone, Fax, Person, Note, Info, Build, Payment, ContactPhone, CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款"];
@@ -99,7 +100,12 @@ export default function OrderDetail() {
   const [editingLog, setEditingLog] = useState(null);
   const [openDeleteLogDialog, setOpenDeleteLogDialog] = useState(false);
   const [deletingLogId, setDeletingLogId] = useState(null);
-
+  const location = useLocation();
+  const [trackType, setTrackType] = useState("month"); // "month" or "year"
+  const [trackValue, setTrackValue] = useState(1);
+  const [trackDialogOpen, setTrackDialogOpen] = useState(false);
+  const [trackRefresh, setTrackRefresh] = useState(0);
+  
   useEffect(() => {
     const fetchProjectData = async () => {
       try {
@@ -128,7 +134,7 @@ export default function OrderDetail() {
     };
 
     fetchProjectData();
-  }, [projectId]);
+  }, [projectId, trackRefresh]);
 
   useEffect(() => {
     const fetchProjectLogs = async () => {
@@ -477,6 +483,34 @@ export default function OrderDetail() {
     }
   };
 
+  // 並讓 isTracked 依賴 trackRefresh
+  const isTracked = !!project?.is_tracked;
+
+  const handleCancelTrack = async () => {
+    try {
+      const { error } = await supabase
+        .from('project')
+        .update({
+          is_tracked: false,
+          track_remind_date: null
+        })
+        .eq('project_id', project.project_id);
+
+      if (error) throw error;
+      setTrackRefresh(r => r + 1); // 重新 fetch project
+      alert('已取消追蹤！');
+    } catch (err) {
+      alert('取消追蹤失敗：' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("setTrack") === "1") {
+      setTrackDialogOpen(true);
+    }
+  }, [location.search]);
+
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">{error}</Typography>;
   if (!project) return <Typography>找不到此專案</Typography>;
@@ -492,27 +526,47 @@ export default function OrderDetail() {
             {project.project_name}
           </Typography>
         </Box>
-        <Box>
-          <>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              startIcon={<Edit />} 
-              onClick={handleOpenProjectDialog}
-              sx={{ mr: 2, borderRadius: 2, textTransform: 'none', px: 3 }}
-            >
-              編輯專案
-            </Button>
-            <Button 
-              variant="outlined" 
-              color="error" 
-              startIcon={<Delete />} 
-              onClick={() => setOpenDeleteDialog(true)}
-              sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
-            >
-              刪除專案
-            </Button>
-          </>
+        <Box display="flex" alignItems="center">
+          <Button
+            variant="contained"
+            color={isTracked ? "success" : "inherit"}
+            startIcon={isTracked ? <CheckCircle /> : <RadioButtonUnchecked />}
+            onClick={() => setTrackDialogOpen(true)}
+            sx={{
+              mr: 2,
+              borderRadius: 2,
+              textTransform: 'none',
+              px: 3,
+              fontWeight: 'bold',
+              bgcolor: isTracked ? 'success.main' : 'grey.400',
+              color: isTracked ? 'white' : 'text.primary',
+              '&:hover': {
+                bgcolor: isTracked ? 'success.dark' : 'grey.500',
+              },
+            }}
+          >
+            {isTracked
+              ? `已設定 ${project.track_remind_date || ''} 追蹤`
+              : '未設定追蹤'}
+          </Button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<Edit />} 
+            onClick={handleOpenProjectDialog}
+            sx={{ mr: 2, borderRadius: 2, textTransform: 'none', px: 3 }}
+          >
+            編輯專案
+          </Button>
+          <Button 
+            variant="outlined" 
+            color="error" 
+            startIcon={<Delete />} 
+            onClick={() => setOpenDeleteDialog(true)}
+            sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
+          >
+            刪除專案
+          </Button>
         </Box>
       </Box>
 
@@ -1583,6 +1637,94 @@ export default function OrderDetail() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={trackDialogOpen} onClose={() => setTrackDialogOpen(false)}>
+        <DialogTitle>設定追蹤提醒</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            {isTracked && project.track_remind_date
+              ? `目前已設定追蹤日期：${project.track_remind_date}，你可以重設或取消追蹤。`
+              : '請選擇要幾個月或幾年後提醒追蹤此專案：'}
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <TextField
+              type="number"
+              label="數值"
+              value={trackValue}
+              onChange={e => setTrackValue(Number(e.target.value))}
+              inputProps={{ min: 1 }}
+              sx={{ width: 100 }}
+            />
+            <FormControl>
+              <Select
+                value={trackType}
+                onChange={e => setTrackType(e.target.value)}
+              >
+                <MenuItem value="month">個月後</MenuItem>
+                <MenuItem value="year">年後</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTrackDialogOpen(false)}>關閉</Button>
+          {isTracked && (
+            <Button
+              color="warning"
+              onClick={async () => {
+                try {
+                  const { error } = await supabase
+                    .from('project')
+                    .update({
+                      is_tracked: false,
+                      track_remind_date: null
+                    })
+                    .eq('project_id', project.project_id);
+                  if (error) throw error;
+                  setTrackDialogOpen(false);
+                  setTrackRefresh(r => r + 1);
+                  alert('已取消追蹤！');
+                } catch (err) {
+                  alert('取消追蹤失敗：' + err.message);
+                }
+              }}
+            >
+              取消追蹤
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={async () => {
+              try {
+                // 計算提醒日期
+                const baseDate = project.start_date ? new Date(project.start_date) : new Date();
+                let remindDate = new Date(baseDate);
+                if (trackType === "month") {
+                  remindDate.setMonth(remindDate.getMonth() + trackValue);
+                } else {
+                  remindDate.setFullYear(remindDate.getFullYear() + trackValue);
+                }
+                // 更新 supabase
+                const { error } = await supabase
+                  .from('project')
+                  .update({
+                    is_tracked: true,
+                    track_remind_date: remindDate.toISOString().split('T')[0]
+                  })
+                  .eq('project_id', project.project_id);
+                if (error) throw error;
+                setTrackDialogOpen(false);
+                setTrackRefresh(r => r + 1);
+                alert(isTracked ? '已重設追蹤！' : '已設定追蹤，可至行事曆頁面查看！');
+              } catch (err) {
+                alert('設定追蹤失敗：' + err.message);
+              }
+            }}
+          >
+            {isTracked ? '重設追蹤' : '確認'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
+    
   );
 }

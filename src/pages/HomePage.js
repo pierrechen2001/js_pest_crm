@@ -177,6 +177,7 @@ const HomePage = () => {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [showConstructionDates, setShowConstructionDates] = useState(true);
   const [showPaymentDates, setShowPaymentDates] = useState(true);
+  const [showTrackDates, setShowTrackDates] = useState(true);
   
   const today = new Date();
   
@@ -383,7 +384,24 @@ const HomePage = () => {
         .not('start_date', 'is', null);
         
       if (error) throw error;
-      
+      const trackEvents = projects
+      .filter(project => project.is_tracked && project.track_remind_date)
+      .map(project => ({
+        id: `track-${project.project_id}`,
+        title: `追蹤：${project.project_name}`,
+        start: project.track_remind_date,
+        end: project.track_remind_date,
+        description: `請追蹤客戶：${project.customer_database?.customer_name || ''}\n專案地址：${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`,
+        backgroundColor: '#ffe082', // 你可以自訂顏色
+        borderColor: '#ffb300',
+        textColor: '#333333',
+        type: 'track',
+        extendedProps: {
+          projectId: project.project_id,
+          isProjectEvent: true
+        }
+      }));
+      // 將追蹤事件添加到專案事件中 
       // 轉換為行事曆事件格式
       const constructionEvents = projects
         .filter(project => project.start_date)
@@ -439,7 +457,7 @@ const HomePage = () => {
         });
       
       // 設置專案事件
-      setProjectEvents([...constructionEvents, ...paymentEvents]);
+      setProjectEvents([...constructionEvents, ...paymentEvents, ...trackEvents]);
       
       // 更新統計資料 - 今日事件數量
       const today = new Date();
@@ -484,6 +502,11 @@ const HomePage = () => {
     // 根據選項篩選專案事件
     let filteredProjectEvents = [];
     
+    if (showTrackDates) {
+      filteredProjectEvents = [...filteredProjectEvents, 
+        ...projectEvents.filter(event => event.type === 'track')];
+    }
+
     if (showConstructionDates) {
       filteredProjectEvents = [...filteredProjectEvents, 
         ...projectEvents.filter(event => event.type === 'construction')];
@@ -496,7 +519,7 @@ const HomePage = () => {
     
     // 合併所有事件
     return [...calendarEvents, ...filteredProjectEvents];
-  }, [calendarEvents, projectEvents, showConstructionDates, showPaymentDates]);
+  }, [calendarEvents, projectEvents, showTrackDates, showConstructionDates, showPaymentDates]);
   
   // 在初始化完成後獲取專案日期
   useEffect(() => {
@@ -691,6 +714,22 @@ const HomePage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <MoneyIcon fontSize="small" sx={{ mr: 0.5, color: theme.palette.text.secondary }} />
                   <Typography variant="body2">顯示收款日期</Typography>
+                </Box>
+              }
+            />
+            <FormControlLabel
+              control={
+                <Checkbox 
+                  checked={showTrackDates} 
+                  onChange={(e) => setShowTrackDates(e.target.checked)}
+                  color="primary"
+                  size="small"
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <CalendarTodayIcon fontSize="small" sx={{ mr: 0.5, color: theme.palette.text.secondary }} />
+                  <Typography variant="body2">顯示追蹤提醒</Typography>
                 </Box>
               }
             />
