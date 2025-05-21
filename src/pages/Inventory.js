@@ -99,9 +99,24 @@ const Inventory = () => {
         const { data: medicinesData, error: medicinesError } = await supabase
           .from('medicines')
           .select(`
-            *,
-            medicine_orders (*),
-            medicine_usages (*)
+            id,
+            name,
+            created_at,
+            updated_at,
+            medicine_orders (
+              id,
+              medicine_id,
+              quantity,
+              date,
+              vendor
+            ),
+            medicine_usages (
+              id,
+              medicine_id,
+              quantity,
+              date,
+              project
+            )
           `);
 
         if (medicinesError) throw medicinesError;
@@ -110,14 +125,7 @@ const Inventory = () => {
         // 獲取專案資料
         const { data: projectsData, error: projectsError } = await supabase
           .from('project')
-          .select(`
-            project_id,
-            project_name,
-            customer_database (
-              customer_id,
-              customer_name
-            )
-          `);
+          .select('project_id, project_name');
 
         if (projectsError) throw projectsError;
         setProjects(projectsData || []);
@@ -394,7 +402,7 @@ const Inventory = () => {
   const handleAddUsage = async () => {
     try {
       // 驗證必填欄位
-      if (!newUsage.quantity || !newUsage.date || !newUsage.project || !newUsage.customer) {
+      if (!newUsage.quantity || !newUsage.date || !newUsage.project) {
         alert('請填寫所有必填欄位！');
         return;
       }
@@ -426,8 +434,7 @@ const Inventory = () => {
           medicine_id: selectedMedicine.id,
           quantity: quantity,
           date: newUsage.date,
-          project: selectedProject.project_name,
-          customer: selectedProject.customer_database?.customer_name || '未知客戶'
+          project: selectedProject.project_name
         }]);
 
       if (error) {
@@ -452,8 +459,7 @@ const Inventory = () => {
       setNewUsage({
         quantity: '',
         date: "",
-        project: "",
-        customer: ""
+        project: ""
       });
     } catch (error) {
       console.error('Error adding usage:', error);
@@ -520,9 +526,24 @@ const Inventory = () => {
       const { data: updatedMedicine, error } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `)
         .eq('id', medicine.id)
         .single();
@@ -559,9 +580,24 @@ const Inventory = () => {
       const { data: updatedMedicine, error } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `)
         .eq('id', selectedMedicine.id)
         .single();
@@ -711,12 +747,11 @@ const Inventory = () => {
         }
         updateData.vendor = editingRecord.vendor;
       } else {
-        if (!editingRecord.project || !editingRecord.customer) {
+        if (!editingRecord.project) {
           alert('請選擇專案！');
           return;
         }
         updateData.project = editingRecord.project;
-        updateData.customer = editingRecord.customer;
       }
 
       // 更新資料庫
@@ -734,9 +769,24 @@ const Inventory = () => {
       const { data: allMedicines, error: fetchError } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `);
 
       if (fetchError) throw fetchError;
@@ -784,9 +834,24 @@ const Inventory = () => {
       const { data: allMedicines, error: fetchError } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `);
 
       if (fetchError) throw fetchError;
@@ -1213,13 +1278,12 @@ const Inventory = () => {
 
             <Autocomplete
               options={projects}
-              getOptionLabel={(option) => `${option.project_name} - ${option.customer_database?.customer_name || '未知客戶'}`}
+              getOptionLabel={(option) => `${option.project_name}`}
               value={projects.find(p => p.project_id === newUsage.project) || null}
               onChange={(event, newValue) => {
                 setNewUsage(prev => ({
                   ...prev,
-                  project: newValue?.project_id || "",
-                  customer: newValue?.customer_database?.customer_name || ""
+                  project: newValue?.project_id || ""
                 }));
               }}
               renderInput={(params) => (
@@ -1286,23 +1350,20 @@ const Inventory = () => {
             </Box>
 
             <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
+              <Table>
+                <TableHead>
+                  <TableRow>
                     <TableCell>日期</TableCell>
-                        <TableCell>數量</TableCell>
+                    <TableCell>數量</TableCell>
                     {historyType === 'order' ? (
                       <TableCell>廠商</TableCell>
                     ) : (
-                      <>
-                        <TableCell>專案</TableCell>
-                        <TableCell>客戶</TableCell>
-                      </>
+                      <TableCell>專案</TableCell>
                     )}
-                        <TableCell>操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+                    <TableCell>操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {filteredHistory.map((record, index) => (
                     <TableRow key={index}>
                       <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
@@ -1310,11 +1371,8 @@ const Inventory = () => {
                       {historyType === 'order' ? (
                         <TableCell>{record.vendor}</TableCell>
                       ) : (
-                        <>
-                          <TableCell>{record.project}</TableCell>
-                          <TableCell>{record.customer}</TableCell>
-        </>
-      )}
+                        <TableCell>{record.project}</TableCell>
+                      )}
                       <TableCell>
                         <Button
                           variant="outlined"
@@ -1340,14 +1398,14 @@ const Inventory = () => {
                   ))}
                   {filteredHistory.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={historyType === 'order' ? 4 : 5} align="center">
+                      <TableCell colSpan={historyType === 'order' ? 4 : 3} align="center">
                         此時間範圍內無{historyType === 'order' ? '訂購' : '使用'}記錄
                       </TableCell>
                     </TableRow>
                   )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
         </DialogContent>
         <DialogActions>
@@ -1395,13 +1453,12 @@ const Inventory = () => {
             ) : (
               <Autocomplete
                 options={projects}
-                getOptionLabel={(option) => `${option.project_name} - ${option.customer_database?.customer_name || '未知客戶'}`}
+                getOptionLabel={(option) => `${option.project_name}`}
                 value={projects.find(p => p.project_name === editingRecord?.project) || null}
                 onChange={(event, newValue) => {
                   setEditingRecord(prev => ({
                     ...prev,
-                    project: newValue?.project_name || "",
-                    customer: newValue?.customer_database?.customer_name || ""
+                    project: newValue?.project_name || ""
                   }));
                 }}
                 renderInput={(params) => (

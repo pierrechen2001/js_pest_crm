@@ -277,11 +277,9 @@ export default function OrderDetail() {
           .from('medicine_usages')
           .insert([{
             medicine_id: newLog.medicine_id,
-            medicine_name: selectedMedicine.name,
             quantity: parseFloat(newLog.medicine_quantity),
             date: newLog.log_date,
-            project_name: project.project_name,
-            customer_name: project.customer_database?.customer_name || '未知客戶'
+            project: project.project_name
           }]);
 
         if (usageError) {
