@@ -790,6 +790,93 @@ const Inventory = () => {
           return;
         }
         updateData.project = editingRecord.project;
+
+        // 如果是使用記錄，先獲取原本的記錄資料
+        const { data: originalRecord, error: originalError } = await supabase
+          .from('medicine_usages')
+          .select('project')
+          .eq('id', editingRecord.id)
+          .single();
+
+        if (originalError) {
+          console.error('Error fetching original record:', originalError);
+          throw originalError;
+        }
+
+        // 獲取原本專案的 ID
+        if (originalRecord && originalRecord.project) {
+          const { data: originalProjectData, error: originalProjectError } = await supabase
+            .from('project')
+            .select('project_id')
+            .eq('project_name', originalRecord.project)
+            .single();
+
+          if (originalProjectError) {
+            console.error('Error finding original project:', originalProjectError);
+            throw originalProjectError;
+          }
+
+          if (originalProjectData) {
+            // 刪除原本專案中的相關日誌
+            const { error: deleteOriginalLogError } = await supabase
+              .from('project_log')
+              .delete()
+              .eq('project_id', originalProjectData.project_id)
+              .eq('log_type', '使用藥劑')
+              .ilike('content', `${selectedMedicine.name}-%`);
+
+            if (deleteOriginalLogError) {
+              console.error('Error deleting original project logs:', deleteOriginalLogError);
+              throw deleteOriginalLogError;
+            }
+          }
+        }
+
+        // 獲取新專案的 ID
+        const { data: newProjectData, error: newProjectError } = await supabase
+          .from('project')
+          .select('project_id')
+          .eq('project_name', editingRecord.project)
+          .single();
+
+        if (newProjectError) {
+          console.error('Error finding new project:', newProjectError);
+          throw newProjectError;
+        }
+
+        if (!newProjectData) {
+          throw new Error('找不到對應的專案');
+        }
+
+        // 刪除新專案中的相關日誌
+        const { error: deleteNewLogError } = await supabase
+          .from('project_log')
+          .delete()
+          .eq('project_id', newProjectData.project_id)
+          .eq('log_type', '使用藥劑')
+          .ilike('content', `${selectedMedicine.name}-%`);
+
+        if (deleteNewLogError) {
+          console.error('Error deleting new project logs:', deleteNewLogError);
+          throw deleteNewLogError;
+        }
+
+        // 創建新的專案日誌
+        const { error: createLogError } = await supabase
+          .from('project_log')
+          .insert([{
+            project_id: newProjectData.project_id,
+            log_type: '使用藥劑',
+            log_date: editingRecord.date,
+            content: `${selectedMedicine.name}-${quantity}`,
+            notes: '',
+            created_by: '庫存頁面'
+          }]);
+
+        if (createLogError) {
+          console.error('Error creating new project log:', createLogError);
+          throw createLogError;
+        }
       }
 
       // 更新資料庫
