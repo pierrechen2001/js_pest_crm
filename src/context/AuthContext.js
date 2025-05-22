@@ -73,8 +73,8 @@ export const AuthProvider = ({ children }) => {
         loginMethod: "google"
       });
       
-      // 移除自動導航到 /customers
-      // navigate("/customers");
+      // // 導向到首頁
+      // navigate("/");
     } catch (error) {
       console.error("Error signing in with Google:", error);
       setError(error.message);
@@ -230,6 +230,8 @@ export const AuthProvider = ({ children }) => {
           isApproved: JSON.parse(localStorage.getItem("isApproved") || 'false'),
           loginMethod: localStorage.getItem("loginMethod") || "email"
         });
+        // // 導向到首頁
+        // navigate("/");
       } else if (event === 'SIGNED_OUT') {
         debugLog('User signed out');
         setUser(null);

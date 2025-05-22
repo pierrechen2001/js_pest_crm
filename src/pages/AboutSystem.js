@@ -48,7 +48,7 @@ import {
 
 // 自定義樣式元件
 const HeaderCard = styled(Card)(({ theme }) => ({
-  background: `linear-gradient(to right, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
+  background: `linear-gradient(to right, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
   borderRadius: 16,
   marginBottom: 24,
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
@@ -129,7 +129,7 @@ const AboutSystem = () => {
       avatar: 'https://avatars.githubusercontent.com/u/149866861?v=4',
       email: 'b12705058@g.ntu.edu.tw',
       github: 'https://github.com/pierrechen2001',
-      quote: '編程不僅是寫程式碼，更是解決問題和創造價值的過程。'
+      quote: '🅿️ 喜歡寫出一個可以改變什麼的程式，但不是喜歡打字。'
     },
     {
       name: '汪芷瑩',
@@ -401,10 +401,10 @@ const AboutSystem = () => {
                   <EmailIcon />
                 </Avatar>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight="medium">官方信箱</Typography>
+                  <Typography variant="subtitle1" fontWeight="medium">信箱</Typography>
                   <Typography variant="body1">
-                    <Link href="mailto:contact@js-pest-crm.com" underline="hover">
-                      contact@js-pest-crm.com
+                    <Link href="mailto:b12705058@g.ntu.edu.tw" underline="hover">
+                      b12705058@g.ntu.edu.tw
                     </Link>
                   </Typography>
                 </Box>
@@ -419,12 +419,12 @@ const AboutSystem = () => {
                   <Typography variant="subtitle1" fontWeight="medium">開源專案</Typography>
                   <Typography variant="body1">
                     <Link 
-                      href="https://github.com/js-pest-crm" 
+                      href="https://github.com/pierrechen2001/js_pest_crm" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       underline="hover"
                     >
-                      github.com/js-pest-crm
+                      github.com/pierrechen2001/js_pest_crm
                     </Link>
                   </Typography>
                 </Box>
@@ -444,9 +444,6 @@ const AboutSystem = () => {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 2 }}>
-            <Typography variant="body1" gutterBottom textAlign="center" sx={{ mb: 3 }}>
-              請觀看下方影片了解系統的使用方式與功能介紹
-            </Typography>
             <Box 
               component="iframe" 
               sx={{ 
@@ -457,7 +454,7 @@ const AboutSystem = () => {
                 borderRadius: 2,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.12)'
               }}
-              src="https://www.youtube.com/embed/your-video-id" 
+              src="https://www.youtube.com/embed/sPTc4_vDMfo" 
               title="系統使用說明" 
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
               allowFullScreen
@@ -533,8 +530,8 @@ const AboutSystem = () => {
               value={tabValue} 
               onChange={handleTabChange} 
               variant="fullWidth"
-              textColor="primary"
-              indicatorColor="primary"
+              textColor="secondary"
+              indicatorColor="secondary"
               aria-label="技術堆疊分頁"
             >
               <Tab icon={<WebIcon />} iconPosition="start" label="前端技術" />
@@ -692,12 +689,12 @@ const AboutSystem = () => {
                 <Typography 
                   variant="body1" 
                   sx={{ 
-                    fontStyle: 'italic', 
+                    fontSize: 16, 
                     pl: 4,
                     pt: 1
                   }}
                 >
-                  "{activeDeveloper.quote}"
+                  {activeDeveloper.quote}
                 </Typography>
               </Box>
             </DialogContent>

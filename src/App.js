@@ -328,9 +328,7 @@ const AppContent = () => {
             <Route
               path="/about"
               element={
-                <ProtectedRoute>
-                  <AboutSystem />
-                </ProtectedRoute>
+                <AboutSystem />
               }
             />
 

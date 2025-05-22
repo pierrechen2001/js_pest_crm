@@ -158,7 +158,7 @@ const Login = () => {
         localStorage.setItem("loginMethod", "google");
         localStorage.setItem("userRoles", JSON.stringify([isAdmin ? 'admin' : 'user']));
         if (isAdmin) {
-          navigate("/homepage");
+          navigate("/");
         } else {
           navigate("/pending-approval");
         }
@@ -171,7 +171,7 @@ const Login = () => {
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
           localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
-          navigate("/customers");
+          navigate("/");
         } else if (!existingUser.is_approved) {
           // Not approved: redirect to pending
           localStorage.setItem("loginMethod", "google");
@@ -183,7 +183,7 @@ const Login = () => {
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
           localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
-          navigate("/customers");
+          navigate("/");
         }
       }
     } catch (error) {
