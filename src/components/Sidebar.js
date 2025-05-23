@@ -15,7 +15,7 @@ import {
   IconButton,
   Tooltip
 } from "@mui/material";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { styled } from '@mui/material/styles';
 import { useAuth } from '../context/AuthContext';
 
@@ -51,6 +51,7 @@ const StyledDrawer = styled(Drawer)(({ theme, collapsed }) => ({
 
 const Sidebar = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout, hasRole } = useAuth();
   
   // User menu state
@@ -402,8 +403,11 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         display: "flex", 
         alignItems: "center",
         justifyContent: collapsed ? "center" : "flex-start",
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
-      }}>
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        cursor: 'pointer'
+      }}
+        onClick={() => { if (user) navigate('/profile'); }}
+      >
         {collapsed ? (
           <Avatar 
             sx={{ 
@@ -435,21 +439,23 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                 {user?.roles?.[0] || 'User'}
                 {!isUserApproved && <span style={{ color: '#ff9800', marginLeft: '5px' }}>(待審核)</span>}
               </Typography>
-            </Box>
-            {(
-              <Tooltip title="帳號設定">
-                <IconButton
-                  onClick={handleClick}
-                  size="small"
-                  sx={{ ml: 1 }}
-                  aria-controls={open ? 'account-menu' : undefined}
-                  aria-haspopup="true"
-                  aria-expanded={open ? 'true' : undefined}
-                >
-                  <SecurityIcon />
-                </IconButton>
-              </Tooltip>
-            )}
+              </Box>
+              {(
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
+                  <Tooltip title="帳號設定">
+                    <IconButton
+                      onClick={e => { e.stopPropagation(); if (user) navigate('/profile'); }}
+                      size="small"
+                      sx={{ ml: 1 }}
+                      aria-controls={open ? 'account-menu' : undefined}
+                      aria-haspopup="true"
+                      aria-expanded={open ? 'true' : undefined}
+                    >
+                      <SecurityIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
           </>
         )}
       </Box>

@@ -1073,7 +1073,12 @@ const Inventory = () => {
 
         {/* 標籤頁 */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
+          <Tabs 
+            value={currentTab} 
+            onChange={(e, newValue) => setCurrentTab(newValue)}
+            textColor="secondary"
+            indicatorColor="secondary"
+          >
             <Tab label="耗材管理" />
             <Tab label="藥劑管理" />
           </Tabs>

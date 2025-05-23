@@ -378,8 +378,26 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
   // handleSaveProject might need to inform App.js to re-fetch or optimistically update the global projects state
   // For now, it will update the local 'projects' state in Orders.js
   const handleSaveProject = async () => {
-    // ... (handleSaveProject logic remains the same but consider global state update implications)
     try {
+      // 1. 組合完整地址
+      const fullAddress = `${projectData.site_city || ''}${projectData.site_district || ''}${projectData.site_address || ''}`;
+      let latitude = null;
+      let longitude = null;
+  
+      // 2. 取得 Google Maps API Key
+      const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
+      if (apiKey && fullAddress) {
+        // 3. 呼叫 Google Geocoding API
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`;
+        const response = await fetch(geocodeUrl);
+        const result = await response.json();
+        if (result.status === 'OK' && result.results && result.results[0]) {
+          latitude = result.results[0].geometry.location.lat;
+          longitude = result.results[0].geometry.location.lng;
+        }
+      }
+  
+      // 4. 寫入 Supabase
       const { data, error } = await supabase
         .from('project')
         .insert([{
@@ -411,6 +429,8 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
           contact3_name: projectData.contacts[2]?.name || "",
           contact3_type: projectData.contacts[2]?.contactType || "",
           contact3_contact: projectData.contacts[2]?.contact || "",
+          latitude,
+          longitude
         }])
         .select('*, customer_database(customer_id, customer_name)'); // Ensure you select joined data if needed for optimistic update
   
