@@ -15,7 +15,7 @@ import {
   IconButton,
   Tooltip
 } from "@mui/material";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { styled } from '@mui/material/styles';
 import { useAuth } from '../context/AuthContext';
 
@@ -51,6 +51,7 @@ const StyledDrawer = styled(Drawer)(({ theme, collapsed }) => ({
 
 const Sidebar = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout, hasRole } = useAuth();
   
   // User menu state
@@ -402,8 +403,11 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         display: "flex", 
         alignItems: "center",
         justifyContent: collapsed ? "center" : "flex-start",
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
-      }}>
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        cursor: 'pointer'
+      }}
+        onClick={() => { if (user) navigate('/profile'); }}
+      >
         {collapsed ? (
           <Avatar 
             sx={{ 
@@ -429,7 +433,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             </Avatar>
             <Box sx={{ ml: 2, overflow: "hidden" }}>
               <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
-                {user?.email}
+                {user?.name}
               </Typography>
               <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 {user?.roles?.[0] || 'User'}
@@ -439,7 +443,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             {(
               <Tooltip title="帳號設定">
                 <IconButton
-                  onClick={handleClick}
+                  onClick={e => { e.stopPropagation(); if (user) navigate('/profile'); }}
                   size="small"
                   sx={{ ml: 1 }}
                   aria-controls={open ? 'account-menu' : undefined}
