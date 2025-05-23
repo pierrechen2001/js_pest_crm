@@ -149,7 +149,7 @@ const AboutSystem = () => {
     },
     {
       name: '劉軒羽',
-      role: '前端開發',
+      role: '全端開發',
       avatar: 'https://avatars.githubusercontent.com/u/130119566?s=400&u=a81b67275d7dc6797d9db710f6c5a4e98aee3d66&v=4',
       email: 'b12705019@ntu.im',
       github: 'https://github.com/ryukyucoding',
