@@ -148,12 +148,12 @@ const AboutSystem = () => {
       quote: '穩定、高效的後端系統是任何成功產品的基石。'
     },
     {
-      name: '李小花',
-      role: 'UI/UX 設計',
-      avatar: 'https://avatars.githubusercontent.com/u/45678901',
-      email: 'flower@ntu.edu.tw',
-      github: 'https://github.com/xiaoflower',
-      quote: '設計不僅關乎美觀，更是關乎使用者體驗和情感連接。'
+      name: '劉軒羽',
+      role: '前端開發',
+      avatar: 'https://avatars.githubusercontent.com/u/130119566?s=400&u=a81b67275d7dc6797d9db710f6c5a4e98aee3d66&v=4',
+      email: 'b12705019@ntu.im',
+      github: 'https://github.com/ryukyucoding',
+      quote: '想找到自己喜歡做的事情，並且能夠持續做下去。'
     },
   ];
 
