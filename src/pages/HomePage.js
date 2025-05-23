@@ -149,9 +149,9 @@ const formatFullDate = (date) => {
 
 const getGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return '早安';
-  if (hour < 18) return '午安';
-  return '晚安';
+  if (hour < 12) return '🌞 早安';
+  if (hour < 18) return '🦋 午安';
+  return '🌙 晚安';
 };
 
 // Fallback credentials if environment variables don't work
