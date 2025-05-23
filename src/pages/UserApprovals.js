@@ -21,8 +21,8 @@ import { useAuth } from '../context/AuthContext';
 const UserApprovals = () => {
   const { user } = useAuth();
   const [approvedUsers, setApprovedUsers] = useState([]);
-  const [pendingUsers,  setPendingUsers]  = useState([]);
-  const [error, setError]     = useState('');
+  const [pendingUsers, setPendingUsers] = useState([]);
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
@@ -34,9 +34,9 @@ const UserApprovals = () => {
         supabase.from('users').select('*').eq('is_approved', false)
       ]);
       if (approvedRes.error) throw approvedRes.error;
-      if (pendingRes.error)  throw pendingRes.error;
+      if (pendingRes.error) throw pendingRes.error;
       setApprovedUsers(approvedRes.data || []);
-      setPendingUsers(pendingRes.data  || []);
+      setPendingUsers(pendingRes.data || []);
     } catch (err) {
       console.error('Error fetching users:', err);
       setError('無法載入用戶列表');
@@ -124,6 +124,7 @@ const UserApprovals = () => {
           padding: 4,
           borderRadius: 3,
           mb: 4,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         }}
       >
         <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
@@ -132,20 +133,20 @@ const UserApprovals = () => {
           </Typography>
         </Box>
         <Divider sx={{ mb: 4 }} />
+
         {/* Approved users section */}
         <Box sx={{ mb: 6 }}>
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
             已審核用戶
           </Typography>
-          <Box sx={{ maxHeight: 350, overflow: 'auto', background: 'transparent', borderRadius: 2 }}>
+          <Box sx={{ maxHeight: 350, overflow: 'auto', background: 'transparent', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 1, mb: 2, background: 'background.paper' }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell>姓名</TableCell>
                     <TableCell>電子郵件</TableCell>
-                    <TableCell>註冊時間</TableCell>
-                    <TableCell>操作</TableCell>
+                    <TableCell align="center">操作</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -153,8 +154,7 @@ const UserApprovals = () => {
                     <TableRow key={u.id} hover>
                       <TableCell>{u.name}</TableCell>
                       <TableCell>{u.email}</TableCell>
-                      <TableCell>{new Date(u.created_at).toLocaleString()}</TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         <Button
                           variant="outlined"
                           color="error"
@@ -167,7 +167,7 @@ const UserApprovals = () => {
                   ))}
                   {approvedUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} align="center">
+                      <TableCell colSpan={3} align="center">
                         目前沒有已審核的用戶
                       </TableCell>
                     </TableRow>
@@ -177,21 +177,20 @@ const UserApprovals = () => {
             </TableContainer>
           </Box>
         </Box>
-        <Divider sx={{ my: 4 }} />
+
         {/* Pending users section */}
         <Box>
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
             待審核用戶
           </Typography>
-          <Box sx={{ maxHeight: 350, overflow: 'auto', background: 'transparent', borderRadius: 2 }}>
+          <Box sx={{ maxHeight: 350, overflow: 'auto', background: 'transparent', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 1, background: 'background.paper' }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell>姓名</TableCell>
                     <TableCell>電子郵件</TableCell>
-                    <TableCell>註冊時間</TableCell>
-                    <TableCell>操作</TableCell>
+                    <TableCell align="center">操作</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -199,8 +198,7 @@ const UserApprovals = () => {
                     <TableRow key={u.id} hover>
                       <TableCell>{u.name}</TableCell>
                       <TableCell>{u.email}</TableCell>
-                      <TableCell>{new Date(u.created_at).toLocaleString()}</TableCell>
-                      <TableCell>
+                      <TableCell align="center">
                         <Button
                           variant="contained"
                           onClick={() => handleApprove(u.id)}
@@ -220,7 +218,7 @@ const UserApprovals = () => {
                   ))}
                   {pendingUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} align="center">
+                      <TableCell colSpan={3} align="center">
                         目前沒有待審核的用戶
                       </TableCell>
                     </TableRow>
@@ -231,6 +229,7 @@ const UserApprovals = () => {
           </Box>
         </Box>
       </Paper>
+
       {/* Feedback Snackbar */}
       <Snackbar
         open={openSnackbar}

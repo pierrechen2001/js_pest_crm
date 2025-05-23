@@ -226,6 +226,7 @@ export const AuthProvider = ({ children }) => {
         setUser({
           id: session.user.id,
           email: session.user.email,
+          name: session.user.name,
           roles: JSON.parse(localStorage.getItem("userRoles") || '["user"]'),
           isApproved: JSON.parse(localStorage.getItem("isApproved") || 'false'),
           loginMethod: localStorage.getItem("loginMethod") || "email"

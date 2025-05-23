@@ -670,7 +670,7 @@ const HomePage = () => {
           <WelcomeCard>
             <CardContent sx={{ py: 4, px: 4 }}>
               <Typography variant="h4" color="white" gutterBottom fontWeight="600">
-                {getGreeting()}，{user?.email?.split('@')[0] || '用戶'}
+                {getGreeting()}，{user?.name || '用戶'}
               </Typography>
               <Typography variant="body1" color="white" sx={{ opacity: 0.9, mb: 3 }}>
                 今天是 {formatFullDate(today)}，祝您有個美好的一天！
