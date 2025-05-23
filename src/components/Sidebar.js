@@ -433,27 +433,29 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             </Avatar>
             <Box sx={{ ml: 2, overflow: "hidden" }}>
               <Typography variant="subtitle1" noWrap sx={{ color: 'common.white' }}>
-                {user?.name}
+                {user?.email}
               </Typography>
               <Typography variant="body2" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 {user?.roles?.[0] || 'User'}
                 {!isUserApproved && <span style={{ color: '#ff9800', marginLeft: '5px' }}>(待審核)</span>}
               </Typography>
-            </Box>
-            {(
-              <Tooltip title="帳號設定">
-                <IconButton
-                  onClick={e => { e.stopPropagation(); if (user) navigate('/profile'); }}
-                  size="small"
-                  sx={{ ml: 1 }}
-                  aria-controls={open ? 'account-menu' : undefined}
-                  aria-haspopup="true"
-                  aria-expanded={open ? 'true' : undefined}
-                >
-                  <SecurityIcon />
-                </IconButton>
-              </Tooltip>
-            )}
+              </Box>
+              {(
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
+                  <Tooltip title="帳號設定">
+                    <IconButton
+                      onClick={e => { e.stopPropagation(); if (user) navigate('/profile'); }}
+                      size="small"
+                      sx={{ ml: 1 }}
+                      aria-controls={open ? 'account-menu' : undefined}
+                      aria-haspopup="true"
+                      aria-expanded={open ? 'true' : undefined}
+                    >
+                      <SecurityIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
           </>
         )}
       </Box>
