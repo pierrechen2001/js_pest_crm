@@ -155,6 +155,14 @@ const AboutSystem = () => {
       github: 'https://github.com/ryukyucoding',
       quote: '想找到自己喜歡做的事情，並且能夠持續做下去。'
     },
+    {
+      name: '蔡政穎',
+      role: '前端開發',
+      avatar: 'https://avatars.githubusercontent.com/u/130119566?s=400&u=a81b67275d7dc6797d9db710f6c5a4e98aee3d66&v=4',
+      email: 'a0909726919@gmail.com',
+      github: 'https://github.com/stonk0105',
+      quote: '嗨。'
+    },
   ];
 
   const frontendStack = [

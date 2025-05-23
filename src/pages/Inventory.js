@@ -249,9 +249,9 @@ const Inventory = () => {
 
   // 計算藥劑剩餘量
   const calculateMedicineQuantity = (medicine) => {
-    const totalOrders = medicine.medicine_orders?.reduce((sum, order) => sum + order.quantity, 0) || 0;
-    const totalUsages = medicine.medicine_usages?.reduce((sum, usage) => sum + usage.quantity, 0) || 0;
-    return totalOrders - totalUsages;
+    const totalOrders = medicine.medicine_orders?.reduce((sum, order) => sum + parseFloat(order.quantity), 0) || 0;
+    const totalUsages = medicine.medicine_usages?.reduce((sum, usage) => sum + parseFloat(usage.quantity), 0) || 0;
+    return (totalOrders - totalUsages).toFixed(2);
   };
 
   // 篩選耗材
@@ -359,11 +359,18 @@ const Inventory = () => {
         return;
       }
 
+      // 確保數量為有效數字（允許小數點）
+      const quantity = parseFloat(newOrder.quantity);
+      if (isNaN(quantity)) {
+        alert('請輸入有效的數量！');
+        return;
+      }
+
       const { error } = await supabase
         .from('medicine_orders')
         .insert([{
           medicine_id: selectedMedicine.id,
-          quantity: parseInt(newOrder.quantity),
+          quantity: quantity,
           date: newOrder.date,
           vendor: newOrder.vendor
         }]);
@@ -414,7 +421,7 @@ const Inventory = () => {
         return;
       }
 
-      // 確保數量為有效數字
+      // 確保數量為有效數字（允許小數點）
       const quantity = parseFloat(newUsage.quantity);
       if (isNaN(quantity)) {
         alert('請輸入有效的數量！');
@@ -450,7 +457,7 @@ const Inventory = () => {
           project_id: newUsage.project,
           log_type: '使用藥劑',
           log_date: newUsage.date,
-          content: `${selectedMedicine.name}-${quantity}`,
+          content: `${selectedMedicine.name}-${quantity.toFixed(2)}`,
           notes: '',
           created_by: '庫存頁面'
         }]);
@@ -762,7 +769,7 @@ const Inventory = () => {
         return;
       }
 
-      // 確保數量為有效數字
+      // 確保數量為有效數字（允許小數點）
       const quantity = parseFloat(editingRecord.quantity);
       if (isNaN(quantity)) {
         alert('請輸入有效的數量！');
@@ -868,7 +875,7 @@ const Inventory = () => {
             project_id: newProjectData.project_id,
             log_type: '使用藥劑',
             log_date: editingRecord.date,
-            content: `${selectedMedicine.name}-${quantity}`,
+            content: `${selectedMedicine.name}-${quantity.toFixed(2)}`,
             notes: '',
             created_by: '庫存頁面'
           }]);
@@ -972,7 +979,7 @@ const Inventory = () => {
           .eq('project_id', projectData.project_id)
           .eq('log_type', '使用藥劑')
           .eq('log_date', record.date)
-          .eq('content', `${selectedMedicine.name}-${record.quantity}`);
+          .eq('content', `${selectedMedicine.name}-${parseFloat(record.quantity).toFixed(2)}`);
 
         if (logError) {
           console.error('Error deleting project log:', logError);
@@ -1375,9 +1382,15 @@ const Inventory = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <TextField
               label="訂購數量"
-              type="number"
+              type="text"
               value={newOrder.quantity}
-              onChange={(e) => setNewOrder(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                // 允許輸入數字和小數點
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setNewOrder(prev => ({ ...prev, quantity: value }));
+                }
+              }}
               fullWidth
             />
 
@@ -1508,20 +1521,20 @@ const Inventory = () => {
             </Box>
 
             <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
+          <Table>
+            <TableHead>
+              <TableRow>
                     <TableCell>日期</TableCell>
-                    <TableCell>數量</TableCell>
+                        <TableCell>數量</TableCell>
                     {historyType === 'order' ? (
                       <TableCell>廠商</TableCell>
                     ) : (
-                      <TableCell>專案</TableCell>
+                        <TableCell>專案</TableCell>
                     )}
-                    <TableCell>操作</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
+                        <TableCell>操作</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
                   {filteredHistory.map((record, index) => (
                     <TableRow key={index}>
                       <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
@@ -1529,8 +1542,8 @@ const Inventory = () => {
                       {historyType === 'order' ? (
                         <TableCell>{record.vendor}</TableCell>
                       ) : (
-                        <TableCell>{record.project}</TableCell>
-                      )}
+                          <TableCell>{record.project}</TableCell>
+      )}
                       <TableCell>
                         <Button
                           variant="outlined"
@@ -1561,9 +1574,9 @@ const Inventory = () => {
                       </TableCell>
                     </TableRow>
                   )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            </TableBody>
+          </Table>
+        </TableContainer>
           </Box>
         </DialogContent>
         <DialogActions>
