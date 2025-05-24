@@ -102,12 +102,22 @@ const Login = () => {
       const picture_url = profile.getImageUrl();
   
       // Check if the user already exists
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('id, email, is_approved, role')
-        .eq('email', email)
-        .single();
-
+      let existingUser = null;
+      let fetchError = null;
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, email, is_approved, role')
+          .eq('email', email)
+          .single();
+        existingUser = data;
+        fetchError = error;
+      } catch (err) {
+        // Handle the case where .single() returns no rows (error with code PGRST116)
+        console.warn("User not found in database on login attempt:", err.message);
+        // existingUser remains null, fetchError might contain details but we treat it as not found
+      }
+  
       if (existingUser) {
         try {
           // Check if the user is the speciific admin email
