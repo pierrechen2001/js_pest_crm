@@ -470,7 +470,7 @@ const AboutSystem = () => {
                 borderRadius: 2,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.12)'
               }}
-              src="https://www.youtube.com/embed/sPTc4_vDMfo" 
+              src="https://www.youtube.com/embed/gikgG-1I1rw" 
               title="系統使用說明" 
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
               allowFullScreen
