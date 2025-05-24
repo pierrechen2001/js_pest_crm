@@ -99,9 +99,24 @@ const Inventory = () => {
         const { data: medicinesData, error: medicinesError } = await supabase
           .from('medicines')
           .select(`
-            *,
-            medicine_orders (*),
-            medicine_usages (*)
+            id,
+            name,
+            created_at,
+            updated_at,
+            medicine_orders (
+              id,
+              medicine_id,
+              quantity,
+              date,
+              vendor
+            ),
+            medicine_usages (
+              id,
+              medicine_id,
+              quantity,
+              date,
+              project
+            )
           `);
 
         if (medicinesError) throw medicinesError;
@@ -110,14 +125,7 @@ const Inventory = () => {
         // 獲取專案資料
         const { data: projectsData, error: projectsError } = await supabase
           .from('project')
-          .select(`
-            project_id,
-            project_name,
-            customer_database (
-              customer_id,
-              customer_name
-            )
-          `);
+          .select('project_id, project_name');
 
         if (projectsError) throw projectsError;
         setProjects(projectsData || []);
@@ -241,9 +249,9 @@ const Inventory = () => {
 
   // 計算藥劑剩餘量
   const calculateMedicineQuantity = (medicine) => {
-    const totalOrders = medicine.medicine_orders?.reduce((sum, order) => sum + order.quantity, 0) || 0;
-    const totalUsages = medicine.medicine_usages?.reduce((sum, usage) => sum + usage.quantity, 0) || 0;
-    return totalOrders - totalUsages;
+    const totalOrders = medicine.medicine_orders?.reduce((sum, order) => sum + parseFloat(order.quantity), 0) || 0;
+    const totalUsages = medicine.medicine_usages?.reduce((sum, usage) => sum + parseFloat(usage.quantity), 0) || 0;
+    return (totalOrders - totalUsages).toFixed(2);
   };
 
   // 篩選耗材
@@ -351,11 +359,18 @@ const Inventory = () => {
         return;
       }
 
+      // 確保數量為有效數字（允許小數點）
+      const quantity = parseFloat(newOrder.quantity);
+      if (isNaN(quantity)) {
+        alert('請輸入有效的數量！');
+        return;
+      }
+
       const { error } = await supabase
         .from('medicine_orders')
         .insert([{
           medicine_id: selectedMedicine.id,
-          quantity: parseInt(newOrder.quantity),
+          quantity: quantity,
           date: newOrder.date,
           vendor: newOrder.vendor
         }]);
@@ -394,7 +409,7 @@ const Inventory = () => {
   const handleAddUsage = async () => {
     try {
       // 驗證必填欄位
-      if (!newUsage.quantity || !newUsage.date || !newUsage.project || !newUsage.customer) {
+      if (!newUsage.quantity || !newUsage.date || !newUsage.project) {
         alert('請填寫所有必填欄位！');
         return;
       }
@@ -406,7 +421,7 @@ const Inventory = () => {
         return;
       }
 
-      // 確保數量為有效數字
+      // 確保數量為有效數字（允許小數點）
       const quantity = parseFloat(newUsage.quantity);
       if (isNaN(quantity)) {
         alert('請輸入有效的數量！');
@@ -420,19 +435,36 @@ const Inventory = () => {
         return;
       }
 
-      const { error } = await supabase
+      // 新增藥劑使用記錄
+      const { error: usageError } = await supabase
         .from('medicine_usages')
         .insert([{
           medicine_id: selectedMedicine.id,
           quantity: quantity,
           date: newUsage.date,
-          project: selectedProject.project_name,
-          customer: selectedProject.customer_database?.customer_name || '未知客戶'
+          project: selectedProject.project_name
         }]);
 
-      if (error) {
-        console.error('Error details:', error);
-        throw error;
+      if (usageError) {
+        console.error('Error details:', usageError);
+        throw usageError;
+      }
+
+      // 新增專案日誌
+      const { error: logError } = await supabase
+        .from('project_log')
+        .insert([{
+          project_id: newUsage.project,
+          log_type: '使用藥劑',
+          log_date: newUsage.date,
+          content: `${selectedMedicine.name}-${quantity.toFixed(2)}`,
+          notes: '',
+          created_by: '庫存頁面'
+        }]);
+
+      if (logError) {
+        console.error('Error adding project log:', logError);
+        throw logError;
       }
 
       // 重新獲取藥劑資料以更新列表
@@ -452,8 +484,7 @@ const Inventory = () => {
       setNewUsage({
         quantity: '',
         date: "",
-        project: "",
-        customer: ""
+        project: ""
       });
     } catch (error) {
       console.error('Error adding usage:', error);
@@ -463,12 +494,32 @@ const Inventory = () => {
 
   // 處理刪除藥劑
   const handleDeleteMedicine = async (medicine) => {
-    if (!window.confirm(`確定要刪除藥劑「${medicine.name}」嗎？此操作將同時刪除所有相關的訂購和使用記錄。`)) {
+    if (!window.confirm(`確定要刪除藥劑「${medicine.name}」嗎？此操作將同時刪除所有相關的訂購、使用記錄和專案日誌。`)) {
       return;
     }
 
     try {
-      // 先刪除相關的訂購記錄
+      // 先找到所有使用此藥劑的專案日誌
+      const { data: projectLogs, error: logsError } = await supabase
+        .from('project_log')
+        .select('*')
+        .eq('log_type', '使用藥劑')
+        .ilike('content', `${medicine.name}-%`);
+
+      if (logsError) throw logsError;
+
+      // 刪除相關的專案日誌
+      if (projectLogs && projectLogs.length > 0) {
+        const { error: deleteLogsError } = await supabase
+          .from('project_log')
+          .delete()
+          .eq('log_type', '使用藥劑')
+          .ilike('content', `${medicine.name}-%`);
+
+        if (deleteLogsError) throw deleteLogsError;
+      }
+
+      // 刪除相關的訂購記錄
       const { error: ordersError } = await supabase
         .from('medicine_orders')
         .delete()
@@ -476,7 +527,7 @@ const Inventory = () => {
 
       if (ordersError) throw ordersError;
 
-      // 再刪除相關的使用記錄
+      // 刪除相關的使用記錄
       const { error: usagesError } = await supabase
         .from('medicine_usages')
         .delete()
@@ -520,9 +571,24 @@ const Inventory = () => {
       const { data: updatedMedicine, error } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `)
         .eq('id', medicine.id)
         .single();
@@ -559,9 +625,24 @@ const Inventory = () => {
       const { data: updatedMedicine, error } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `)
         .eq('id', selectedMedicine.id)
         .single();
@@ -688,7 +769,7 @@ const Inventory = () => {
         return;
       }
 
-      // 確保數量為有效數字
+      // 確保數量為有效數字（允許小數點）
       const quantity = parseFloat(editingRecord.quantity);
       if (isNaN(quantity)) {
         alert('請輸入有效的數量！');
@@ -711,12 +792,98 @@ const Inventory = () => {
         }
         updateData.vendor = editingRecord.vendor;
       } else {
-        if (!editingRecord.project || !editingRecord.customer) {
+        if (!editingRecord.project) {
           alert('請選擇專案！');
           return;
         }
         updateData.project = editingRecord.project;
-        updateData.customer = editingRecord.customer;
+
+        // 如果是使用記錄，先獲取原本的記錄資料
+        const { data: originalRecord, error: originalError } = await supabase
+          .from('medicine_usages')
+          .select('project')
+          .eq('id', editingRecord.id)
+          .single();
+
+        if (originalError) {
+          console.error('Error fetching original record:', originalError);
+          throw originalError;
+        }
+
+        // 獲取原本專案的 ID
+        if (originalRecord && originalRecord.project) {
+          const { data: originalProjectData, error: originalProjectError } = await supabase
+            .from('project')
+            .select('project_id')
+            .eq('project_name', originalRecord.project)
+            .single();
+
+          if (originalProjectError) {
+            console.error('Error finding original project:', originalProjectError);
+            throw originalProjectError;
+          }
+
+          if (originalProjectData) {
+            // 刪除原本專案中的相關日誌
+            const { error: deleteOriginalLogError } = await supabase
+              .from('project_log')
+              .delete()
+              .eq('project_id', originalProjectData.project_id)
+              .eq('log_type', '使用藥劑')
+              .ilike('content', `${selectedMedicine.name}-%`);
+
+            if (deleteOriginalLogError) {
+              console.error('Error deleting original project logs:', deleteOriginalLogError);
+              throw deleteOriginalLogError;
+            }
+          }
+        }
+
+        // 獲取新專案的 ID
+        const { data: newProjectData, error: newProjectError } = await supabase
+          .from('project')
+          .select('project_id')
+          .eq('project_name', editingRecord.project)
+          .single();
+
+        if (newProjectError) {
+          console.error('Error finding new project:', newProjectError);
+          throw newProjectError;
+        }
+
+        if (!newProjectData) {
+          throw new Error('找不到對應的專案');
+        }
+
+        // 刪除新專案中的相關日誌
+        const { error: deleteNewLogError } = await supabase
+          .from('project_log')
+          .delete()
+          .eq('project_id', newProjectData.project_id)
+          .eq('log_type', '使用藥劑')
+          .ilike('content', `${selectedMedicine.name}-%`);
+
+        if (deleteNewLogError) {
+          console.error('Error deleting new project logs:', deleteNewLogError);
+          throw deleteNewLogError;
+        }
+
+        // 創建新的專案日誌
+        const { error: createLogError } = await supabase
+          .from('project_log')
+          .insert([{
+            project_id: newProjectData.project_id,
+            log_type: '使用藥劑',
+            log_date: editingRecord.date,
+            content: `${selectedMedicine.name}-${quantity.toFixed(2)}`,
+            notes: '',
+            created_by: '庫存頁面'
+          }]);
+
+        if (createLogError) {
+          console.error('Error creating new project log:', createLogError);
+          throw createLogError;
+        }
       }
 
       // 更新資料庫
@@ -734,9 +901,24 @@ const Inventory = () => {
       const { data: allMedicines, error: fetchError } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `);
 
       if (fetchError) throw fetchError;
@@ -772,6 +954,39 @@ const Inventory = () => {
     try {
       const tableName = historyType === 'order' ? 'medicine_orders' : 'medicine_usages';
       
+      // 如果是使用記錄，先刪除對應的專案日誌
+      if (historyType === 'usage') {
+        // 先找到對應的專案 ID
+        const { data: projectData, error: projectError } = await supabase
+          .from('project')
+          .select('project_id')
+          .eq('project_name', record.project)
+          .single();
+
+        if (projectError) {
+          console.error('Error finding project:', projectError);
+          throw projectError;
+        }
+
+        if (!projectData) {
+          throw new Error('找不到對應的專案');
+        }
+
+        // 刪除專案日誌
+        const { error: logError } = await supabase
+          .from('project_log')
+          .delete()
+          .eq('project_id', projectData.project_id)
+          .eq('log_type', '使用藥劑')
+          .eq('log_date', record.date)
+          .eq('content', `${selectedMedicine.name}-${parseFloat(record.quantity).toFixed(2)}`);
+
+        if (logError) {
+          console.error('Error deleting project log:', logError);
+          throw logError;
+        }
+      }
+      
       // 刪除記錄
       const { error } = await supabase
         .from(tableName)
@@ -784,9 +999,24 @@ const Inventory = () => {
       const { data: allMedicines, error: fetchError } = await supabase
         .from('medicines')
         .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
+          id,
+          name,
+          created_at,
+          updated_at,
+          medicine_orders (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            vendor
+          ),
+          medicine_usages (
+            id,
+            medicine_id,
+            quantity,
+            date,
+            project
+          )
         `);
 
       if (fetchError) throw fetchError;
@@ -843,7 +1073,12 @@ const Inventory = () => {
 
         {/* 標籤頁 */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
+          <Tabs 
+            value={currentTab} 
+            onChange={(e, newValue) => setCurrentTab(newValue)}
+            textColor="secondary"
+            indicatorColor="secondary"
+          >
             <Tab label="耗材管理" />
             <Tab label="藥劑管理" />
           </Tabs>
@@ -1152,9 +1387,15 @@ const Inventory = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <TextField
               label="訂購數量"
-              type="number"
+              type="text"
               value={newOrder.quantity}
-              onChange={(e) => setNewOrder(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                // 允許輸入數字和小數點
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setNewOrder(prev => ({ ...prev, quantity: value }));
+                }
+              }}
               fullWidth
             />
 
@@ -1213,13 +1454,12 @@ const Inventory = () => {
 
             <Autocomplete
               options={projects}
-              getOptionLabel={(option) => `${option.project_name} - ${option.customer_database?.customer_name || '未知客戶'}`}
+              getOptionLabel={(option) => `${option.project_name}`}
               value={projects.find(p => p.project_id === newUsage.project) || null}
               onChange={(event, newValue) => {
                 setNewUsage(prev => ({
                   ...prev,
-                  project: newValue?.project_id || "",
-                  customer: newValue?.customer_database?.customer_name || ""
+                  project: newValue?.project_id || ""
                 }));
               }}
               renderInput={(params) => (
@@ -1294,10 +1534,7 @@ const Inventory = () => {
                     {historyType === 'order' ? (
                       <TableCell>廠商</TableCell>
                     ) : (
-                      <>
                         <TableCell>專案</TableCell>
-                        <TableCell>客戶</TableCell>
-                      </>
                     )}
                         <TableCell>操作</TableCell>
               </TableRow>
@@ -1310,10 +1547,7 @@ const Inventory = () => {
                       {historyType === 'order' ? (
                         <TableCell>{record.vendor}</TableCell>
                       ) : (
-                        <>
                           <TableCell>{record.project}</TableCell>
-                          <TableCell>{record.customer}</TableCell>
-        </>
       )}
                       <TableCell>
                         <Button
@@ -1340,7 +1574,7 @@ const Inventory = () => {
                   ))}
                   {filteredHistory.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={historyType === 'order' ? 4 : 5} align="center">
+                      <TableCell colSpan={historyType === 'order' ? 4 : 3} align="center">
                         此時間範圍內無{historyType === 'order' ? '訂購' : '使用'}記錄
                       </TableCell>
                     </TableRow>
@@ -1395,13 +1629,12 @@ const Inventory = () => {
             ) : (
               <Autocomplete
                 options={projects}
-                getOptionLabel={(option) => `${option.project_name} - ${option.customer_database?.customer_name || '未知客戶'}`}
+                getOptionLabel={(option) => `${option.project_name}`}
                 value={projects.find(p => p.project_name === editingRecord?.project) || null}
                 onChange={(event, newValue) => {
                   setEditingRecord(prev => ({
                     ...prev,
-                    project: newValue?.project_name || "",
-                    customer: newValue?.customer_database?.customer_name || ""
+                    project: newValue?.project_name || ""
                   }));
                 }}
                 renderInput={(params) => (

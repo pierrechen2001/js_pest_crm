@@ -595,13 +595,14 @@ const Customers = ({
 
       {/* 客戶類型篩選按鈕 */}
       <div style={{ display: "flex", gap: "10px", marginBottom: 10 }}>
-        <Button variant={selectedType === "" ? "contained" : "outlined"} onClick={() => setSelectedType("")} color="primary">全部</Button>
+        <Button variant={selectedType === "" ? "contained" : "outlined"} onClick={() => setSelectedType("")} color="secondary" sx={{ fontWeight: 600 }}>全部</Button>
         {customerTypes.map((type) => (
           <Button
             key={type}
             variant={selectedType === type ? "contained" : "outlined"}
             onClick={() => setSelectedType(type)}
-            color="primary"
+            color="secondary"
+            sx={{ fontWeight: 600 }}
           >
             {type}
           </Button>

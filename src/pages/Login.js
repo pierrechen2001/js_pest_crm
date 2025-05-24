@@ -8,7 +8,8 @@ import {
   Alert,
   Card,
   CardContent,
-  Divider
+  Divider,
+  Paper
 } from "@mui/material";
 import GoogleIcon from '@mui/icons-material/Google';
 import { useAuth } from '../context/AuthContext';
@@ -158,7 +159,7 @@ const Login = () => {
         localStorage.setItem("loginMethod", "google");
         localStorage.setItem("userRoles", JSON.stringify([isAdmin ? 'admin' : 'user']));
         if (isAdmin) {
-          navigate("/homepage");
+          navigate("/");
         } else {
           navigate("/pending-approval");
         }
@@ -171,7 +172,7 @@ const Login = () => {
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
           localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
-          navigate("/customers");
+          navigate("/");
         } else if (!existingUser.is_approved) {
           // Not approved: redirect to pending
           localStorage.setItem("loginMethod", "google");
@@ -183,7 +184,7 @@ const Login = () => {
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
           localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
-          navigate("/customers");
+          navigate("/");
         }
       }
     } catch (error) {
@@ -194,28 +195,82 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="sm">
+    <Container
+      maxWidth="sm"
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 200,
+        minHeight: '100vh',
+        width: '100vw',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f5f5f5',
+        zIndex: 1200,
+      }}
+    >
       <Box
         sx={{
-          marginTop: 8,
+          width: '100%',
+          maxWidth: 'sm',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          px: 2,
         }}
       >
-        <Typography 
-          component="h1" 
-          variant="h4" 
-          sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}
+        <Box
+          sx={{
+            p: 4,
+            
+            textAlign: 'center',
+            background: 'transparent',
+          }}
         >
-          管理系統
-        </Typography>
+          <Typography 
+            component="h1" 
+            variant="h3" 
+            sx={{ 
+              mb: 2, 
+              fontWeight: 'bold', 
+              color: 'primary.main',
+              textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
+            }}
+          >
+            中興客戶管理系統
+          </Typography>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: 'text.secondary',
+              mb: 1,
+              fontWeight: 'medium',
+            }}
+          >
+            歡迎使用
+          </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'text.secondary',
+              opacity: 0.8,
+            }}
+          >
+            請使用 Google 帳號登入系統
+          </Typography>
+        </Box>
+
         <Card
           elevation={6}
           sx={{
             width: '100%',
-            borderRadius: 2,
+            borderRadius: 3,
             overflow: 'hidden',
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
           }}
         >
           <CardContent
@@ -226,18 +281,38 @@ const Login = () => {
               alignItems: "center",
             }}
           >
-            <Typography component="h2" variant="h5" sx={{ mb: 2 }}>
-              Google 登入
-            </Typography>
             <Button
               fullWidth
-              variant="outlined"
+              variant="contained"
               startIcon={<GoogleIcon />}
               onClick={handleGoogleLogin}
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 8px rgba(0,0,0,0.15)',
+                },
+                transition: 'all 0.2s ease-in-out',
+              }}
             >
               使用 Google 帳號登入
             </Button>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: 'text.secondary',
+                opacity: 0.7,
+                textAlign: 'center',
+                mt: 2,
+              }}
+            >
+              登入即表示您同意遵守系統使用規範
+            </Typography>
           </CardContent>
         </Card>
       </Box>

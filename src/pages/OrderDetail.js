@@ -207,11 +207,41 @@ export default function OrderDetail() {
 
       // 確保日誌類型是有效的值
       const validLogTypes = ['工程', '財務', '行政', '使用藥劑'];
-      const logType = newLog.log_type.trim();
+      // 移除所有空白字符，包括空格、換行等
+      const logType = newLog.log_type.replace(/\s+/g, '');
       
+      console.log('=== 日誌類型追蹤 ===');
+      console.log('表單中的原始值:', newLog.log_type);
+      console.log('處理後的值:', logType);
+      console.log('允許的值列表:', validLogTypes);
+      console.log('是否在允許列表中:', validLogTypes.includes(logType));
+      console.log('值的長度:', logType.length);
+      console.log('值的字符編碼:', Array.from(logType).map(c => c.charCodeAt(0)));
+      
+      // 詳細比較每個字符
+      console.log('=== 字符比較 ===');
+      validLogTypes.forEach(validType => {
+        console.log(`比較 "${logType}" 和 "${validType}":`);
+        console.log('長度是否相同:', logType.length === validType.length);
+        console.log('字符編碼比較:');
+        Array.from(logType).forEach((char, i) => {
+          console.log(`位置 ${i}: ${char}(${char.charCodeAt(0)}) vs ${validType[i]}(${validType[i]?.charCodeAt(0)})`);
+        });
+      });
+      console.log('===================');
+
+      // 確保值完全匹配資料庫約束
       if (!validLogTypes.includes(logType)) {
-        console.error('無效的日誌類型:', logType);
-        alert('無效的日誌類型！');
+        const errorMessage = `無效的日誌類型！\n\n` +
+          `您選擇的類型: "${logType}"\n` +
+          `允許的類型: ${validLogTypes.join(', ')}\n\n` +
+          '請選擇正確的日誌類型。\n\n' +
+          '技術細節：\n' +
+          `- 值的長度: ${logType.length}\n` +
+          `- 字符編碼: ${Array.from(logType).map(c => c.charCodeAt(0)).join(', ')}\n\n` +
+          '注意：如果您的選擇看起來正確但仍然失敗，請聯繫系統管理員更新資料庫約束。';
+        console.error(errorMessage);
+        alert(errorMessage);
         return;
       }
 
@@ -225,11 +255,11 @@ export default function OrderDetail() {
       // 準備日誌資料
       const logDataToInsert = {
         project_id: projectId,
-        log_type: logType, // 使用驗證過的 logType
+        log_type: logType,
         log_date: newLog.log_date,
         content: newLog.content.trim(),
         notes: (newLog.notes || '').trim(),
-        created_by: '系統管理員'
+        created_by: user?.name || '未知使用者'
       };
 
       // 如果是使用藥劑類型，將藥劑資訊加入內容中
@@ -239,48 +269,57 @@ export default function OrderDetail() {
           alert('找不到選擇的藥劑！');
           return;
         }
-        logDataToInsert.content = `使用藥劑：${selectedMedicine.name}，數量：${newLog.medicine_quantity}\n\n${newLog.content}`;
-      }
+        // 修改內容格式為 "藥劑種類-使用量"
+        logDataToInsert.content = `${selectedMedicine.name}-${newLog.medicine_quantity}`;
 
-      console.log('準備插入的日誌資料:', JSON.stringify(logDataToInsert, null, 2)); // 使用 JSON.stringify 以便更好地查看資料
-
-      // 插入日誌記錄
-      const { data: insertedLog, error: logError } = await supabase
-        .from('project_log')
-        .insert([
-          {
-            project_id: projectId,
-            log_type: newLog.log_type,
-            log_date: newLog.log_date,
-            content: newLog.content,
-            notes: newLog.notes,
-            created_by: user?.name || '未知使用者'
-          }
-        ])
-        .select();
-
-      if (logError) {
-        console.error('Error inserting log:', logError);
-        console.error('Failed data:', JSON.stringify(logDataToInsert, null, 2));
-        throw new Error('新增日誌失敗：' + logError.message);
-      }
-
-      // 如果是使用藥劑類型，同時更新藥劑使用記錄
-      if (logType === '使用藥劑') {
+        // 新增使用記錄到 medicine_usages
         const { error: usageError } = await supabase
           .from('medicine_usages')
           .insert([{
             medicine_id: newLog.medicine_id,
             quantity: parseFloat(newLog.medicine_quantity),
             date: newLog.log_date,
-            project: project.project_name,
-            customer: project.customer_database?.customer_name || '未知客戶'
+            project: project.project_name
           }]);
 
         if (usageError) {
           console.error('Error inserting usage:', usageError);
           throw new Error('新增藥劑使用記錄失敗：' + usageError.message);
         }
+      }
+
+      console.log('=== 準備插入的資料 ===');
+      console.log('完整的插入資料:', JSON.stringify(logDataToInsert, null, 2));
+      console.log('log_type 的最終值:', logDataToInsert.log_type);
+      console.log('===================');
+
+      // 插入日誌記錄
+      const { data: insertedLog, error: logError } = await supabase
+        .from('project_log')
+        .insert([logDataToInsert])
+        .select();
+
+      if (logError) {
+        console.error('Error inserting log:', logError);
+        console.error('Failed data:', JSON.stringify(logDataToInsert, null, 2));
+        
+        // 更詳細的錯誤訊息
+        let errorMessage = '新增日誌失敗！\n\n';
+        
+        if (logError.message.includes('project_log_log_type_check')) {
+          errorMessage += '原因：日誌類型不符合資料庫要求\n\n' +
+            `您選擇的類型: "${logDataToInsert.log_type}"\n` +
+            `允許的類型: ${validLogTypes.join(', ')}\n\n` +
+            '請選擇正確的日誌類型。\n\n' +
+            '技術細節：\n' +
+            `- 值的長度: ${logDataToInsert.log_type.length}\n` +
+            `- 字符編碼: ${Array.from(logDataToInsert.log_type).map(c => c.charCodeAt(0)).join(', ')}`;
+        } else {
+          errorMessage += `錯誤訊息：${logError.message}\n\n` +
+            '請檢查輸入的資料是否正確。';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // 更新日誌列表
@@ -299,8 +338,8 @@ export default function OrderDetail() {
 
     } catch (error) {
       console.error('Error in handleAddLog:', error);
-      setError('新增日誌時發生錯誤：' + error.message);
-      alert('新增日誌時發生錯誤：' + error.message);
+      setError(error.message);
+      alert(error.message);
     }
   };
 
@@ -426,6 +465,50 @@ export default function OrderDetail() {
 
   const handleDeleteLog = async () => {
     try {
+      // 先獲取要刪除的日誌記錄
+      const logToDelete = projectLogs.find(log => log.log_id === deletingLogId);
+      
+      if (!logToDelete) {
+        throw new Error('找不到要刪除的日誌記錄');
+      }
+
+      // 如果是使用藥劑的日誌，先刪除對應的使用記錄
+      if (logToDelete.log_type === '使用藥劑') {
+        // 從內容中解析藥劑名稱和數量
+        const [medicineName, quantity] = logToDelete.content.split('-');
+        
+        // 找到對應的藥劑 ID
+        const { data: medicineData, error: medicineError } = await supabase
+          .from('medicines')
+          .select('id')
+          .eq('name', medicineName)
+          .single();
+
+        if (medicineError) {
+          console.error('Error finding medicine:', medicineError);
+          throw medicineError;
+        }
+
+        if (!medicineData) {
+          throw new Error('找不到對應的藥劑');
+        }
+
+        // 刪除使用記錄
+        const { error: usageError } = await supabase
+          .from('medicine_usages')
+          .delete()
+          .eq('medicine_id', medicineData.id)
+          .eq('quantity', parseFloat(quantity))
+          .eq('date', logToDelete.log_date)
+          .eq('project', project.project_name);
+
+        if (usageError) {
+          console.error('Error deleting medicine usage:', usageError);
+          throw usageError;
+        }
+      }
+
+      // 刪除日誌記錄
       const { error } = await supabase
         .from('project_log')
         .delete()

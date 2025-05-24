@@ -138,13 +138,12 @@ const MapComponent = ({ projects = [] }) => {
       }
       return;
     }
-    
-    const geocoder = new window.google.maps.Geocoder();
+
     const { spherical } = window.google.maps.geometry;
     const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
-    const { InfoWindow } = window.google.maps; // Get InfoWindow constructor
+    const { InfoWindow } = window.google.maps;
 
-    // Clear previous project markers and close any open InfoWindow
+    // 清除舊的 marker
     projectMarkersRef.current.forEach(marker => marker.map = null);
     projectMarkersRef.current = [];
     if (activeInfoWindowRef.current) {
@@ -152,23 +151,93 @@ const MapComponent = ({ projects = [] }) => {
       activeInfoWindowRef.current = null;
     }
 
-    const geocodeDelay = 250; // ms delay between geocoding requests
-
-    projects.forEach((project, index) => {
-      const projectAddress = `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`.trim();
-      if (!projectAddress) return;
-
-      setTimeout(() => {
-        geocoder.geocode({ address: projectAddress }, (results, status) => {
-          if (status === 'OK' && results && results[0]) {
-            const projectLocation = results[0].geometry.location;
+    projects.forEach(async (project) => {
+      // 優先使用經緯度
+      let lat = project.latitude;
+      let lng = project.longitude;
+      if (typeof lat === 'string') lat = parseFloat(lat);
+      if (typeof lng === 'string') lng = parseFloat(lng);
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        const projectLocation = { lat, lng };
+        const distance = spherical.computeDistanceBetween(mainMarkerPosition, projectLocation);
+        if (distance <= circleRadius) {
+          const pinElement = new PinElement({
+            glyphColor: 'white',
+            background: '#4285F4',
+            borderColor: '#1A73E8',
+          });
+          const projectMarker = new AdvancedMarkerElement({
+            position: projectLocation,
+            map: mapInstanceRef.current,
+            title: project.project_name || 'Project Location',
+            content: pinElement.element,
+          });
+          projectMarker.addListener('click', () => {
+            if (activeInfoWindowRef.current) {
+              activeInfoWindowRef.current.close();
+            }
+            const startDate = project.start_date ? new Date(project.start_date).toLocaleDateString() : 'N/A';
+            const contractAmount = project.construction_fee ? `${project.construction_fee.toLocaleString()} 元` : 'N/A';
+            const projectTitleText = project.project_name || '未提供專案名稱';
+            const projectTitleElement = document.createElement('div');
+            projectTitleElement.style.fontSize = '1.4em';
+            projectTitleElement.style.fontWeight = 'bold';
+            projectTitleElement.textContent = projectTitleText;
+            const projectDetails = `
+              <div style="font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;">
+                <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
+                <p style="margin: 0 0 10px 0;"><strong>施工金額:</strong> ${contractAmount}</p>
+                <a href="/order/${project.project_id}" target="_blank" style="color: #1a73e8; text-decoration: none; font-weight: bold;">查看專案詳細頁面</a>
+              </div>
+            `;
+            const infoWindow = new InfoWindow({
+              headerContent: projectTitleElement,
+              content: projectDetails,
+              ariaLabel: project.project_name || '專案詳情',
+            });
+            infoWindow.open({
+              anchor: projectMarker,
+              map: mapInstanceRef.current,
+            });
+            activeInfoWindowRef.current = infoWindow;
+          });
+          projectMarkersRef.current.push(projectMarker);
+        }
+      } else {
+        // 若無經緯度，嘗試 geocode 並即時存回 supabase
+        const fullAddress = `${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`;
+        if (!fullAddress) return;
+        const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
+        if (!apiKey) return;
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`;
+        try {
+          const response = await fetch(geocodeUrl);
+          const result = await response.json();
+          if (result.status === 'OK' && result.results && result.results[0]) {
+            const geo = result.results[0].geometry.location;
+            // 立即存回 supabase
+            if (window.supabase) {
+              try {
+                const { error } = await window.supabase
+                  .from('project')
+                  .update({ latitude: geo.lat, longitude: geo.lng })
+                  .eq('project_id', project.project_id);
+                if (error) {
+                  console.error('Supabase update error:', error);
+                } else {
+                  console.log('Supabase updated project', project.project_id, 'with lat/lng:', geo.lat, geo.lng);
+                }
+              } catch (e) {
+                console.error('Supabase update exception:', e);
+              }
+            }
+            // 直接顯示 marker
+            const projectLocation = { lat: geo.lat, lng: geo.lng };
             const distance = spherical.computeDistanceBetween(mainMarkerPosition, projectLocation);
-
             if (distance <= circleRadius) {
               const pinElement = new PinElement({
-                // glyph: project.project_name?.charAt(0) || 'P', // Removed glyph
-                glyphColor: 'white', // No glyph, so no glyphColor
-                background: '#4285F4', // Google Blue for project markers
+                glyphColor: 'white',
+                background: '#4285F4',
                 borderColor: '#1A73E8',
               });
               const projectMarker = new AdvancedMarkerElement({
@@ -177,59 +246,44 @@ const MapComponent = ({ projects = [] }) => {
                 title: project.project_name || 'Project Location',
                 content: pinElement.element,
               });
-
               projectMarker.addListener('click', () => {
                 if (activeInfoWindowRef.current) {
                   activeInfoWindowRef.current.close();
                 }
-            
                 const startDate = project.start_date ? new Date(project.start_date).toLocaleDateString() : 'N/A';
                 const contractAmount = project.construction_fee ? `${project.construction_fee.toLocaleString()} 元` : 'N/A';
-
                 const projectTitleText = project.project_name || '未提供專案名稱';
-                
-                // Create an HTML element for the header content
                 const projectTitleElement = document.createElement('div');
                 projectTitleElement.style.fontSize = '1.4em';
                 projectTitleElement.style.fontWeight = 'bold';
-                projectTitleElement.textContent = projectTitleText; // Use textContent for plain text to avoid XSS if projectTitleText could contain HTML
-
+                projectTitleElement.textContent = projectTitleText;
                 const projectDetails = `
-                  <div style="font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;">
-                    <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
-                    <p style="margin: 0 0 10px 0;"><strong>施工金額:</strong> ${contractAmount}</p>
-                    <a href="/order/${project.project_id}" target="_blank" style="color: #1a73e8; text-decoration: none; font-weight: bold;">查看專案詳細頁面</a>
+                  <div style=\"font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;\">
+                    <p style=\"margin: 0 0 4px 0;\"><strong>開始時間:</strong> ${startDate}</p>
+                    <p style=\"margin: 0 0 10px 0;\"><strong>施工金額:</strong> ${contractAmount}</p>
+                    <a href=\"/order/${project.project_id}\" target=\"_blank\" style=\"color: #1a73e8; text-decoration: none; font-weight: bold;\">查看專案詳細頁面</a>
                   </div>
                 `;
-
                 const infoWindow = new InfoWindow({
-                  headerContent: projectTitleElement, // Pass the HTML element
+                  headerContent: projectTitleElement,
                   content: projectDetails,
                   ariaLabel: project.project_name || '專案詳情',
-                  // We can add some padding around the main content if needed, 
-                  // but the header should be handled by the API's default styling for headers.
                 });
-
                 infoWindow.open({
                   anchor: projectMarker,
                   map: mapInstanceRef.current,
                 });
                 activeInfoWindowRef.current = infoWindow;
               });
-
               projectMarkersRef.current.push(projectMarker);
             }
-          } else if (status === window.google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
-            console.warn(`Geocoding OVER_QUERY_LIMIT for project: ${projectAddress}. Consider a more robust queue or reduce frequency.`);
-          } else if (status !== window.google.maps.GeocoderStatus.ZERO_RESULTS) { // Don't log error for no results
-            console.error(`Geocode was not successful for project ${project.project_name} (${projectAddress}): ${status}`);
           }
-        });
-      }, index * geocodeDelay); // Stagger requests
+        } catch (e) {
+          console.error('Geocode and save failed:', e);
+        }
+      }
     });
-
-  }, [mapReady, mainMarkerPosition, circleRadius, projects, mapInstanceRef]); // Added mapInstanceRef to dependencies
-
+  }, [mapReady, mainMarkerPosition, circleRadius, projects, mapInstanceRef]);
 
   const handleSearch = async () => {
     console.log("handleSearch called. searchInput:", searchInput, "mapReady:", mapReady);

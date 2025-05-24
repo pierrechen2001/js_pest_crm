@@ -30,7 +30,7 @@ import MoneyIcon from '@mui/icons-material/Money';
 
 // 自定義樣式元件
 const WelcomeCard = styled(Card)(({ theme }) => ({
-  background: `linear-gradient(to right, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
+  background: `linear-gradient(to right, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
   borderRadius: 16,
   marginBottom: 24,
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
@@ -149,9 +149,9 @@ const formatFullDate = (date) => {
 
 const getGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return '早安';
-  if (hour < 18) return '午安';
-  return '晚安';
+  if (hour < 12) return '🌞 早安';
+  if (hour < 18) return '🦋 午安';
+  return '🌙 晚安';
 };
 
 // Fallback credentials if environment variables don't work
@@ -250,13 +250,15 @@ const HomePage = () => {
         // 計算所有狀態為待處理、進行中、未完成等的工程數量
         const pendingProjects = projectData?.filter(project => {
           // 檢查建設狀態值，包含多種可能的"未完成"狀態
-          const status = (project.construction_status || '').toLowerCase();
-          return status === 'pending' || 
-                 status === '待處理' || 
-                 status === '進行中' || 
-                 status === 'in progress' || 
-                 status === '未完成' ||
-                 status === '部分完成';
+          const constructionStatus = (project.construction_status || '').toLowerCase();
+          const billingStatus = (project.billing_status || '').toLowerCase();
+          
+          // 只有當施工狀態為"已完成"且請款狀態為"已請款"或"已收款"時，工程才算完成
+          return !(
+            (constructionStatus === '已完成' || constructionStatus === 'completed') && 
+            (billingStatus === '已請款' || billingStatus === '已收款' || 
+             billingStatus === 'billed' || billingStatus === 'paid')
+          );
         }).length || 0;
         
         // 設定基本統計資料
@@ -377,30 +379,36 @@ const HomePage = () => {
           payment_date,
           construction_status,
           billing_status,
+          is_tracked,
+          track_remind_date,
+          site_city,
+          site_district,
+          site_address,
           customer_database (
-            customer_name
+            customer_name,
+            customer_id
           )
-        `)
-        .not('start_date', 'is', null);
+        `);
         
       if (error) throw error;
+      
       const trackEvents = projects
-      .filter(project => project.is_tracked && project.track_remind_date)
-      .map(project => ({
-        id: `track-${project.project_id}`,
-        title: `追蹤：${project.project_name}`,
-        start: project.track_remind_date,
-        end: project.track_remind_date,
-        description: `請追蹤客戶：${project.customer_database?.customer_name || ''}\n專案地址：${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`,
-        backgroundColor: '#ffe082', // 你可以自訂顏色
-        borderColor: '#ffb300',
-        textColor: '#333333',
-        type: 'track',
-        extendedProps: {
-          projectId: project.project_id,
-          isProjectEvent: true
-        }
-      }));
+        .filter(project => project.is_tracked && project.track_remind_date)
+        .map(project => ({
+          id: `track-${project.project_id}`,
+          title: `追蹤：${project.project_name}`,
+          start: project.track_remind_date,
+          end: project.track_remind_date,
+          description: `請追蹤客戶：${project.customer_database?.customer_name || ''}\n專案地址：${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`,
+          backgroundColor: '#ffe082', // 你可以自訂顏色
+          borderColor: '#ffb300',
+          textColor: '#333333',
+          type: 'track',
+          extendedProps: {
+            projectId: project.project_id,
+            isProjectEvent: true
+          }
+        }));
       // 將追蹤事件添加到專案事件中 
       // 轉換為行事曆事件格式
       const constructionEvents = projects
@@ -465,6 +473,64 @@ const HomePage = () => {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      // 篩選出今天需要進行施工的專案（根據施工日期或施工狀態）
+      const todayConstructionProjects = projects.filter(project => {
+        // 如果有施工日期且是今天
+        if (project.start_date) {
+          const startDate = parseISO(project.start_date);
+          startDate.setHours(0, 0, 0, 0);
+          
+          let endDate;
+          if (project.end_date) {
+            endDate = parseISO(project.end_date);
+            endDate.setHours(23, 59, 59, 999);
+          } else {
+            endDate = new Date(startDate);
+            endDate.setHours(23, 59, 59, 999);
+          }
+          
+          if (today.getTime() >= startDate.getTime() && today.getTime() <= endDate.getTime()) {
+            return true;
+          }
+        }
+        
+        // 檢查施工狀態是否為進行中
+        const constructionStatus = (project.construction_status || '').toLowerCase();
+        if (constructionStatus === '進行中' || constructionStatus === 'in progress') {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      // 篩選出今天需要進行請款的專案
+      const todayPaymentProjects = projects.filter(project => {
+        // 如果有請款日期且是今天
+        if (project.payment_date) {
+          const paymentDate = parseISO(project.payment_date);
+          paymentDate.setHours(0, 0, 0, 0);
+          
+          if (paymentDate.getTime() === today.getTime()) {
+            return true;
+          }
+        }
+        
+        // 檢查請款狀態是否為待收款
+        const billingStatus = (project.billing_status || '').toLowerCase();
+        if (billingStatus === '已請款' && billingStatus !== '已收款') {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      // 將今日需要處理的專案轉換為事件
+      const todayConstructionProjectEvents = todayConstructionProjects.filter(project => 
+        !constructionEvents.some(event => event.projectId === project.project_id)).length;
+      
+      const todayPaymentProjectEvents = todayPaymentProjects.filter(project => 
+        !paymentEvents.some(event => event.projectId === project.project_id)).length;
+      
       // 計算今天的施工事件 - 檢查今天是否在施工日期範圍內
       const todayConstructionEvents = constructionEvents.filter(event => {
         const eventStart = new Date(event.start);
@@ -473,7 +539,7 @@ const HomePage = () => {
         const eventEnd = new Date(event.end);
         eventEnd.setHours(23, 59, 59, 999);
         
-        return today >= eventStart && today <= eventEnd;
+        return (today.getTime() >= eventStart.getTime() && today.getTime() <= eventEnd.getTime());
       }).length;
       
       // 計算今天的收款事件
@@ -484,9 +550,24 @@ const HomePage = () => {
         return eventDate.getTime() === today.getTime();
       }).length;
       
+      // 計算今天的追蹤事件
+      const todayTrackEvents = trackEvents.filter(event => {
+        const eventDate = new Date(event.start);
+        eventDate.setHours(0, 0, 0, 0);
+        
+        return eventDate.getTime() === today.getTime();
+      }).length;
+      
+      // 獲取現有的 Google Calendar 事件數量
+      const existingGoogleEvents = stats.todayEvents || 0;
+      
+      // 今日行程總數 = Google日曆事件 + 施工事件 + 收款事件 + 追蹤事件 + 今日施工專案 + 今日請款專案
+      const totalTodayEvents = existingGoogleEvents + todayConstructionEvents + todayPaymentEvents + 
+                               todayTrackEvents + todayConstructionProjectEvents + todayPaymentProjectEvents;
+      
       setStats(prev => ({
         ...prev,
-        todayEvents: prev.todayEvents + todayConstructionEvents + todayPaymentEvents
+        todayEvents: totalTodayEvents
       }));
       
     } catch (error) {
@@ -556,11 +637,11 @@ const HomePage = () => {
       // 檢查給定日期是否在開始日期和結束日期之間（包含開始和結束日期）
       return (
         // 日期在事件的開始和結束之間
-        (startOfDay >= eventStartDay && startOfDay <= eventEndDay) ||
-        (endOfDay >= eventStartDay && endOfDay <= eventEndDay) ||
+        (startOfDay.getTime() >= eventStartDay.getTime() && startOfDay.getTime() <= eventEndDay.getTime()) ||
+        (endOfDay.getTime() >= eventStartDay.getTime() && endOfDay.getTime() <= eventEndDay.getTime()) ||
         // 或者事件時間範圍在當天之內
-        (eventStartDay >= startOfDay && eventStartDay <= endOfDay) ||
-        (eventEndDay >= startOfDay && eventEndDay <= endOfDay)
+        (eventStartDay.getTime() >= startOfDay.getTime() && eventStartDay.getTime() <= endOfDay.getTime()) ||
+        (eventEndDay.getTime() >= startOfDay.getTime() && eventEndDay.getTime() <= endOfDay.getTime())
       );
     });
   };
@@ -589,7 +670,7 @@ const HomePage = () => {
           <WelcomeCard>
             <CardContent sx={{ py: 4, px: 4 }}>
               <Typography variant="h4" color="white" gutterBottom fontWeight="600">
-                {getGreeting()}，{user?.email?.split('@')[0] || '用戶'}
+                {getGreeting()}，{user?.name || '用戶'}
               </Typography>
               <Typography variant="body1" color="white" sx={{ opacity: 0.9, mb: 3 }}>
                 今天是 {formatFullDate(today)}，祝您有個美好的一天！

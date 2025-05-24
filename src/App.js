@@ -20,6 +20,7 @@ import CustomerDetailPage from "./pages/CustomerDetailPage";
 import NotFound from "./pages/NotFound";
 import { supabase } from './lib/supabaseClient';
 import theme from './theme.js'; // Assuming you have a theme.js file for MUI theme
+import UserProfile from "./pages/UserProfile";
 
 
 // Protected Route component
@@ -328,8 +329,16 @@ const AppContent = () => {
             <Route
               path="/about"
               element={
+                <AboutSystem />
+              }
+            />
+
+            {/* User Profile Route */}
+            <Route
+              path="/profile"
+              element={
                 <ProtectedRoute>
-                  <AboutSystem />
+                  <UserProfile />
                 </ProtectedRoute>
               }
             />

@@ -120,3 +120,27 @@ create table public.project_log (
 create index project_log_project_id_idx on public.project_log (project_id);
 create index project_log_log_date_idx on public.project_log (log_date);
 create index project_log_medicine_id_idx on public.project_log (medicine_id);
+
+create table public.medicine_orders (
+  id uuid not null default gen_random_uuid(),
+  medicine_id uuid not null,
+  quantity numeric not null,
+  date date not null,
+  vendor text not null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null,
+  constraint medicine_orders_pkey primary key (id),
+  constraint medicine_orders_medicine_id_fkey foreign key (medicine_id) references medicines (id) on delete cascade
+) tablespace pg_default;
+
+create table public.medicine_usages (
+  id uuid not null default gen_random_uuid(),
+  medicine_id uuid not null,
+  quantity numeric not null,
+  date date not null,
+  project text not null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null,
+  constraint medicine_usages_pkey primary key (id),
+  constraint medicine_usages_medicine_id_fkey foreign key (medicine_id) references medicines (id) on delete cascade
+) tablespace pg_default;
