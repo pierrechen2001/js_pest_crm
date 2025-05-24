@@ -224,7 +224,7 @@ const Login = () => {
               textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
             }}
           >
-            中興客戶管理系統
+            中星客戶管理系統
           </Typography>
           <Typography 
             variant="h6" 
