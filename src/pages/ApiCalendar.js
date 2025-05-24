@@ -529,6 +529,9 @@ const ApiCalendar = () => {
           billing_status,
           is_tracked,               
           track_remind_date,
+          site_city,
+          site_district,
+          site_address,
           customer_database (
             customer_name
           )
@@ -563,7 +566,14 @@ const ApiCalendar = () => {
             type: 'construction', // 自定義標記
             extendedProps: {
               projectId: project.project_id,
-              isProjectEvent: true // 標記為專案事件
+              projectName: project.project_name,
+              customerName: project.customer_database?.customer_name || '未知',
+              site_city: project.site_city || '',
+              site_district: project.site_district || '',
+              site_address: project.site_address || '',
+              construction_status: project.construction_status || '',
+              billing_status: project.billing_status || '',
+              isProjectEvent: true
             }
           };
         });
@@ -581,7 +591,7 @@ const ApiCalendar = () => {
             
             return {
               id: `payment-${project.project_id}`,
-              title: `收款: ${project.project_name}`,
+              title: `請款: ${project.project_name}`,
               start: project.payment_date,
               end: endDate, // 使用隔天作為結束日期
               description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.billing_status}`,
@@ -591,23 +601,14 @@ const ApiCalendar = () => {
               type: 'payment', // 自定義標記
               extendedProps: {
                 projectId: project.project_id,
-                isProjectEvent: true // 標記為專案事件
-              }
-            };
-          } else {
-            return {
-              id: `payment-${project.project_id}`,
-              title: `收款: ${project.project_name}`,
-              start: project.payment_date,
-              end: project.payment_date,
-              description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.billing_status}`,
-              backgroundColor: '#f8f0ff', // 淡紫色
-              borderColor: '#dbb6ff',
-              textColor: '#333333',
-              type: 'payment', // 自定義標記
-              extendedProps: {
-                projectId: project.project_id,
-                isProjectEvent: true // 標記為專案事件
+                projectName: project.project_name,
+                customerName: project.customer_database?.customer_name || '未知',
+                site_city: project.site_city || '',
+                site_district: project.site_district || '',
+                site_address: project.site_address || '',
+                construction_status: project.construction_status || '',
+                billing_status: project.billing_status || '',
+                isProjectEvent: true
               }
             };
           }
@@ -628,6 +629,13 @@ const ApiCalendar = () => {
           type: 'track',
           extendedProps: {
             projectId: project.project_id,
+            projectName: project.project_name,
+            customerName: project.customer_database?.customer_name || '未知',
+            site_city: project.site_city || '',
+            site_district: project.site_district || '',
+            site_address: project.site_address || '',
+            construction_status: project.construction_status || '',
+            billing_status: project.billing_status || '',
             isProjectEvent: true
           }
         }));
@@ -877,12 +885,16 @@ const ApiCalendar = () => {
             eventDidMount={(info) => {
               // 為事件添加工具提示
               if (info.event.extendedProps && info.event.extendedProps.isProjectEvent) {
+                const { projectName, customerName, site_city, site_district, site_address, construction_status, billing_status } = info.event.extendedProps;
                 const tooltip = document.createElement('div');
                 tooltip.className = 'project-tooltip';
                 tooltip.innerHTML = `
-                  <div style="padding: 8px;">
-                    <strong>${info.event.title}</strong>
-                    <div>${info.event.extendedProps.description || ''}</div>
+                  <div style="padding: 8px; min-width:200px;">
+                    <strong>專案名稱：</strong>${projectName || info.event.title}<br/>
+                    <strong>客戶名稱：</strong>${customerName || ''}<br/>
+                    <strong>施工地址：</strong>${(site_city || '') + (site_district || '') + (site_address || '')}<br/>
+                    <strong>施工狀態：</strong>${construction_status || ''}<br/>
+                    <strong>請款狀態：</strong>${billing_status || ''}
                   </div>
                 `;
                 document.body.appendChild(tooltip);
