@@ -163,6 +163,14 @@ const AboutSystem = () => {
       github: 'https://github.com/stonk0105',
       quote: '嗨。'
     },
+    {
+      name: '徐郁翔',
+      role: '前端開發',
+      avatar: 'https://avatars.githubusercontent.com/u/160754763?v=4',
+      email: 'dascupt@gmail.com',
+      github: 'https://github.com/Diteaphr',
+      quote: '嗨。'
+    },
   ];
 
   const frontendStack = [
