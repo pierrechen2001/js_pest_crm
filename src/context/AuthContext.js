@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
       // Set user data
       const fulluser = await fetchFullUser(profile.getEmail());
 
-  // 2) store the roles array you just got
+    // 2) store the roles array you just got
       localStorage.setItem("userRoles", JSON.stringify(fulluser.roles));
 
     // 3) set React state

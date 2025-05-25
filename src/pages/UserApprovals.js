@@ -139,8 +139,18 @@ const UserApprovals = () => {
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
             已審核用戶
           </Typography>
-          <Box sx={{ maxHeight: 350, overflow: 'auto', background: 'transparent', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-            <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 1, mb: 2, background: 'background.paper' }}>
+          <Box sx={{ 
+            maxHeight: 350, 
+            overflow: 'auto', 
+            background: 'transparent', 
+            borderRadius: 2, 
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)' 
+          }}>
+            <TableContainer component={Paper} sx={{
+              borderRadius: 2, 
+              boxShadow: 1, 
+              background: 'background.paper' 
+            }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
