@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { gapi } from "gapi-script";
 import { assignRolePermissions } from '../lib/permissionUtils';
+import LoadingScreen from '../components/LoadingScreen';
 
 // Create context
 const AuthContext = createContext(null);
@@ -146,12 +147,12 @@ export const AuthProvider = ({ children }) => {
         
         isInitialized = true;
       } catch (error) {
-        
-        navigate('/login');
+        console.warn('Google Auth initialization failed:', error);
         debugLog('Google Auth initialization failed, but app will continue');
         
         // Don't set a global error for Google auth failures
         // This allows the app to work even if Google auth is not configured
+        // Don't navigate to login here as it might interfere with normal auth flow
       }
     };
 
@@ -204,8 +205,12 @@ export const AuthProvider = ({ children }) => {
           debugLog('Auth initialization timeout reached, forcing loading to false');
           setLoading(false);
           setError('Authentication timed out. Please refresh and try again.');
+          // Clear potentially corrupted localStorage data
+          localStorage.removeItem("userRoles");
+          localStorage.removeItem("loginMethod");
+          localStorage.removeItem("isApproved");
           navigate('/login'); // Explicitly navigate to login on timeout
-        }, 5000); // 5 second timeout
+        }, 10000); // 10 second timeout (increased from 5)
         
         // Get the current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -227,33 +232,79 @@ export const AuthProvider = ({ children }) => {
 
         if (session?.user) {
           debugLog('User found in session:', session.user);
-          // Attempt to get roles and approval status from localStorage
-          const userRoles = JSON.parse(localStorage.getItem("userRoles") || '["user"]');
-          const isApproved = JSON.parse(localStorage.getItem("isApproved") || 'false');
           
-          // Basic check: If essential data from localStorage is missing or invalid after finding a session user, redirect.
-          // This might indicate a corrupted state or a user deleted from the 'users' table while the session was active.
-          if (!userRoles || userRoles.length === 0) {
-             console.warn("Essential user data missing from localStorage after session found. Redirecting to login.");
-             setUser(null);
-             setLoading(false);
-             navigate('/login');
-             return;
-          }
+          try {
+            // Attempt to get roles and approval status from localStorage
+            let userRoles, isApproved;
+            
+            try {
+              userRoles = JSON.parse(localStorage.getItem("userRoles") || '["user"]');
+              isApproved = JSON.parse(localStorage.getItem("isApproved") || 'false');
+            } catch (parseError) {
+              console.warn("Error parsing localStorage data, using defaults:", parseError);
+              userRoles = ["user"];
+              isApproved = false;
+            }
+            
+            // Basic check: If essential data from localStorage is missing or invalid after finding a session user, redirect.
+            // This might indicate a corrupted state or a user deleted from the 'users' table while the session was active.
+            if (!userRoles || userRoles.length === 0) {
+               console.warn("Essential user data missing from localStorage after session found. Fetching fresh data...");
+               
+               // Try to fetch fresh user data
+               try {
+                 const fullUser = await fetchFullUser(session.user.email);
+                 if (fullUser) {
+                   localStorage.setItem("userRoles", JSON.stringify(fullUser.roles));
+                   localStorage.setItem("isApproved", JSON.stringify(fullUser.isApproved));
+                   
+                   setUser({
+                     id: session.user.id,
+                     email: session.user.email,
+                     roles: fullUser.roles,
+                     isApproved: fullUser.isApproved,
+                     loginMethod: localStorage.getItem("loginMethod") || "email"
+                   });
+                   setLoading(false);
+                   return;
+                 }
+               } catch (fetchError) {
+                 console.error("Error fetching fresh user data:", fetchError);
+               }
+               
+               // If we can't fetch fresh data, redirect to login
+               setUser(null);
+               setLoading(false);
+               navigate('/login');
+               return;
+            }
 
-          setUser({
-            id: session.user.id,
-            email: session.user.email,
-            roles: userRoles,
-            isApproved: isApproved,
-            loginMethod: localStorage.getItem("loginMethod") || "email"
-          });
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+              roles: userRoles,
+              isApproved: isApproved,
+              loginMethod: localStorage.getItem("loginMethod") || "email"
+            });
+          } catch (error) {
+            console.error("Error processing user session:", error);
+            setUser(null);
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
         } else {
           debugLog('No user session found, redirecting to login');
           setUser(null);
           setLoading(false);
           navigate('/login'); // Explicitly navigate to login if no session
         }
+        
+        // Ensure loading is set to false in all cases
+        setLoading(false);
+        
+        // Ensure loading is set to false in all cases
+        setLoading(false);
       } catch (error) {
         console.error("Error initializing auth:", error);
         setError(`Auth error: ${error.message}`);
@@ -343,6 +394,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Retry function for auth initialization
+  const retryAuth = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    // Clear potentially corrupted data
+    localStorage.removeItem("userRoles");
+    localStorage.removeItem("loginMethod");
+    localStorage.removeItem("isApproved");
+    // Reload the page to restart auth process
+    window.location.reload();
+  }, []);
+
   // Provide auth context
   return (
     <AuthContext.Provider
@@ -352,35 +415,15 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         loading,
         error,
-        googleAuth
+        googleAuth,
+        retryAuth
       }}
     >
-      {loading ? (
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh' 
-        }}>
-          <div>Loading...</div>
-          {error && (
-            <div style={{ color: 'red', marginTop: '10px' }}>
-              Error: {error}
-            </div>
-          )}
-        </div>
-      ) : error ? (
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh',
-          color: 'red' 
-        }}>
-          Error: {error}
-        </div>
+      {loading || error ? (
+        <LoadingScreen 
+          error={error} 
+          onRetry={retryAuth}
+        />
       ) : (
         children
       )}
