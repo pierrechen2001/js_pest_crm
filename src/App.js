@@ -41,7 +41,19 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Check if user is approved
+  // Check if user data is still being loaded (isApproved is undefined means data not fully loaded)
+  if (user.isApproved === undefined) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          載入用戶資料中...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Only redirect to pending approval if explicitly approved is false (not undefined)
   if (user.isApproved === false && user.roles[0] !== 'admin' && location.pathname !== '/pending-approval') {
     console.log('User not approved, redirecting to pending approval page');
     return <Navigate to="/pending-approval" replace />;

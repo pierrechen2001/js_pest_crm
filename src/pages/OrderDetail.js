@@ -36,8 +36,8 @@ import {
 } from '@mui/material';
 import { Edit, Delete, ArrowBack, Add, Business, Receipt, LocationOn, Phone, Fax, Person, Note, Info, Build, Payment, ContactPhone, CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
 
-const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
-const billingStatusOptions = ["未請款", "部分請款", "已請款"];
+const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲", "估價", "取消"];
+const billingStatusOptions = ["未請款", "部分請款", "已請款", "取消"];
 const taiwanCities = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"];
 const taiwanDistricts = {
   "台北市": [

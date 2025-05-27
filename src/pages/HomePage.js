@@ -246,18 +246,21 @@ const HomePage = () => {
         if (projectError) throw projectError;
         setProjects(projectData || []);
         
-        // 正確計算待處理工程數
         // 計算所有狀態為待處理、進行中、未完成等的工程數量
         const pendingProjects = projectData?.filter(project => {
           // 檢查建設狀態值，包含多種可能的"未完成"狀態
           const constructionStatus = (project.construction_status || '').toLowerCase();
           const billingStatus = (project.billing_status || '').toLowerCase();
           
-          // 只有當施工狀態為"已完成"且請款狀態為"已請款"或"已收款"時，工程才算完成
+          // 如果施工狀態或請款狀態為取消，則不計入待處理
+          if (constructionStatus === '取消' || billingStatus === '取消') {
+            return false;
+          }
+          
+          // 只有當施工狀態為"已完成"且請款狀態為"已結清"時，工程才算完成
           return !(
             (constructionStatus === '已完成' || constructionStatus === 'completed') && 
-            (billingStatus === '已請款' || billingStatus === '已收款' || 
-             billingStatus === 'billed' || billingStatus === 'paid')
+            (billingStatus === '已結清' || billingStatus === 'paid')
           );
         }).length || 0;
         
