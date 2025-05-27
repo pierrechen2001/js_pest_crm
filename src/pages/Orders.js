@@ -1,7 +1,39 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabaseClient';
-import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton, TablePagination, TableContainer } from "@mui/material";
-import { Add } from "@mui/icons-material";
+import { 
+  Box, 
+  Paper, 
+  Button, 
+  TextField, 
+  Select, 
+  FormControl, 
+  InputLabel, 
+  Dialog, 
+  DialogActions, 
+  DialogContent, 
+  DialogTitle, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableRow, 
+  TableSortLabel, 
+  Autocomplete, 
+  Checkbox, 
+  ListItemText, 
+  CircularProgress, 
+  Typography, 
+  Divider, 
+  Menu, 
+  MenuItem, 
+  IconButton, 
+  TablePagination, 
+  TableContainer,
+  Chip,
+  InputAdornment,
+  useTheme
+} from "@mui/material";
+import { Add, Add as AddIcon } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
 import { geocodeAddress, combineAddress } from '../lib/geocoding';
@@ -285,8 +317,21 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [useCustomerAddress, setUseCustomerAddress] = useState(false);
-  // 在 Orders 組件內 state 區塊加上
-  const [useCustomerContacts, setUseCustomerContacts] = useState(false);
+
+  const [useCustomerContact, setUseCustomerContact] = useState(false);
+
+  // 施工項目相關狀態
+  const [constructionItemOptions, setConstructionItemOptions] = useState([
+    "餌站安裝", "餌站檢測", "白蟻防治", "餌站埋設", "木料藥劑噴塗", "藥劑", "害蟲驅除", "老鼠餌站",
+    "空間消毒", "調查費用", "鼠害防治工程", "外牆清洗", "外牆去漆",
+    "門窗框去漆", "屋樑支撐工程", "牆身止潮帶", "外牆防護工程", "除鏽", "其他"
+  ]);
+  const [newConstructionItem, setNewConstructionItem] = useState("");
+  const [constructionItemDialogOpen, setConstructionItemDialogOpen] = useState(false);
+
+  const theme = useTheme();
+
+
   function getInitialProjectData() {
     return {
       project_name: "",
@@ -295,6 +340,7 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
       site_district: "",
       site_address: "",
       construction_item: "",
+      construction_items: [], // 新增：多選施工項目數組
       construction_fee: "",
       start_date: "",
       end_date: "",
@@ -452,7 +498,8 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
         contacts: [
           { role: "", name: "", contactType: "", contact: "" },
           { role: "", name: "", contactType: "", contact: "" }
-        ]
+        ],
+        construction_items: [], // 重置施工項目
     });
     setSelectedCustomer(null);
     } catch (error) {
@@ -491,6 +538,42 @@ const updateContact = (index, field, value) => {
   setProjectData({ ...projectData, contacts: updated });
 };
   
+
+  // 處理施工項目選擇
+  const handleConstructionItemChange = (event, newValue) => {
+    setProjectData(prev => ({
+      ...prev,
+      construction_items: newValue || [],
+      construction_item: (newValue || []).join(", ") // 保持向後兼容性
+    }));
+  };
+
+  // 新增自定義施工項目
+  const handleAddConstructionItem = () => {
+    if (newConstructionItem.trim() && !constructionItemOptions.includes(newConstructionItem.trim())) {
+      const newItem = newConstructionItem.trim();
+      setConstructionItemOptions(prev => [...prev, newItem]);
+      setProjectData(prev => ({
+        ...prev,
+        construction_items: [...(prev.construction_items || []), newItem],
+        construction_item: [...(prev.construction_items || []), newItem].join(", ")
+      }));
+      setNewConstructionItem("");
+      setConstructionItemDialogOpen(false);
+    }
+  };
+
+  // 刪除施工項目
+  const handleRemoveConstructionItem = (itemToRemove) => {
+    setProjectData(prev => {
+      const updatedItems = prev.construction_items.filter(item => item !== itemToRemove);
+      return {
+        ...prev,
+        construction_items: updatedItems,
+        construction_item: updatedItems.join(", ")
+      };
+    });
+  };
 
   // Remove loading/error checks that are now in App.js
   // if (loading) return <CircularProgress />;
@@ -879,7 +962,50 @@ const updateContact = (index, field, value) => {
               value={projectData.end_date}
               onChange={handleChange}
             />
-          </div>
+          </div>          {/* 施工項目多選 */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>施工項目</Typography>
+            <Autocomplete
+              multiple
+              options={constructionItemOptions}
+              value={projectData.construction_items || []}
+              onChange={handleConstructionItemChange}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    key={option}
+                    variant="outlined"
+                    label={option}
+                    {...getTagProps({ index })}
+                    onDelete={() => handleRemoveConstructionItem(option)}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  placeholder="選擇或輸入施工項目"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {params.InputProps.endAdornment}
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setConstructionItemDialogOpen(true)}
+                            size="small"
+                          >
+                            <AddIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Box>
 
           {/* 新增施工天數、施工範圍、注意事項 */}
           <TextField
@@ -1013,15 +1139,46 @@ const updateContact = (index, field, value) => {
               </div>
             </>
           )}
+
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>取消</Button>
-          <Button 
+          <Button onClick={() => setOpenDialog(false)}>取消</Button>          <Button 
             variant="contained" 
             onClick={handleSaveProject}
             disabled={!projectData.project_name || !projectData.customer_id}
           >
             儲存
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新增自定義施工項目對話框 */}
+      <Dialog
+        open={constructionItemDialogOpen}
+        onClose={() => setConstructionItemDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>新增施工項目</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="施工項目名稱"
+            fullWidth
+            variant="outlined"
+            value={newConstructionItem}
+            onChange={(e) => setNewConstructionItem(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConstructionItemDialogOpen(false)}>取消</Button>
+          <Button
+            onClick={handleAddConstructionItem}
+            variant="contained"
+            disabled={!newConstructionItem.trim() || constructionItemOptions.includes(newConstructionItem.trim())}
+          >
+            新增
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,8 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from "@googlemaps/js-api-loader";
-import { TextField, Button, Box, Typography, Paper, Slider } from '@mui/material';
-import { supabase } from '../lib/supabaseClient';
-import { geocodeAddress, combineAddress } from '../lib/geocoding'; // Added Slider
+
+import { 
+  TextField, 
+  Button, 
+  Box, 
+  Typography, 
+  Paper, 
+  Slider, 
+  Chip
+} from '@mui/material';
+
 
 const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
 
@@ -25,6 +33,10 @@ const MapComponent = ({ projects = [] }) => {
   const [error, setError] = useState(null);
   const [circleRadius, setCircleRadius] = useState(200);
   const [mainMarkerPosition, setMainMarkerPosition] = useState(null); // Tracks center of the circle
+  
+  // 新增篩選相關狀態
+  const [selectedFilters, setSelectedFilters] = useState([]);
+  const [availableFilters, setAvailableFilters] = useState([]);
 
   const updateCircle = (center, map, radius) => {
     if (!window.google || !window.google.maps.Circle) return;
@@ -45,7 +57,61 @@ const MapComponent = ({ projects = [] }) => {
         center: center,
         radius: radius,
       });
+    }  };
+
+  // 提取所有可用的施工項目作為篩選選項
+  useEffect(() => {
+    const extractFilters = () => {
+      const allItems = new Set();
+      projects.forEach(project => {
+        // 優先使用 construction_items 數組
+        if (project.construction_items && Array.isArray(project.construction_items)) {
+          project.construction_items.forEach(item => {
+            if (item && item.trim()) {
+              allItems.add(item.trim());
+            }
+          });
+        } 
+        // 如果沒有 construction_items，則使用 construction_item 字符串
+        else if (project.construction_item) {
+          const items = project.construction_item.split(',').map(item => item.trim());
+          items.forEach(item => {
+            if (item) {
+              allItems.add(item);
+            }
+          });
+        }
+      });
+      setAvailableFilters(Array.from(allItems).sort());
+    };
+    
+    extractFilters();
+  }, [projects]);
+
+  // 篩選專案的函數
+  const getFilteredProjects = () => {
+    if (selectedFilters.length === 0) {
+      return projects;
     }
+    
+    return projects.filter(project => {
+      // 檢查專案的施工項目是否包含任何選中的篩選項
+      let projectItems = [];
+      
+      // 優先使用 construction_items 數組
+      if (project.construction_items && Array.isArray(project.construction_items)) {
+        projectItems = project.construction_items;
+      } 
+      // 如果沒有 construction_items，則使用 construction_item 字符串
+      else if (project.construction_item) {
+        projectItems = project.construction_item.split(',').map(item => item.trim());
+      }
+      
+      // 檢查是否有任何項目匹配篩選條件
+      return selectedFilters.some(filter => 
+        projectItems.some(item => item.trim() === filter)
+      );
+    });
   };
 
   useEffect(() => {
@@ -128,7 +194,6 @@ const MapComponent = ({ projects = [] }) => {
       circleRef.current.setRadius(circleRadius);
     }
   }, [circleRadius, mapReady]);
-
   // Effect to display project markers within the circle
   useEffect(() => {
     if (!mapReady || !mainMarkerPosition || !projects || !window.google || !window.google.maps.geometry || !window.google.maps.marker || !window.google.maps.InfoWindow) {
@@ -153,7 +218,10 @@ const MapComponent = ({ projects = [] }) => {
       activeInfoWindowRef.current = null;
     }
 
-    projects.forEach(async (project) => {
+    // 使用篩選後的專案
+    const filteredProjects = getFilteredProjects();
+
+    filteredProjects.forEach(async (project) => {
       // 優先使用經緯度
       let lat = project.latitude;
       let lng = project.longitude;
@@ -275,11 +343,12 @@ const MapComponent = ({ projects = [] }) => {
             }
           }
         } catch (e) {
-          console.error('Geocoding 失敗:', e);
-        }
+
+          console.error('Geocode and save failed:', e);        }
+
       }
     });
-  }, [mapReady, mainMarkerPosition, circleRadius, projects, mapInstanceRef]);
+  }, [mapReady, mainMarkerPosition, circleRadius, projects, selectedFilters, mapInstanceRef]);
 
   const handleSearch = async () => {
     console.log("handleSearch called. searchInput:", searchInput, "mapReady:", mapReady);
@@ -321,29 +390,75 @@ const MapComponent = ({ projects = [] }) => {
   if (!apiKey) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Google Maps API Key is missing.</div>;
   }
-
   return (
     <Paper elevation={3} style={{ padding: '20px', margin: '20px' }}>
       <Typography variant="h5" gutterBottom>
         施工鄰近地點查詢
       </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-          label="Search Location"
+      
+      {/* 搜尋位置 */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          label="搜尋位置"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyPress={(e) => { if (e.key === 'Enter') handleSearch(); }}
-            sx={{ mr: 1 }}
-          />
-          <Button 
-            variant="contained" 
+          sx={{ mr: 1 }}
+        />
+        <Button 
+          variant="contained" 
           onClick={handleSearch} 
           disabled={isLoading || !mapReady} 
         >
-          Search
+          搜尋
         </Button>
+      </Box>      {/* 施工項目篩選 */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          篩選專案類別 ({selectedFilters.length > 0 ? `已選擇 ${selectedFilters.length} 項` : '顯示全部'})
+        </Typography>
+        
+        {/* 標籤按鈕篩選 */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+          {/* 全部按鈕 */}
+          <Chip
+            label="全部"
+            clickable
+            variant={selectedFilters.length === 0 ? "filled" : "outlined"}
+            color={selectedFilters.length === 0 ? "primary" : "default"}
+            onClick={() => setSelectedFilters([])}
+            sx={{ 
+              fontWeight: selectedFilters.length === 0 ? 'bold' : 'normal',
+              '&:hover': { backgroundColor: selectedFilters.length === 0 ? 'primary.dark' : 'action.hover' }
+            }}
+          />
+          
+          {/* 施工項目標籤 */}
+          {availableFilters.map((filter) => (
+            <Chip
+              key={filter}
+              label={filter}
+              clickable
+              variant={selectedFilters.includes(filter) ? "filled" : "outlined"}
+              color={selectedFilters.includes(filter) ? "primary" : "default"}
+              onClick={() => {
+                setSelectedFilters(prev => 
+                  prev.includes(filter) 
+                    ? prev.filter(f => f !== filter)
+                    : [...prev, filter]
+                );
+              }}
+              sx={{ 
+                fontWeight: selectedFilters.includes(filter) ? 'bold' : 'normal',
+                '&:hover': { 
+                  backgroundColor: selectedFilters.includes(filter) ? 'primary.dark' : 'action.hover' 
+                }
+              }}
+            />
+          ))}
+        </Box>
       </Box>
 
       <Box sx={{ mb: 2, px: 1 }}>
