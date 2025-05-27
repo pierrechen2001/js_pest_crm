@@ -32,6 +32,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Chip,
 } from '@mui/material';
 import { Edit, Delete, ArrowBack, Add, Business, Receipt, LocationOn, Phone, Fax, Person, Note, Info, Build, Payment, ContactPhone, CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
 
@@ -659,7 +660,7 @@ export default function OrderDetail() {
 
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
-                <Person sx={{ mr: 1, color: 'primary.main' }} />
+                <Person sx={{ mr: 1, color: 'primary' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡人資訊</Typography>
               </Box>
               {customer?.contact1_name && (
@@ -744,10 +745,42 @@ export default function OrderDetail() {
                 <Build sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">施工資訊</Typography>
               </Box>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>                <Grid item xs={12} md={6}>
                   <Typography><strong>開始日期：</strong> {project.start_date}</Typography>
-                  <Typography><strong>施工項目：</strong> {project.construction_item}</Typography>
+                  <Box sx={{ mb: 1 }}>
+                    <Typography component="span"><strong>施工項目：</strong></Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {(() => {
+                        // Try to parse construction_items array or fall back to construction_item
+                        let items = [];
+                        
+                        if (project.construction_items && Array.isArray(project.construction_items)) {
+                          items = project.construction_items;
+                        } else if (project.construction_item) {
+                          // Try to split by comma if it's a string
+                          items = project.construction_item.split(',').map(item => item.trim()).filter(Boolean);
+                        }
+                        
+                        if (items.length > 0) {
+                          return items.map((item, index) => (
+                            <Chip
+                              key={index}
+                              label={item}
+                              size="small"
+                              variant="outlined"
+                              sx={{ 
+                                bgcolor: 'primary.light',
+                                color: 'black',
+                                '& .MuiChip-label': { fontSize: '0.75rem' }
+                              }}
+                            />
+                          ));
+                        } else {
+                          return <Typography component="span" color="textSecondary"> 無</Typography>;
+                        }
+                      })()}
+                    </Box>
+                  </Box>
                   <Typography><strong>施工天數：</strong> {project.construction_days}</Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -807,74 +840,62 @@ export default function OrderDetail() {
                 <Grid item xs={12} md={6}>
                   <Typography><strong>收款方式：</strong> {project.payment_method}</Typography>
                   <Typography><strong>收款金額：</strong> ${project.amount?.toLocaleString()}</Typography>
-                  <Typography><strong>手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
+                  <Typography><strong>結清日期：</strong> {project.payment_date}</Typography>
+                  {project.payment_method === '匯款' && (
+                    <Typography><strong>手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
+                  )}
+                  {project.payment_method === '支票' && (
+                    <>
+                      <Typography><strong>付款人：</strong> {project.payer}</Typography>
+                      <Typography><strong>收款人：</strong> {project.payee}</Typography>
+                      <Typography><strong>支票號碼：</strong> {project.check_number}</Typography>
+                      <Typography><strong>銀行分行：</strong> {project.bank_branch}</Typography>
+                      <Typography><strong>到期日：</strong> {project.due_date}</Typography>
+                    </>
+                  )}
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography><strong>收款日期：</strong> {project.payment_date}</Typography>
-                  <Typography><strong>付款人：</strong> {project.payer}</Typography>
-                  <Typography><strong>收款人：</strong> {project.payee}</Typography>
-                </Grid>
-                {project.payment_method === '支票' && (
-                  <Grid item xs={12}>
-                    <Typography><strong>支票號碼：</strong> {project.check_number}</Typography>
-                    <Typography><strong>銀行分行：</strong> {project.bank_branch}</Typography>
-                    <Typography><strong>到期日：</strong> {project.due_date}</Typography>
-                  </Grid>
-                )}
               </Grid>
+              
             </Box>
             <Divider sx={{ mb: 3 }} />
             <Box>
               <Box display="flex" alignItems="center" mb={1}>
                 <ContactPhone sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡人資訊</Typography>
-                </Box>
-                <>
-                  {[
-                    {
-                      role: project.contact1_role,
-                      name: project.contact1_name,
-                      type: project.contact1_type,
-                      contact: project.contact1_contact,
-                    },
-                    {
-                      role: project.contact2_role,
-                      name: project.contact2_name,
-                      type: project.contact2_type,
-                      contact: project.contact2_contact,
-                    },
-                    {
-                      role: project.contact3_role,
-                      name: project.contact3_name,
-                      type: project.contact3_type,
-                      contact: project.contact3_contact,
-                    },
-                  ].map((c, idx) =>
-                    c.name ? (
-                      <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }} key={idx}>
-                        <Grid item xs={12} md={4}>
-                          <Typography>
-                            <strong>{c.role}：</strong>{c.name}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <Typography>
-                            <strong>{c.type}：</strong>{c.contact}
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                    ) : null
-                  )}
-
-                  {!project.contact1_name && !project.contact2_name && !project.contact3_name && (
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <Typography color="textSecondary">尚未設定聯絡人資訊</Typography>
-                      </Grid>
-                    </Grid>
-                  )}
-                </>
-                </Box>
+              </Box>
+              {[
+                {
+                  role: project.contact1_role,
+                  name: project.contact1_name,
+                  type: project.contact1_type,
+                  contact: project.contact1_contact,
+                },
+                {
+                  role: project.contact2_role,
+                  name: project.contact2_name,
+                  type: project.contact2_type,
+                  contact: project.contact2_contact,
+                },
+                {
+                  role: project.contact3_role,
+                  name: project.contact3_name,
+                  type: project.contact3_type,
+                  contact: project.contact3_contact,
+                },
+              ].map((c, idx) =>
+                c.name ? (
+                  <Typography sx={{ mb: 1 }} key={idx}>
+                    <strong>{c.role ? c.role + '：' : ''}</strong>
+                    {c.name}
+                    {c.type && <span style={{ color: '#888', marginLeft: 8 }}>{c.type}：</span>}
+                    {c.contact && <span style={{ marginLeft: 8 }}>{c.contact}</span>}
+                  </Typography>
+                ) : null
+              )}
+              {!project.contact1_name && !project.contact2_name && !project.contact3_name && (
+                <Typography color="textSecondary">尚未設定聯絡人資訊</Typography>
+              )}
+            </Box>
 
           </Card>
         </Grid>
@@ -1077,7 +1098,7 @@ export default function OrderDetail() {
         <Box sx={{ flex: 1 }}>
           <TextField
             fullWidth
-            label="收款日期"
+            label="結清日期"
             type="date"
             name="payment_date"
             value={editedProject.payment_date || ''}
@@ -1086,10 +1107,6 @@ export default function OrderDetail() {
             margin="normal"
           />
         </Box>
-      </Grid>
-
-      {/* 收款金額和手續費 */}
-      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
         <Box sx={{ flex: 1 }}>
           <TextField
             fullWidth
@@ -1101,242 +1118,165 @@ export default function OrderDetail() {
             margin="normal"
           />
         </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="手續費"
-            type="number"
-            name="fee"
-            value={editedProject.fee || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
       </Grid>
 
-      {/* 付款人和收款人 */}
-      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="付款人"
-            name="payer"
-            value={editedProject.payer || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>收款人</InputLabel>
-            <Select
-              name="payee"
-              value={editedProject.payee || ''}
-              onChange={handleChange}
-            >
-              <MenuItem value="中星">中星</MenuItem>
-              <MenuItem value="建興">建興</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Grid>
-
-      {/* 支票相關資訊 */}
-      {editedProject.payment_method === '支票' && (
+      {/* 匯款相關資訊 */}
+      {editedProject.payment_method === '匯款' && (
         <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
-              label="支票號碼"
-              name="check_number"
-              value={editedProject.check_number || ''}
+              label="手續費"
+              type="number"
+              name="fee"
+              value={editedProject.fee || ''}
               onChange={handleChange}
-              margin="normal"
-            />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <TextField
-              fullWidth
-              label="銀行分行"
-              name="bank_branch"
-              value={editedProject.bank_branch || ''}
-              onChange={handleChange}
-              margin="normal"
-            />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <TextField
-              fullWidth
-              label="到期日"
-              type="date"
-              name="due_date"
-              value={editedProject.due_date || ''}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
               margin="normal"
             />
           </Box>
         </Grid>
       )}
 
+      {/* 支票相關資訊 */}
+      {editedProject.payment_method === '支票' && (
+        <>
+          <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="付款人"
+                name="payer"
+                value={editedProject.payer || ''}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>收款人</InputLabel>
+                <Select
+                  name="payee"
+                  value={editedProject.payee || ''}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="中星">中星</MenuItem>
+                  <MenuItem value="建興">建興</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Grid>
+
+          <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="支票號碼"
+                name="check_number"
+                value={editedProject.check_number || ''}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="銀行分行"
+                name="bank_branch"
+                value={editedProject.bank_branch || ''}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="到期日"
+                type="date"
+                name="due_date"
+                value={editedProject.due_date || ''}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+              />
+            </Box>
+          </Grid>
+        </>
+      )}
+
             <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
-            {/* Contact rows: one per person */}
-            {/* 聯絡人 1 */}
-            <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-              <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 1</Typography></Box>
-              <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>職位</InputLabel>
-                  <Select
-                    name="contact1_role"
-                    value={editedProject.contact1_role || ''}
+            {[1, 2, 3].map((i) => (
+              <Grid container alignItems="center" sx={{ mb: i === 3 ? 1 : 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }} key={i}>
+                <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 {i}</Typography></Box>
+                <Box sx={{ flex: 1 }}>
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel>職位</InputLabel>
+                    <Select
+                      name={`contact${i}_role`}
+                      value={editedProject[`contact${i}_role`] || ''}
+                      onChange={handleChange}
+                    >
+                      {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
+                        <MenuItem key={role} value={role}>{role}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="名字"
+                    name={`contact${i}_name`}
+                    value={editedProject[`contact${i}_name`] || ''}
                     onChange={handleChange}
-                  >
-                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                      <MenuItem key={role} value={role}>{role}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="名字"
-                  name="contact1_name"
-                  value={editedProject.contact1_name || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>聯絡方式類型</InputLabel>
-                  <Select
-                    name="contact1_type"
-                    value={editedProject.contact1_type || ''}
-                    onChange={handleChange}
-                  >
-                    {["電話", "市話", "LineID", "Email"].map((type) => (
-                      <MenuItem key={type} value={type}>{type}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="聯絡方式"
-                  name="contact1_contact"
-                  value={editedProject.contact1_contact || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Box>
-            </Grid>
-            {/* 聯絡人 2 */}
-            <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-              <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 2</Typography></Box>
-              <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>職位</InputLabel>
-                  <Select
-                    name="contact2_role"
-                    value={editedProject.contact2_role || ''}
-                    onChange={handleChange}
-                  >
-                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                      <MenuItem key={role} value={role}>{role}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="名字"
-                  name="contact2_name"
-                  value={editedProject.contact2_name || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>聯絡方式類型</InputLabel>
-                  <Select
-                    name="contact2_type"
-                    value={editedProject.contact2_type || ''}
-                    onChange={handleChange}
-                  >
-                    {["電話", "市話", "LineID", "Email"].map((type) => (
-                      <MenuItem key={type} value={type}>{type}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="聯絡方式"
-                  name="contact2_contact"
-                  value={editedProject.contact2_contact || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Box>
-            </Grid>
-            {/* 聯絡人 3 */}
-            <Grid container alignItems="center" sx={{ mb: 1, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-              <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 3</Typography></Box>
-              <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>職位</InputLabel>
-                  <Select
-                    name="contact3_role"
-                    value={editedProject.contact3_role || ''}
-                    onChange={handleChange}
-                  >
-                    {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                      <MenuItem key={role} value={role}>{role}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="名字"
-                  name="contact3_name"
-                  value={editedProject.contact3_name || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>聯絡方式類型</InputLabel>
-                  <Select
-                    name="contact3_type"
-                    value={editedProject.contact3_type || ''}
-                    onChange={handleChange}
-                  >
-                    {["電話", "市話", "LineID", "Email"].map((type) => (
-                      <MenuItem key={type} value={type}>{type}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="聯絡方式"
-                  name="contact3_contact"
-                  value={editedProject.contact3_contact || ''}
-                  onChange={handleChange}
-                  margin="normal"
-                />
-              </Box>
-            </Grid>
+                    margin="normal"
+                  />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel>聯絡方式類型</InputLabel>
+                    <Select
+                      name={`contact${i}_type`}
+                      value={editedProject[`contact${i}_type`] || ''}
+                      onChange={handleChange}
+                    >
+                      {["電話", "市話", "LineID", "Email"].map((type) => (
+                        <MenuItem key={type} value={type}>{type}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="聯絡方式"
+                    name={`contact${i}_contact`}
+                    value={editedProject[`contact${i}_contact`] || ''}
+                    onChange={(e) => {
+                      let formattedValue = e.target.value;
+                      const contactType = editedProject[`contact${i}_type`];
+
+                      if (contactType === "電話") {
+                        formattedValue = formattedValue
+                          .replace(/[^\d]/g, "")
+                          .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+                      } else if (contactType === "市話") {
+                        formattedValue = formattedValue
+                          .replace(/[^\d]/g, "")
+                          .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                      }
+
+                      handleChange({
+                        target: {
+                          name: `contact${i}_contact`,
+                          value: formattedValue
+                        }
+                      });
+                    }}
+                    margin="normal"
+                  />
+                </Box>
+              </Grid>
+            ))}
           </Box>
         </DialogContent>
         <DialogActions>

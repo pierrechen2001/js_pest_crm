@@ -1,7 +1,39 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabaseClient';
-import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Autocomplete, Checkbox, ListItemText, CircularProgress, Typography, Divider, Menu, MenuItem, IconButton, TablePagination, TableContainer } from "@mui/material";
-import { Add } from "@mui/icons-material";
+import { 
+  Box, 
+  Paper, 
+  Button, 
+  TextField, 
+  Select, 
+  FormControl, 
+  InputLabel, 
+  Dialog, 
+  DialogActions, 
+  DialogContent, 
+  DialogTitle, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableRow, 
+  TableSortLabel, 
+  Autocomplete, 
+  Checkbox, 
+  ListItemText, 
+  CircularProgress, 
+  Typography, 
+  Divider, 
+  Menu, 
+  MenuItem, 
+  IconButton, 
+  TablePagination, 
+  TableContainer,
+  Chip,
+  InputAdornment,
+  useTheme
+} from "@mui/material";
+import { Add, Add as AddIcon } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
 import { geocodeAddress, combineAddress } from '../lib/geocoding';
@@ -299,8 +331,21 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [useCustomerAddress, setUseCustomerAddress] = useState(false);
-  // 在 Orders 組件內 state 區塊加上
+  const [useCustomerContact, setUseCustomerContact] = useState(false);
   const [useCustomerContacts, setUseCustomerContacts] = useState(false);
+
+  // 施工項目相關狀態
+  const [constructionItemOptions, setConstructionItemOptions] = useState([
+    "餌站安裝", "餌站檢測", "白蟻防治", "餌站埋設", "木料藥劑噴塗", "藥劑", "害蟲驅除", "老鼠餌站",
+    "空間消毒", "調查費用", "鼠害防治工程", "外牆清洗", "外牆去漆",
+    "門窗框去漆", "屋樑支撐工程", "牆身止潮帶", "外牆防護工程", "除鏽", "其他"
+  ]);
+  const [newConstructionItem, setNewConstructionItem] = useState("");
+  const [constructionItemDialogOpen, setConstructionItemDialogOpen] = useState(false);
+
+  const theme = useTheme();
+
+
   function getInitialProjectData() {
     return {
       project_name: "",
@@ -309,6 +354,7 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
       site_district: "",
       site_address: "",
       construction_item: "",
+      construction_items: [], // 新增：多選施工項目數組
       construction_fee: "",
       start_date: "",
       end_date: "",
@@ -325,6 +371,11 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
     };
   }
   const [projectData, setProjectData] = useState(getInitialProjectData());
+  
+  // 客戶搜尋相關的 state
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [customerFilters, setCustomerFilters] = useState([]);
+  const customerFilterOptions = ["客戶名稱", "聯絡人姓名", "電話", "地址"];
   
   const [statusAnchorEl, setStatusAnchorEl] = useState(null);
   const [billingAnchorEl, setBillingAnchorEl] = useState(null);
@@ -466,7 +517,8 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
         contacts: [
           { role: "", name: "", contactType: "", contact: "" },
           { role: "", name: "", contactType: "", contact: "" }
-        ]
+        ],
+        construction_items: [], // 重置施工項目
     });
     setSelectedCustomer(null);
     } catch (error) {
@@ -505,6 +557,42 @@ const updateContact = (index, field, value) => {
   setProjectData({ ...projectData, contacts: updated });
 };
   
+
+  // 處理施工項目選擇
+  const handleConstructionItemChange = (event, newValue) => {
+    setProjectData(prev => ({
+      ...prev,
+      construction_items: newValue || [],
+      construction_item: (newValue || []).join(", ") // 保持向後兼容性
+    }));
+  };
+
+  // 新增自定義施工項目
+  const handleAddConstructionItem = () => {
+    if (newConstructionItem.trim() && !constructionItemOptions.includes(newConstructionItem.trim())) {
+      const newItem = newConstructionItem.trim();
+      setConstructionItemOptions(prev => [...prev, newItem]);
+      setProjectData(prev => ({
+        ...prev,
+        construction_items: [...(prev.construction_items || []), newItem],
+        construction_item: [...(prev.construction_items || []), newItem].join(", ")
+      }));
+      setNewConstructionItem("");
+      setConstructionItemDialogOpen(false);
+    }
+  };
+
+  // 刪除施工項目
+  const handleRemoveConstructionItem = (itemToRemove) => {
+    setProjectData(prev => {
+      const updatedItems = prev.construction_items.filter(item => item !== itemToRemove);
+      return {
+        ...prev,
+        construction_items: updatedItems,
+        construction_item: updatedItems.join(", ")
+      };
+    });
+  };
 
   // Remove loading/error checks that are now in App.js
   // if (loading) return <CircularProgress />;
@@ -599,9 +687,274 @@ const updateContact = (index, field, value) => {
         <DialogTitle>新增專案</DialogTitle>
         <DialogContent>
           <Typography variant="h6" gutterBottom>基本資訊</Typography>
+          
+          {/* 客戶搜尋與篩選 */}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: 20 }}>
+            <TextField
+              label="搜尋客戶"
+              fullWidth
+              value={customerSearchQuery}
+              onChange={(e) => setCustomerSearchQuery(e.target.value)}
+            />
+            <FormControl style={{ minWidth: 200 }}>
+              <InputLabel>篩選條件</InputLabel>
+              <Select
+                multiple
+                value={customerFilters}
+                onChange={(e) => setCustomerFilters(e.target.value)}
+                renderValue={(selected) => selected.join(", ")}
+              >
+                {customerFilterOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    <Checkbox checked={customerFilters.indexOf(option) > -1} />
+                    <ListItemText primary={option} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
+
+          {/* 客戶選擇列表 */}
+          <div style={{ marginBottom: 20 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              選擇客戶 {selectedCustomer && `(已選擇: ${selectedCustomer.customer_name})`}
+            </Typography>
+            
+            {selectedCustomer ? (
+              // 顯示已選擇的客戶
+              <Paper 
+                elevation={1} 
+                style={{ 
+                  border: '2px solid #1976d2',
+                  borderRadius: 4
+                }}
+              >
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#e3f2fd'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <Typography variant="subtitle2" style={{ fontWeight: 'bold', marginBottom: 4 }}>
+                        {selectedCustomer.customer_name}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" style={{ marginBottom: 2 }}>
+                        聯絡人: {[selectedCustomer.contact1_name, selectedCustomer.contact2_name, selectedCustomer.contact3_name]
+                          .filter(Boolean).join(', ') || '無'}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" style={{ marginBottom: 2 }}>
+                        電話: {[selectedCustomer.contact1_contact, selectedCustomer.contact2_contact, selectedCustomer.contact3_contact]
+                          .filter(Boolean).join(', ') || '無'}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        地址: {`${selectedCustomer.contact_city || ''}${selectedCustomer.contact_district || ''}${selectedCustomer.contact_address || ''}` || '無'}
+                      </Typography>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ 
+                        backgroundColor: '#1976d2', 
+                        color: 'white', 
+                        borderRadius: '50%', 
+                        width: 24, 
+                        height: 24, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: '14px'
+                      }}>
+                        ✓
+                      </div>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => {
+                          setSelectedCustomer(null);
+                          setProjectData(prev => ({
+                            ...prev,
+                            customer_id: null,
+                          }));
+                          setUseCustomerAddress(false);
+                        }}
+                        style={{ minWidth: 'auto', padding: '4px 8px' }}
+                      >
+                        重選
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Paper>
+            ) : (
+              // 顯示客戶選擇列表
+              <Paper 
+                elevation={1} 
+                style={{ 
+                  maxHeight: 200, 
+                  overflow: 'auto', 
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 4
+                }}
+              >
+                {(() => {
+                  const filteredCustomers = [...(customers || [])].filter((customer) => {
+                    // 搜索邏輯
+                    if (customerSearchQuery.trim() !== "") {
+                      const searchLower = customerSearchQuery.toLowerCase();
+
+                      if (customerFilters.length === 0) {
+                        return (
+                          customer.customer_name?.toLowerCase().includes(searchLower) ||
+                          `${customer.contact1_name || ""}${customer.contact2_name || ""}${customer.contact3_name || ""}`
+                            .toLowerCase()
+                            .includes(searchLower) ||
+                          `${customer.contact1_contact || ""}${customer.contact2_contact || ""}${customer.contact3_contact || ""}`
+                            .toLowerCase()
+                            .includes(searchLower) ||
+                          `${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`
+                            .toLowerCase()
+                            .includes(searchLower)
+                        );
+                      }
+
+                      const matchesAnyField = customerFilters.some((filter) => {
+                        switch (filter) {
+                          case "客戶名稱":
+                            return customer.customer_name?.toLowerCase().includes(searchLower);
+                          case "聯絡人姓名":
+                            return `${customer.contact1_name || ""}${customer.contact2_name || ""}${customer.contact3_name || ""}`
+                              .toLowerCase()
+                              .includes(searchLower);
+                          case "電話":
+                            return `${customer.contact1_contact || ""}${customer.contact2_contact || ""}${customer.contact3_contact || ""}`
+                              .toLowerCase()
+                              .includes(searchLower);
+                          case "地址":
+                            return `${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`
+                              .toLowerCase()
+                              .includes(searchLower);
+                          default:
+                            return false;
+                        }
+                      });
+
+                      if (!matchesAnyField) return false;
+                    }
+
+                    return true;
+                  }).sort((a, b) => 
+                    new Date(b.created_at || 0) - new Date(a.created_at || 0)
+                  );
+
+                  if (filteredCustomers.length === 0) {
+                    return (
+                      <div style={{ padding: 20, textAlign: 'center', color: '#666' }}>
+                        {customerSearchQuery.trim() !== "" || customerFilters.length > 0 
+                          ? "沒有符合篩選條件的客戶" 
+                          : "請輸入搜尋條件或選擇篩選條件"}
+                      </div>
+                    );
+                  }
+
+                  return filteredCustomers.map((customer) => (
+                    <div
+                      key={customer.customer_id}
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        setProjectData(prev => ({
+                          ...prev,
+                          customer_id: customer.customer_id,
+                        }));
+                        // 當客戶改變時重置地址複製選項
+                        setUseCustomerAddress(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid #f0f0f0',
+                        cursor: 'pointer',
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = '#f5f5f5';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <Typography variant="subtitle2" style={{ fontWeight: 'bold', marginBottom: 4 }}>
+                            {customer.customer_name}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary" style={{ marginBottom: 2 }}>
+                            聯絡人: {[customer.contact1_name, customer.contact2_name, customer.contact3_name]
+                              .filter(Boolean).join(', ') || '無'}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary" style={{ marginBottom: 2 }}>
+                            電話: {[customer.contact1_contact, customer.contact2_contact, customer.contact3_contact]
+                              .filter(Boolean).join(', ') || '無'}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            地址: {`${customer.contact_city || ''}${customer.contact_district || ''}${customer.contact_address || ''}` || '無'}
+                          </Typography>
+                        </div>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </Paper>
+            )}
+          </div>
+
+          
+          
+          {/* 客戶選擇列表
           <Autocomplete
             options={
-              [...customers].sort((a, b) => 
+              [...customers].filter((customer) => {
+                // 搜索邏輯
+                if (customerSearchQuery.trim() !== "") {
+                  const searchLower = customerSearchQuery.toLowerCase();
+
+                  if (customerFilters.length === 0) {
+                    return (
+                      customer.customer_name?.toLowerCase().includes(searchLower) ||
+                      `${customer.contact1_name || ""}${customer.contact2_name || ""}${customer.contact3_name || ""}`
+                        .toLowerCase()
+                        .includes(searchLower) ||
+                      `${customer.contact1_contact || ""}${customer.contact2_contact || ""}${customer.contact3_contact || ""}`
+                        .toLowerCase()
+                        .includes(searchLower) ||
+                      `${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`
+                        .toLowerCase()
+                        .includes(searchLower)
+                    );
+                  }
+
+                  const matchesAnyField = customerFilters.some((filter) => {
+                    switch (filter) {
+                      case "客戶名稱":
+                        return customer.customer_name?.toLowerCase().includes(searchLower);
+                      case "聯絡人姓名":
+                        return `${customer.contact1_name || ""}${customer.contact2_name || ""}${customer.contact3_name || ""}`
+                          .toLowerCase()
+                          .includes(searchLower);
+                      case "電話":
+                        return `${customer.contact1_contact || ""}${customer.contact2_contact || ""}${customer.contact3_contact || ""}`
+                          .toLowerCase()
+                          .includes(searchLower);
+                      case "地址":
+                        return `${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`
+                          .toLowerCase()
+                          .includes(searchLower);
+                      default:
+                        return false;
+                    }
+                  });
+
+                  if (!matchesAnyField) return false;
+                }
+
+                return true;
+              }).sort((a, b) => 
                 new Date(b.created_at || 0) - new Date(a.created_at || 0)
               )
             }            
@@ -620,7 +973,7 @@ const updateContact = (index, field, value) => {
               <TextField {...params} label="選擇客戶" margin="normal" />
             )}
           />
-          
+           */}
           <TextField
             name="project_name"
             label="專案名稱"
@@ -893,7 +1246,50 @@ const updateContact = (index, field, value) => {
               value={projectData.end_date}
               onChange={handleChange}
             />
-          </div>
+          </div>          {/* 施工項目多選 */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>施工項目</Typography>
+            <Autocomplete
+              multiple
+              options={constructionItemOptions}
+              value={projectData.construction_items || []}
+              onChange={handleConstructionItemChange}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    key={option}
+                    variant="outlined"
+                    label={option}
+                    {...getTagProps({ index })}
+                    onDelete={() => handleRemoveConstructionItem(option)}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  placeholder="選擇或輸入施工項目"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {params.InputProps.endAdornment}
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setConstructionItemDialogOpen(true)}
+                            size="small"
+                          >
+                            <AddIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Box>
 
           {/* 新增施工天數、施工範圍、注意事項 */}
           <TextField
@@ -929,43 +1325,144 @@ const updateContact = (index, field, value) => {
           <Typography variant="h6" gutterBottom>收款資訊</Typography>
 
           {/* 收款方式和收款時間 */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+            <FormControl fullWidth>
+              <InputLabel>收款方式</InputLabel>
+              <Select
+                name="payment_method"
+                value={projectData.payment_method || ""}
+                onChange={handleChange}
+              >
+                <MenuItem value="現金">現金</MenuItem>
+                <MenuItem value="匯款">匯款</MenuItem>
+                <MenuItem value="支票">支票</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              name="payment_date"
+              label="結清日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={projectData.payment_date || ""}
+              onChange={handleChange}
+            />
+          </div>
 
+          {/* 收款金額 */}
           <TextField
-            name="construction_fee"
-            label="施工金額"
+            name="amount"
+            label="收款金額"
             type="number"
             fullWidth
             margin="normal"
-            value={projectData.construction_fee}
+            value={projectData.amount || ""}
             onChange={handleChange}
           />
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-          <TextField
-            name="payment_method"
-            label="收款方式"
-            fullWidth
-            value={projectData.payment_method || ""}
-            onChange={(e) => setProjectData({ ...projectData, payment_method: e.target.value })}
-          />
-          <TextField
-            name="payment_date"
-            label="收款日期"
-            type="date"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={projectData.payment_date || ""}
-            onChange={(e) => setProjectData({ ...projectData, payment_date: e.target.value })}
-          />
-          </div>
+
+          {/* 匯款相關資訊 */}
+          {projectData.payment_method === '匯款' && (
+            <TextField
+              name="fee"
+              label="手續費"
+              type="number"
+              fullWidth
+              margin="normal"
+              value={projectData.fee || ""}
+              onChange={handleChange}
+            />
+          )}
+
+          {/* 支票相關資訊 */}
+          {projectData.payment_method === '支票' && (
+            <>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                <TextField
+                  name="payer"
+                  label="付款人"
+                  fullWidth
+                  value={projectData.payer || ""}
+                  onChange={handleChange}
+                />
+                <FormControl fullWidth>
+                  <InputLabel>收款人</InputLabel>
+                  <Select
+                    name="payee"
+                    value={projectData.payee || ""}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="中星">中星</MenuItem>
+                    <MenuItem value="建興">建興</MenuItem>
+                  </Select>
+                </FormControl>
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                <TextField
+                  name="check_number"
+                  label="支票號碼"
+                  fullWidth
+                  value={projectData.check_number || ""}
+                  onChange={handleChange}
+                />
+                <TextField
+                  name="bank_branch"
+                  label="銀行分行"
+                  fullWidth
+                  value={projectData.bank_branch || ""}
+                  onChange={handleChange}
+                />
+                <TextField
+                  name="due_date"
+                  label="到期日"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={projectData.due_date || ""}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
+
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>取消</Button>
-          <Button 
+          <Button onClick={() => setOpenDialog(false)}>取消</Button>          <Button 
             variant="contained" 
             onClick={handleSaveProject}
             disabled={!projectData.project_name || !projectData.customer_id}
           >
             儲存
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新增自定義施工項目對話框 */}
+      <Dialog
+        open={constructionItemDialogOpen}
+        onClose={() => setConstructionItemDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>新增施工項目</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="施工項目名稱"
+            fullWidth
+            variant="outlined"
+            value={newConstructionItem}
+            onChange={(e) => setNewConstructionItem(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConstructionItemDialogOpen(false)}>取消</Button>
+          <Button
+            onClick={handleAddConstructionItem}
+            variant="contained"
+            disabled={!newConstructionItem.trim() || constructionItemOptions.includes(newConstructionItem.trim())}
+          >
+            新增
           </Button>
         </DialogActions>
       </Dialog>
