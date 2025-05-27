@@ -930,7 +930,7 @@ const updateContact = (index, field, value) => {
             </FormControl>
             <TextField
               name="payment_date"
-              label="收款日期"
+              label="結清日期"
               type="date"
               fullWidth
               InputLabelProps={{ shrink: true }}

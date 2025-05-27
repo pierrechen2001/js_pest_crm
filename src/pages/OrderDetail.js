@@ -807,6 +807,7 @@ export default function OrderDetail() {
                 <Grid item xs={12} md={6}>
                   <Typography><strong>收款方式：</strong> {project.payment_method}</Typography>
                   <Typography><strong>收款金額：</strong> ${project.amount?.toLocaleString()}</Typography>
+                  <Typography><strong>結清日期：</strong> {project.payment_date}</Typography>
                   {project.payment_method === '匯款' && (
                     <Typography><strong>手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
                   )}
@@ -825,6 +826,7 @@ export default function OrderDetail() {
                   </>
                 )}
               </Grid>
+              
             </Box>
             <Divider sx={{ mb: 3 }} />
             <Box>
@@ -1076,6 +1078,18 @@ export default function OrderDetail() {
               <MenuItem value="支票">支票</MenuItem>
             </Select>
           </FormControl>
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="結清日期"
+            type="date"
+            name="payment_date"
+            value={editedProject.payment_date || ''}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            margin="normal"
+          />
         </Box>
         <Box sx={{ flex: 1 }}>
           <TextField
