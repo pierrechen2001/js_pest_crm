@@ -1041,33 +1041,104 @@ const updateContact = (index, field, value) => {
           <Typography variant="h6" gutterBottom>收款資訊</Typography>
 
           {/* 收款方式和收款時間 */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+            <FormControl fullWidth>
+              <InputLabel>收款方式</InputLabel>
+              <Select
+                name="payment_method"
+                value={projectData.payment_method || ""}
+                onChange={handleChange}
+              >
+                <MenuItem value="現金">現金</MenuItem>
+                <MenuItem value="匯款">匯款</MenuItem>
+                <MenuItem value="支票">支票</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              name="payment_date"
+              label="收款日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={projectData.payment_date || ""}
+              onChange={handleChange}
+            />
+          </div>
 
+          {/* 收款金額 */}
           <TextField
-            name="construction_fee"
-            label="施工金額"
+            name="amount"
+            label="收款金額"
             type="number"
             fullWidth
             margin="normal"
-            value={projectData.construction_fee}
+            value={projectData.amount || ""}
             onChange={handleChange}
           />
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-          <TextField
-            name="payment_method"
-            label="收款方式"
-            fullWidth
-            value={projectData.payment_method || ""}
-            onChange={(e) => setProjectData({ ...projectData, payment_method: e.target.value })}
-          />
-          <TextField
-            name="payment_date"
-            label="收款日期"
-            type="date"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={projectData.payment_date || ""}
-            onChange={(e) => setProjectData({ ...projectData, payment_date: e.target.value })}
-          />          </div>
+
+          {/* 匯款相關資訊 */}
+          {projectData.payment_method === '匯款' && (
+            <TextField
+              name="fee"
+              label="手續費"
+              type="number"
+              fullWidth
+              margin="normal"
+              value={projectData.fee || ""}
+              onChange={handleChange}
+            />
+          )}
+
+          {/* 支票相關資訊 */}
+          {projectData.payment_method === '支票' && (
+            <>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                <TextField
+                  name="payer"
+                  label="付款人"
+                  fullWidth
+                  value={projectData.payer || ""}
+                  onChange={handleChange}
+                />
+                <FormControl fullWidth>
+                  <InputLabel>收款人</InputLabel>
+                  <Select
+                    name="payee"
+                    value={projectData.payee || ""}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="中星">中星</MenuItem>
+                    <MenuItem value="建興">建興</MenuItem>
+                  </Select>
+                </FormControl>
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                <TextField
+                  name="check_number"
+                  label="支票號碼"
+                  fullWidth
+                  value={projectData.check_number || ""}
+                  onChange={handleChange}
+                />
+                <TextField
+                  name="bank_branch"
+                  label="銀行分行"
+                  fullWidth
+                  value={projectData.bank_branch || ""}
+                  onChange={handleChange}
+                />
+                <TextField
+                  name="due_date"
+                  label="到期日"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={projectData.due_date || ""}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
 
         </DialogContent>
         <DialogActions>
