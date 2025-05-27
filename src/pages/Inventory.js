@@ -1069,6 +1069,17 @@ const Inventory = () => {
               新增{currentTab === 0 ? '耗材' : '藥劑'}
             </Button>
           </Box>
+
+          {/* 右側：插圖 */}
+          <Box
+            component="img"
+            src="/inventory-page.svg"
+            alt="庫存管理圖"
+            sx={{
+              height: 200,
+              maxWidth: '100%',
+            }}
+          />
         </Paper>
 
         {/* 標籤頁 */}
