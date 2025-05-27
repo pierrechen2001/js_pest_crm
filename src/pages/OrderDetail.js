@@ -32,6 +32,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Chip,
 } from '@mui/material';
 import { Edit, Delete, ArrowBack, Add, Business, Receipt, LocationOn, Phone, Fax, Person, Note, Info, Build, Payment, ContactPhone, CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
 
@@ -659,7 +660,7 @@ export default function OrderDetail() {
 
             <Box mb={2}>
               <Box display="flex" alignItems="center" mb={1}>
-                <Person sx={{ mr: 1, color: 'primary.main' }} />
+                <Person sx={{ mr: 1, color: 'primary' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">聯絡人資訊</Typography>
               </Box>
               {customer?.contact1_name && (
@@ -744,10 +745,42 @@ export default function OrderDetail() {
                 <Build sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">施工資訊</Typography>
               </Box>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>                <Grid item xs={12} md={6}>
                   <Typography><strong>開始日期：</strong> {project.start_date}</Typography>
-                  <Typography><strong>施工項目：</strong> {project.construction_item}</Typography>
+                  <Box sx={{ mb: 1 }}>
+                    <Typography component="span"><strong>施工項目：</strong></Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {(() => {
+                        // Try to parse construction_items array or fall back to construction_item
+                        let items = [];
+                        
+                        if (project.construction_items && Array.isArray(project.construction_items)) {
+                          items = project.construction_items;
+                        } else if (project.construction_item) {
+                          // Try to split by comma if it's a string
+                          items = project.construction_item.split(',').map(item => item.trim()).filter(Boolean);
+                        }
+                        
+                        if (items.length > 0) {
+                          return items.map((item, index) => (
+                            <Chip
+                              key={index}
+                              label={item}
+                              size="small"
+                              variant="outlined"
+                              sx={{ 
+                                bgcolor: 'primary.light',
+                                color: 'black',
+                                '& .MuiChip-label': { fontSize: '0.75rem' }
+                              }}
+                            />
+                          ));
+                        } else {
+                          return <Typography component="span" color="textSecondary"> 無</Typography>;
+                        }
+                      })()}
+                    </Box>
+                  </Box>
                   <Typography><strong>施工天數：</strong> {project.construction_days}</Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
