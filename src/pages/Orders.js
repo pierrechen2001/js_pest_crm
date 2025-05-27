@@ -219,6 +219,9 @@ export default function Orders({ projects: initialProjects = [], customers: init
   const [selectedFilters, setSelectedFilters] = useState([]);
   const filterOptions = ["專案名稱", "客戶名稱", "施工地址"];
 
+  console.log("原始專案資料：", projects);
+  const normalizePhone = (str) => (str || "").replace(/\D/g, "");
+
 // ... (filteredProjects logic remains largely the same, but uses the 'projects' state derived from props)
 const filteredProjects = (projects || [])
 .filter((project) => {
@@ -227,14 +230,24 @@ const filteredProjects = (projects || [])
     const searchLower = searchQuery.toLowerCase();
 
     if (selectedFilters.length === 0) {
+      const normalizeText = (str) => (str || "").toLowerCase();
+      const normalizePhone = (str) => (str || "").replace(/\D/g, "");
+      const queryText = searchQuery.toLowerCase();
+      const queryPhone = normalizePhone(searchQuery);
+
       return (
-        project.project_name?.toLowerCase().includes(searchLower) ||
-        project.customer_database?.customer_name?.toLowerCase().includes(searchLower) ||
-        `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
+        project.project_name?.toLowerCase().includes(queryText) ||
+        project.customer_database?.customer_name?.toLowerCase().includes(queryText) ||
+        ((project.site_city || "") + (project.site_district || "") + (project.site_address || ""))
           .toLowerCase()
-          .includes(searchLower)
+          .includes(queryText) ||
+        normalizePhone(project.contact1_contact).includes(queryPhone) ||
+        normalizePhone(project.contact2_contact).includes(queryPhone) ||
+        normalizePhone(project.contact3_contact).includes(queryPhone)
       );
     }
+
+
 
     const matchesAnyField = selectedFilters.some((filter) => {
       switch (filter) {
@@ -246,11 +259,12 @@ const filteredProjects = (projects || [])
           return `${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`
             .toLowerCase()
             .includes(searchLower);
+
         default:
           return false;
       }
     });
-
+    console.log(project.contacts)
     if (!matchesAnyField) return false;
   }
 
