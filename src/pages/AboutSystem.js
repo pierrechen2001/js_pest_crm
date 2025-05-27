@@ -169,7 +169,7 @@ const AboutSystem = () => {
       avatar: 'https://avatars.githubusercontent.com/u/160754763?v=4',
       email: 'dascupt@gmail.com',
       github: 'https://github.com/Diteaphr',
-      quote: '嗨。'
+      quote: 'Out of the black, into the blue'
     },
   ];
 
