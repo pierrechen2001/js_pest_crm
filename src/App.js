@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import { supabase } from './lib/supabaseClient';
 import theme from './theme.js'; // Assuming you have a theme.js file for MUI theme
 import UserProfile from "./pages/UserProfile";
+import GeocodingManagement from "./pages/GeocodingManagement";
 
 
 // Protected Route component
@@ -321,6 +322,15 @@ const AppContent = () => {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <UserApprovals />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/geocoding-management"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <GeocodingManagement />
                 </ProtectedRoute>
               }
             />

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from "@googlemaps/js-api-loader";
+
 import { 
   TextField, 
   Button, 
@@ -9,6 +10,7 @@ import {
   Slider, 
   Chip
 } from '@mui/material';
+
 
 const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
 
@@ -273,34 +275,28 @@ const MapComponent = ({ projects = [] }) => {
         }
       } else {
         // 若無經緯度，嘗試 geocode 並即時存回 supabase
-        const fullAddress = `${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`;
-        if (!fullAddress) return;
-        const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
-        if (!apiKey) return;
-        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`;
+        const fullAddress = combineAddress(project.site_city, project.site_district, project.site_address);
+        if (!fullAddress.trim()) return;
+        
         try {
-          const response = await fetch(geocodeUrl);
-          const result = await response.json();
-          if (result.status === 'OK' && result.results && result.results[0]) {
-            const geo = result.results[0].geometry.location;
+          const coords = await geocodeAddress(fullAddress);
+          if (coords) {
             // 立即存回 supabase
-            if (window.supabase) {
-              try {
-                const { error } = await window.supabase
-                  .from('project')
-                  .update({ latitude: geo.lat, longitude: geo.lng })
-                  .eq('project_id', project.project_id);
-                if (error) {
-                  console.error('Supabase update error:', error);
-                } else {
-                  console.log('Supabase updated project', project.project_id, 'with lat/lng:', geo.lat, geo.lng);
-                }
-              } catch (e) {
-                console.error('Supabase update exception:', e);
-              }
+            const { error } = await supabase
+              .from('project')
+              .update({ 
+                latitude: coords.latitude, 
+                longitude: coords.longitude 
+              })
+              .eq('project_id', project.project_id);
+            
+            if (error) {
+              console.error('Supabase update error:', error);
+            } else {
+              console.log('成功更新專案經緯度:', project.project_name);
             }
             // 直接顯示 marker
-            const projectLocation = { lat: geo.lat, lng: geo.lng };
+            const projectLocation = { lat: coords.latitude, lng: coords.longitude };
             const distance = spherical.computeDistanceBetween(mainMarkerPosition, projectLocation);
             if (distance <= circleRadius) {
               const pinElement = new PinElement({
@@ -326,10 +322,10 @@ const MapComponent = ({ projects = [] }) => {
                 projectTitleElement.style.fontWeight = 'bold';
                 projectTitleElement.textContent = projectTitleText;
                 const projectDetails = `
-                  <div style=\"font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;\">
-                    <p style=\"margin: 0 0 4px 0;\"><strong>開始時間:</strong> ${startDate}</p>
-                    <p style=\"margin: 0 0 10px 0;\"><strong>施工金額:</strong> ${contractAmount}</p>
-                    <a href=\"/order/${project.project_id}\" target=\"_blank\" style=\"color: #1a73e8; text-decoration: none; font-weight: bold;\">查看專案詳細頁面</a>
+                  <div style="font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;">
+                    <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>施工金額:</strong> ${contractAmount}</p>
+                    <a href="/order/${project.project_id}" target="_blank" style="color: #1a73e8; text-decoration: none; font-weight: bold;">查看專案詳細頁面</a>
                   </div>
                 `;
                 const infoWindow = new InfoWindow({
@@ -347,7 +343,9 @@ const MapComponent = ({ projects = [] }) => {
             }
           }
         } catch (e) {
+
           console.error('Geocode and save failed:', e);        }
+
       }
     });
   }, [mapReady, mainMarkerPosition, circleRadius, projects, selectedFilters, mapInstanceRef]);
