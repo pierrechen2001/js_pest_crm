@@ -319,7 +319,7 @@ const Customers = ({
                       <TextField 
                         {...params} 
                         label={
-                          newCustomerType === "一般住家" ? "地址" :
+                          newCustomerType === "一般住家" ? "住址" :
                           newCustomerType === "建築師" ? "事務所地址" :
                           newCustomerType === "古蹟、政府機關" ? "專案地址" :
                           "公司地址"
@@ -372,34 +372,46 @@ const Customers = ({
 
               {/* 聯絡資訊 */}
               <Typography variant="h6" gutterBottom>聯絡資訊</Typography>
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
-                {/* 公司電話與傳真號碼 */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
+                {/* 公司電話/市話、傳真、信箱（僅非一般住家顯示） */}
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                   <TextField
-                    label="公司電話（市話）"
+                    label={newCustomerType === "一般住家" ? "市話" : "公司電話（市話）"}
                     fullWidth
                     value={customerData.company_phone || ""}
                     onChange={(e) => {
-                      let formattedValue = e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                      let formattedValue = e.target.value.replace(/[^\d]/g, "");
+                      if (formattedValue.length === 10 && formattedValue.startsWith("0")) {
+                        // 市話格式 (02)1234-5678
+                        formattedValue = formattedValue.replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                      }
                       setCustomerData({ ...customerData, company_phone: formattedValue });
                     }}
                   />
-                  <TextField
-                    label="傳真號碼"
-                    fullWidth
-                    value={customerData.fax || ""}
-                    onChange={(e) => {
-                      let formattedValue = e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                      setCustomerData({ ...customerData, fax: formattedValue });
-                    }}
-                  />
-                  <TextField
-                    label="公司信箱"
-                    fullWidth
-                    value={customerData.email || ""}
-                    onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                  />
-                </div>      
+                  {/* 非一般住家才顯示傳真與公司信箱 */}
+                  {newCustomerType !== "一般住家" && (
+                    <>
+                      <TextField
+                        label="傳真號碼"
+                        fullWidth
+                        value={customerData.fax || ""}
+                        onChange={(e) => {
+                          let formattedValue = e.target.value.replace(/[^\d]/g, "");
+                          if (formattedValue.length === 10 && formattedValue.startsWith("0")) {
+                            formattedValue = formattedValue.replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                          }
+                          setCustomerData({ ...customerData, fax: formattedValue });
+                        }}
+                      />
+                      <TextField
+                        label="公司信箱"
+                        fullWidth
+                        value={customerData.email || ""}
+                        onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                      />
+                    </>
+                  )}
+                </div>
 
                 {/* 預設聯絡人 1 */}
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -433,7 +445,7 @@ const Customers = ({
                         setCustomerData({ ...customerData, contacts: updatedContacts });
                       }}
                     >
-                      {["LineID", "市話", "電話", "信箱"].map((type) => (
+                      {["LineID", "市話", "手機", "信箱"].map((type) => (
                         <MenuItem key={type} value={type}>{type}</MenuItem>
                       ))}
                     </Select>
@@ -445,13 +457,11 @@ const Customers = ({
                     onChange={(e) => {
                       let formattedValue = e.target.value;
                       const contactType = customerData.contacts[0]?.contactType;
-
                       if (contactType === "市話") {
                         formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                      } else if (contactType === "電話") {
+                      } else if (contactType === "手機") {
                         formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
                       }
-
                       const updatedContacts = [...customerData.contacts];
                       updatedContacts[0].contact = formattedValue;
                       setCustomerData({ ...customerData, contacts: updatedContacts });
@@ -459,84 +469,80 @@ const Customers = ({
                   />
                 </div>
 
-
+                {/* 其他聯絡人 */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
-                {customerData.contacts?.map((contact, index) => {
-                      if (index === 0) return null; // 跳過預設聯絡人
-                      return (
-                  <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <TextField
-                        label="職位"
-                        fullWidth
-                        value={contact.role || ""}
-                        onChange={(e) => {
-                          const updatedContacts = [...customerData.contacts];
-                          updatedContacts[index].role = e.target.value;
-                          setCustomerData({ ...customerData, contacts: updatedContacts });
-                        }}
-                      />
-                      <TextField
-                        label="名字"
-                        fullWidth
-                        value={contact.name || ""}
-                        onChange={(e) => {
-                          const updatedContacts = [...customerData.contacts];
-                          updatedContacts[index].name = e.target.value;
-                          setCustomerData({ ...customerData, contacts: updatedContacts });
-                        }}
-                      />
-                      <FormControl fullWidth>
-                        <InputLabel>聯絡方式類型</InputLabel>
-                        <Select
-                          value={contact.contactType || ""}
+                  {customerData.contacts?.map((contact, index) => {
+                    if (index === 0) return null;
+                    return (
+                      <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                        <TextField
+                          label="職位"
+                          fullWidth
+                          value={contact.role || ""}
                           onChange={(e) => {
                             const updatedContacts = [...customerData.contacts];
-                            updatedContacts[index] = {
-                              ...updatedContacts[index],
-                              contactType: e.target.value,
-                              contact: "", // 清空原本輸入
-                            };
+                            updatedContacts[index].role = e.target.value;
+                            setCustomerData({ ...customerData, contacts: updatedContacts });
+                          }}
+                        />
+                        <TextField
+                          label="名字"
+                          fullWidth
+                          value={contact.name || ""}
+                          onChange={(e) => {
+                            const updatedContacts = [...customerData.contacts];
+                            updatedContacts[index].name = e.target.value;
+                            setCustomerData({ ...customerData, contacts: updatedContacts });
+                          }}
+                        />
+                        <FormControl fullWidth>
+                          <InputLabel>聯絡方式類型</InputLabel>
+                          <Select
+                            value={contact.contactType || ""}
+                            onChange={(e) => {
+                              const updatedContacts = [...customerData.contacts];
+                              updatedContacts[index] = {
+                                ...updatedContacts[index],
+                                contactType: e.target.value,
+                                contact: "",
+                              };
+                              setCustomerData({ ...customerData, contacts: updatedContacts });
+                            }}
+                          >
+                            {["LineID", "市話", "手機", "信箱"].map((type) => (
+                              <MenuItem key={type} value={type}>{type}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <TextField
+                          label={contact.contactType || "聯絡方式"}
+                          fullWidth
+                          value={contact.contact || ""}
+                          onChange={(e) => {
+                            let formattedValue = e.target.value;
+                            if (contact.contactType === "市話") {
+                              formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                            } else if (contact.contactType === "手機") {
+                              formattedValue = formattedValue.replace(/[^\d]/g, "").replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+                            }
+                            const updatedContacts = [...customerData.contacts];
+                            updatedContacts[index].contact = formattedValue;
+                            setCustomerData({ ...customerData, contacts: updatedContacts });
+                          }}
+                        />
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => {
+                            const updatedContacts = customerData.contacts.filter((_, i) => i !== index);
                             setCustomerData({ ...customerData, contacts: updatedContacts });
                           }}
                         >
-                          {["LineID", "市話", "電話", "信箱"].map((type) => (
-                            <MenuItem key={type} value={type}>{type}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <TextField
-                        label={contact.contactType || "聯絡方式"}
-                        fullWidth
-                        value={contact.contact || ""}
-                        onChange={(e) => {
-                          let formattedValue = e.target.value;
-                          if (contact.contactType === "市話") {
-                            formattedValue = formattedValue
-                              .replace(/[^\d]/g, "")
-                              .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                          } else if (contact.contactType === "電話") {
-                            formattedValue = formattedValue
-                              .replace(/[^\d]/g, "")
-                              .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                          }
-
-                          const updatedContacts = [...customerData.contacts];
-                          updatedContacts[index].contact = formattedValue;
-                          setCustomerData({ ...customerData, contacts: updatedContacts });
-                        }}
-                      />
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={() => {
-                          const updatedContacts = customerData.contacts.filter((_, i) => i !== index);
-                          setCustomerData({ ...customerData, contacts: updatedContacts });
-                        }}
-                      >
-                        刪除
-                      </Button>
-                    </div>
-                  )})}
+                          刪除
+                        </Button>
+                      </div>
+                    );
+                  })}
 
                   <Button
                     variant="outlined"
