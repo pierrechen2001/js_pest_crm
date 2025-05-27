@@ -317,8 +317,8 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [useCustomerAddress, setUseCustomerAddress] = useState(false);
-
   const [useCustomerContact, setUseCustomerContact] = useState(false);
+  const [useCustomerContacts, setUseCustomerContacts] = useState(false);
 
   // 施工項目相關狀態
   const [constructionItemOptions, setConstructionItemOptions] = useState([
