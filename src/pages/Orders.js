@@ -284,6 +284,8 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [useCustomerAddress, setUseCustomerAddress] = useState(false);
+  // 在 Orders 組件內 state 區塊加上
+  const [useCustomerContacts, setUseCustomerContacts] = useState(false);
   function getInitialProjectData() {
     return {
       project_name: "",
@@ -626,68 +628,57 @@ const updateContact = (index, field, value) => {
             required
           />
           
+          <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
           {selectedCustomer && (
             <FormControl component="fieldset" style={{ marginTop: 10, marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                {/* 聯絡資訊同客戶資料 */}
                 <Checkbox
-                  checked={useCustomerAddress}
-                  onChange={(e) => {
-                    setUseCustomerAddress(e.target.checked);
-                    
+                  checked={useCustomerContacts}
+                  onChange={async (e) => {
+                    setUseCustomerContacts(e.target.checked);
                     if (e.target.checked) {
-                      // 從選擇的客戶資料中自動填入地址及聯絡方式
-                      const fetchCustomerDetails = async () => {
-                        try {
-                          const { data, error } = await supabase
-                            .from('customer_database')
-                            .select('*')
-                            .eq('customer_id', selectedCustomer.customer_id)
-                            .single();
-                            
-                          if (error) throw error;
-                          
-                          // 更新專案地址
-                          setProjectData(prev => ({
-                            ...prev,
-                            site_city: data.contact_city || "",
-                            site_district: data.contact_district || "",
-                            site_address: data.contact_address || "",
-                            contacts: [
-                              {
-                                role: data.contact1_role || "",
-                                name: data.contact1_name || "", 
-                                contactType: data.contact1_type || "",
-                                contact: data.contact1_contact || ""
-                              },
-                              ...(data.contact2_name ? [{
-                                role: data.contact2_role || "",
-                                name: data.contact2_name || "",
-                                contactType: data.contact2_type || "",
-                                contact: data.contact2_contact || ""
-                              }] : []),
-                              ...(data.contact3_name ? [{
-                                role: data.contact3_role || "",
-                                name: data.contact3_name || "",
-                                contactType: data.contact3_type || "",
-                                contact: data.contact3_contact || ""
-                              }] : [])
-                            ].filter(contact => contact.name)
-                          }));
-                        } catch (error) {
-                          console.error('Error fetching customer details:', error);
-                        }
-                      };
-                      
-                      fetchCustomerDetails();
+                      const { data, error } = await supabase
+                        .from('customer_database')
+                        .select('*')
+                        .eq('customer_id', selectedCustomer.customer_id)
+                        .single();
+                      if (error) return;
+                      setProjectData(prev => ({
+                        ...prev,
+                        contacts: [
+                          ...(data.contact1_name ? [{
+                            role: data.contact1_role || "",
+                            name: data.contact1_name || "",
+                            contactType: data.contact1_type || "",
+                            contact: data.contact1_contact || ""
+                          }] : []),
+                          ...(data.contact2_name ? [{
+                            role: data.contact2_role || "",
+                            name: data.contact2_name || "",
+                            contactType: data.contact2_type || "",
+                            contact: data.contact2_contact || ""
+                          }] : []),
+                          ...(data.contact3_name ? [{
+                            role: data.contact3_role || "",
+                            name: data.contact3_name || "",
+                            contactType: data.contact3_type || "",
+                            contact: data.contact3_contact || ""
+                          }] : [])
+                        ].filter(contact => contact.name)
+                      }));
+                    } else {
+                      setProjectData(prev => ({
+                        ...prev,
+                        contacts: [{ role: "", name: "", contactType: "", contact: "" }]
+                      }));
                     }
                   }}
                 />
-                <Typography>地址、聯絡方式同客戶資料</Typography>
+                <Typography>聯絡資訊同客戶資料</Typography>
               </div>
             </FormControl>
           )}
-          
-          <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
           <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "20px" }}>
             {/* 預設聯絡人 1 */}
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -816,7 +807,41 @@ const updateContact = (index, field, value) => {
 
           <Divider sx={{ my: 2 }} />
           <Typography variant="h6" gutterBottom>施工資訊</Typography>
-
+          {/* 地址同客戶資料 Checkbox */}
+            {selectedCustomer && (
+              <FormControl component="fieldset" style={{ marginTop: 0, marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                  <Checkbox
+                    checked={useCustomerAddress}
+                    onChange={async (e) => {
+                      setUseCustomerAddress(e.target.checked);
+                      if (e.target.checked) {
+                        const { data, error } = await supabase
+                          .from('customer_database')
+                          .select('*')
+                          .eq('customer_id', selectedCustomer.customer_id)
+                          .single();
+                        if (error) return;
+                        setProjectData(prev => ({
+                          ...prev,
+                          site_city: data.contact_city || "",
+                          site_district: data.contact_district || "",
+                          site_address: data.contact_address || ""
+                        }));
+                      } else {
+                        setProjectData(prev => ({
+                          ...prev,
+                          site_city: "",
+                          site_district: "",
+                          site_address: ""
+                        }));
+                      }
+                    }}
+                  />
+                  <Typography>地址同客戶資料</Typography>
+                </div>
+              </FormControl>
+            )}
           {/* 施工地址 */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
             <div style={{ flex: 1 }}>
