@@ -27,7 +27,7 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SecurityIcon from "@mui/icons-material/Security";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HomeIcon from '@mui/icons-material/Home';
-import { Assignment as AssignmentIcon, Map as MapIcon, Info as InfoIcon } from '@mui/icons-material';
+import { Assignment as AssignmentIcon, Map as MapIcon, Info as InfoIcon, LocationOn as LocationOnIcon } from '@mui/icons-material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
@@ -138,6 +138,11 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       text: '用戶管理',
       icon: <SecurityIcon />,
       path: '/UserApprovals',
+    },
+    {
+      text: 'Geocoding',
+      icon: <LocationOnIcon />,
+      path: '/geocoding-management',
     }
   ];
   

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useParams, useNavigate } from 'react-router-dom';
+import { geocodeAddress, combineAddress } from '../lib/geocoding';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
   IconButton,
@@ -236,6 +237,13 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       const safeInt = (n) => n === "" || n === undefined ? null : parseInt(n, 10);
       const safeFloat = (n) => n === "" || n === undefined ? null : parseFloat(n);
 
+      // 1. 組合完整地址並進行 geocoding
+      const fullAddress = combineAddress(projectData.site_city, projectData.site_district, projectData.site_address);
+      const coords = await geocodeAddress(fullAddress);
+      const latitude = coords?.latitude || null;
+      const longitude = coords?.longitude || null;
+
+      // 4. 寫入 Supabase
       const { data, error } = await supabase
         .from('project')
         .insert([{
@@ -267,6 +275,8 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
           contact3_name: projectData.contacts[2]?.name || "",
           contact3_type: projectData.contacts[2]?.contactType || "",
           contact3_contact: projectData.contacts[2]?.contact || "",
+          latitude,
+          longitude
         }])
         .select();
   

@@ -58,6 +58,10 @@ create table public.project (
   contact3_name text null,
   contact3_type text null,
   contact3_contact text null,
+  latitude double precision null,
+  longitude double precision null,
+  track_remind_date date null,
+  is_tracked boolean null,
   constraint project_pkey primary key (project_id),
   constraint project_customer_id_fkey foreign KEY (customer_id) references customer_database (customer_id) on delete set null
 ) TABLESPACE pg_default;
