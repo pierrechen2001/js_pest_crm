@@ -385,6 +385,7 @@ export const AuthProvider = ({ children }) => {
       // Clear local storage
       localStorage.removeItem("userRoles");
       localStorage.removeItem("loginMethod");
+      localStorage.removeItem("isApproved");
       
       setUser(null);
       navigate("/login");
