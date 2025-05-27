@@ -807,19 +807,22 @@ export default function OrderDetail() {
                 <Grid item xs={12} md={6}>
                   <Typography><strong>收款方式：</strong> {project.payment_method}</Typography>
                   <Typography><strong>收款金額：</strong> ${project.amount?.toLocaleString()}</Typography>
-                  <Typography><strong>手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography><strong>收款日期：</strong> {project.payment_date}</Typography>
-                  <Typography><strong>付款人：</strong> {project.payer}</Typography>
-                  <Typography><strong>收款人：</strong> {project.payee}</Typography>
+                  {project.payment_method === '匯款' && (
+                    <Typography><strong>手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
+                  )}
                 </Grid>
                 {project.payment_method === '支票' && (
-                  <Grid item xs={12}>
-                    <Typography><strong>支票號碼：</strong> {project.check_number}</Typography>
-                    <Typography><strong>銀行分行：</strong> {project.bank_branch}</Typography>
-                    <Typography><strong>到期日：</strong> {project.due_date}</Typography>
-                  </Grid>
+                  <>
+                    <Grid item xs={12} md={6}>
+                      <Typography><strong>付款人：</strong> {project.payer}</Typography>
+                      <Typography><strong>收款人：</strong> {project.payee}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography><strong>支票號碼：</strong> {project.check_number}</Typography>
+                      <Typography><strong>銀行分行：</strong> {project.bank_branch}</Typography>
+                      <Typography><strong>到期日：</strong> {project.due_date}</Typography>
+                    </Grid>
+                  </>
                 )}
               </Grid>
             </Box>
@@ -1077,22 +1080,6 @@ export default function OrderDetail() {
         <Box sx={{ flex: 1 }}>
           <TextField
             fullWidth
-            label="收款日期"
-            type="date"
-            name="payment_date"
-            value={editedProject.payment_date || ''}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            margin="normal"
-          />
-        </Box>
-      </Grid>
-
-      {/* 收款金額和手續費 */}
-      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
             label="收款金額"
             type="number"
             name="amount"
@@ -1101,82 +1088,89 @@ export default function OrderDetail() {
             margin="normal"
           />
         </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="手續費"
-            type="number"
-            name="fee"
-            value={editedProject.fee || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
       </Grid>
 
-      {/* 付款人和收款人 */}
-      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="付款人"
-            name="payer"
-            value={editedProject.payer || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>收款人</InputLabel>
-            <Select
-              name="payee"
-              value={editedProject.payee || ''}
-              onChange={handleChange}
-            >
-              <MenuItem value="中星">中星</MenuItem>
-              <MenuItem value="建興">建興</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Grid>
-
-      {/* 支票相關資訊 */}
-      {editedProject.payment_method === '支票' && (
+      {/* 匯款相關資訊 */}
+      {editedProject.payment_method === '匯款' && (
         <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
-              label="支票號碼"
-              name="check_number"
-              value={editedProject.check_number || ''}
+              label="手續費"
+              type="number"
+              name="fee"
+              value={editedProject.fee || ''}
               onChange={handleChange}
-              margin="normal"
-            />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <TextField
-              fullWidth
-              label="銀行分行"
-              name="bank_branch"
-              value={editedProject.bank_branch || ''}
-              onChange={handleChange}
-              margin="normal"
-            />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <TextField
-              fullWidth
-              label="到期日"
-              type="date"
-              name="due_date"
-              value={editedProject.due_date || ''}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
               margin="normal"
             />
           </Box>
         </Grid>
+      )}
+
+      {/* 支票相關資訊 */}
+      {editedProject.payment_method === '支票' && (
+        <>
+          <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="付款人"
+                name="payer"
+                value={editedProject.payer || ''}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>收款人</InputLabel>
+                <Select
+                  name="payee"
+                  value={editedProject.payee || ''}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="中星">中星</MenuItem>
+                  <MenuItem value="建興">建興</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Grid>
+
+          <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="支票號碼"
+                name="check_number"
+                value={editedProject.check_number || ''}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="銀行分行"
+                name="bank_branch"
+                value={editedProject.bank_branch || ''}
+                onChange={handleChange}
+                margin="normal"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="到期日"
+                type="date"
+                name="due_date"
+                value={editedProject.due_date || ''}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+              />
+            </Box>
+          </Grid>
+        </>
       )}
 
             <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
