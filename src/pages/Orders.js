@@ -4,6 +4,7 @@ import { Box, Paper, Button, TextField, Select, FormControl, InputLabel, Dialog,
 import { Add } from "@mui/icons-material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { useNavigate } from 'react-router-dom';
+import { geocodeAddress, combineAddress } from '../lib/geocoding';
 // MapComponent import removed if not directly used on this page layout
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
@@ -381,23 +382,11 @@ const paginatedProjects = filteredAndStatusProjects.slice(page * rowsPerPage, pa
   // For now, it will update the local 'projects' state in Orders.js
   const handleSaveProject = async () => {
     try {
-      // 1. 組合完整地址
-      const fullAddress = `${projectData.site_city || ''}${projectData.site_district || ''}${projectData.site_address || ''}`;
-      let latitude = null;
-      let longitude = null;
-  
-      // 2. 取得 Google Maps API Key
-      const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
-      if (apiKey && fullAddress) {
-        // 3. 呼叫 Google Geocoding API
-        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`;
-        const response = await fetch(geocodeUrl);
-        const result = await response.json();
-        if (result.status === 'OK' && result.results && result.results[0]) {
-          latitude = result.results[0].geometry.location.lat;
-          longitude = result.results[0].geometry.location.lng;
-        }
-      }
+      // 1. 組合完整地址並進行 geocoding
+      const fullAddress = combineAddress(projectData.site_city, projectData.site_district, projectData.site_address);
+      const coords = await geocodeAddress(fullAddress);
+      const latitude = coords?.latitude || null;
+      const longitude = coords?.longitude || null;
   
       // 4. 寫入 Supabase
       const { data, error } = await supabase
