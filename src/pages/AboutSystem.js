@@ -158,7 +158,7 @@ const AboutSystem = () => {
     {
       name: '蔡政穎',
       role: '前端開發',
-      avatar: 'https://avatars.githubusercontent.com/u/130119566?s=400&u=a81b67275d7dc6797d9db710f6c5a4e98aee3d66&v=4',
+      avatar: 'https://avatars.githubusercontent.com/u/99543007?v=4',
       email: 'a0909726919@gmail.com',
       github: 'https://github.com/stonk0105',
       quote: '嗨。'
@@ -195,8 +195,8 @@ const AboutSystem = () => {
   ];
 
   const easterEgg = {
-    drink: '珍珠奶茶',
-    animal: '貓咪',
+    drink: '烤糖蕎麥凍奶青',
+    animal: '山雀',
   };
 
   const handleDeveloperClick = (developer) => {
@@ -470,7 +470,7 @@ const AboutSystem = () => {
                 borderRadius: 2,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.12)'
               }}
-              src="https://www.youtube.com/embed/sPTc4_vDMfo" 
+              src="https://www.youtube.com/embed/gikgG-1I1rw" 
               title="系統使用說明" 
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
               allowFullScreen
@@ -627,7 +627,7 @@ const AboutSystem = () => {
             }}
           >
             <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
-              開發者的小秘密
+              恭喜你發現我的小秘密
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Avatar sx={{ bgcolor: 'primary.light' }}>

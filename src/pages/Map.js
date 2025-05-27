@@ -351,7 +351,7 @@ const MapComponent = ({ projects = [] }) => {
       </Box>
 
       <Box sx={{ mb: 2, px: 1 }}>
-        <Typography gutterBottom>Circle Radius: {circleRadius}m</Typography>
+        <Typography gutterBottom>方圓半徑: {circleRadius}m</Typography>
         <Slider
           value={circleRadius}
           onChange={handleSliderChange}
@@ -359,7 +359,7 @@ const MapComponent = ({ projects = [] }) => {
           valueLabelDisplay="auto"
           step={50} 
           min={0}
-          max={2000} 
+          max={10000} 
         />
           </Box>
 

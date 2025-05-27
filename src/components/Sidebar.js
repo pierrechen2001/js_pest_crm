@@ -32,7 +32,9 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 // 自定義樣式元件
-const StyledDrawer = styled(Drawer)(({ theme, collapsed }) => ({
+const StyledDrawer = styled(Drawer, {
+  shouldForwardProp: (prop) => prop !== 'collapsed',
+})(({ theme, collapsed }) => ({
   width: collapsed ? 64 : 240,
   flexShrink: 0,
   '& .MuiDrawer-paper': {
@@ -150,7 +152,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     <StyledDrawer
       variant="permanent"
       anchor="left"
-      collapsed={collapsed}
+      PaperProps={{ style: { width: collapsed ? 64 : 240 } }}
     >
       {/* 系統名稱 */}
       <Box sx={{ 
