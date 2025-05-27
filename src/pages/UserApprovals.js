@@ -85,6 +85,12 @@ const UserApprovals = () => {
   };
 
   const handleDelete = async (userId) => {
+    if (user && user.id === userId) {
+      setError('您不能刪除自己的帳號');
+      setOpenSnackbar(true);
+      return; // Prevent self-deletion
+    }
+
     const ok = window.confirm('確定要刪除此已審核用戶嗎？此操作不可復原。');
     if (!ok) return;
 
@@ -101,6 +107,27 @@ const UserApprovals = () => {
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('刪除用戶時發生錯誤');
+      setOpenSnackbar(true);
+    }
+  };
+
+  const handleSetAdmin = async (userId) => {
+    const ok = window.confirm('確定要將此用戶設為管理員嗎？');
+    if (!ok) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ role: 'admin' })
+        .eq('id', userId);
+      if (error) throw error;
+
+      setSuccess('用戶已成功設為管理員');
+      setOpenSnackbar(true);
+      await fetchUsers();
+    } catch (err) {
+      console.error('Error setting user as admin:', err);
+      setError('設為管理員時發生錯誤');
       setOpenSnackbar(true);
     }
   };
@@ -172,6 +199,19 @@ const UserApprovals = () => {
                         >
                           刪除
                         </Button>
+                        {u.role === 'admin' ? (
+                          <Typography variant="body2" component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+                            &nbsp;&nbsp;&nbsp;&nbsp;已為管理員&nbsp;&nbsp;&nbsp;&nbsp;
+                          </Typography>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            sx={{ ml: 1 }}
+                            onClick={() => handleSetAdmin(u.id)}
+                          >
+                            設為管理員
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
