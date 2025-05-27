@@ -206,7 +206,7 @@ export default function OrderDetail() {
       }
 
       // 確保日誌類型是有效的值
-      const validLogTypes = ['工程', '財務', '行政', '使用藥劑'];
+      const validLogTypes = ['工程', '財務', '行政', '藥劑'];
       // 移除所有空白字符，包括空格、換行等
       const logType = newLog.log_type.replace(/\s+/g, '');
       
@@ -245,7 +245,7 @@ export default function OrderDetail() {
         return;
       }
 
-      if (logType === '使用藥劑') {
+      if (logType === '藥劑') {
         if (!newLog.medicine_id || !newLog.medicine_quantity) {
           alert('請選擇藥劑並輸入使用數量！');
           return;
@@ -262,8 +262,8 @@ export default function OrderDetail() {
         created_by: user?.name || '未知使用者'
       };
 
-      // 如果是使用藥劑類型，將藥劑資訊加入內容中
-      if (logType === '使用藥劑') {
+      // 如果是藥劑類型，將藥劑資訊加入內容中
+      if (logType === '藥劑') {
         const selectedMedicine = medicines.find(m => m.id === newLog.medicine_id);
         if (!selectedMedicine) {
           alert('找不到選擇的藥劑！');
@@ -361,6 +361,13 @@ export default function OrderDetail() {
         project_notes: editedProject.project_notes,
         payment_method: editedProject.payment_method,
         payment_date: editedProject.payment_date,
+        amount: parseFloat(editedProject.amount) || null,
+        fee: parseFloat(editedProject.fee) || null,
+        payer: editedProject.payer,
+        payee: editedProject.payee,
+        check_number: editedProject.check_number,
+        bank_branch: editedProject.bank_branch,
+        due_date: editedProject.due_date,
         construction_status: editedProject.construction_status,
         billing_status: editedProject.billing_status,
         contact1_role: editedProject.contact1_role,
@@ -472,8 +479,8 @@ export default function OrderDetail() {
         throw new Error('找不到要刪除的日誌記錄');
       }
 
-      // 如果是使用藥劑的日誌，先刪除對應的使用記錄
-      if (logToDelete.log_type === '使用藥劑') {
+      // 如果是藥劑的日誌，先刪除對應的使用記錄
+      if (logToDelete.log_type === '藥劑') {
         // 從內容中解析藥劑名稱和數量
         const [medicineName, quantity] = logToDelete.content.split('-');
         
@@ -799,10 +806,21 @@ export default function OrderDetail() {
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Typography><strong>收款方式：</strong> {project.payment_method}</Typography>
+                  <Typography><strong>收款金額：</strong> ${project.amount?.toLocaleString()}</Typography>
+                  <Typography><strong>手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography><strong>收款日期：</strong> {project.payment_date}</Typography>
+                  <Typography><strong>付款人：</strong> {project.payer}</Typography>
+                  <Typography><strong>收款人：</strong> {project.payee}</Typography>
                 </Grid>
+                {project.payment_method === '支票' && (
+                  <Grid item xs={12}>
+                    <Typography><strong>支票號碼：</strong> {project.check_number}</Typography>
+                    <Typography><strong>銀行分行：</strong> {project.bank_branch}</Typography>
+                    <Typography><strong>到期日：</strong> {project.due_date}</Typography>
+                  </Grid>
+                )}
               </Grid>
             </Box>
             <Divider sx={{ mb: 3 }} />
@@ -1043,14 +1061,18 @@ export default function OrderDetail() {
       {/* 收款資訊 */}
       <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
         <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="收款方式"
-            name="payment_method"
-            value={editedProject.payment_method || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>收款方式</InputLabel>
+            <Select
+              name="payment_method"
+              value={editedProject.payment_method || ''}
+              onChange={handleChange}
+            >
+              <MenuItem value="現金">現金</MenuItem>
+              <MenuItem value="匯款">匯款</MenuItem>
+              <MenuItem value="支票">支票</MenuItem>
+            </Select>
+          </FormControl>
         </Box>
         <Box sx={{ flex: 1 }}>
           <TextField
@@ -1065,6 +1087,97 @@ export default function OrderDetail() {
           />
         </Box>
       </Grid>
+
+      {/* 收款金額和手續費 */}
+      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="收款金額"
+            type="number"
+            name="amount"
+            value={editedProject.amount || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="手續費"
+            type="number"
+            name="fee"
+            value={editedProject.fee || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+      </Grid>
+
+      {/* 付款人和收款人 */}
+      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <TextField
+            fullWidth
+            label="付款人"
+            name="payer"
+            value={editedProject.payer || ''}
+            onChange={handleChange}
+            margin="normal"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>收款人</InputLabel>
+            <Select
+              name="payee"
+              value={editedProject.payee || ''}
+              onChange={handleChange}
+            >
+              <MenuItem value="中星">中星</MenuItem>
+              <MenuItem value="建興">建興</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </Grid>
+
+      {/* 支票相關資訊 */}
+      {editedProject.payment_method === '支票' && (
+        <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <TextField
+              fullWidth
+              label="支票號碼"
+              name="check_number"
+              value={editedProject.check_number || ''}
+              onChange={handleChange}
+              margin="normal"
+            />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <TextField
+              fullWidth
+              label="銀行分行"
+              name="bank_branch"
+              value={editedProject.bank_branch || ''}
+              onChange={handleChange}
+              margin="normal"
+            />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <TextField
+              fullWidth
+              label="到期日"
+              type="date"
+              name="due_date"
+              value={editedProject.due_date || ''}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              margin="normal"
+            />
+          </Box>
+        </Grid>
+      )}
 
             <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
             {/* Contact rows: one per person */}
@@ -1449,7 +1562,7 @@ export default function OrderDetail() {
                   <MenuItem value="工程">工程</MenuItem>
                   <MenuItem value="財務">財務</MenuItem>
                   <MenuItem value="行政">行政</MenuItem>
-                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
+                  <MenuItem value="藥劑">藥劑</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -1476,8 +1589,8 @@ export default function OrderDetail() {
             </Box>
           </Grid>
 
-          {/* 藥劑選擇（僅在使用藥劑類型時顯示） */}
-          {newLog.log_type === '使用藥劑' && (
+          {/* 藥劑選擇（僅在藥劑類型時顯示） */}
+          {newLog.log_type === '藥劑' && (
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={6}>
                 <FormControl fullWidth>
@@ -1530,7 +1643,7 @@ export default function OrderDetail() {
             onClick={handleAddLog} 
             variant="contained" 
             color="primary"
-            disabled={!newLog.content || (newLog.log_type === '使用藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))}
+            disabled={!newLog.content || (newLog.log_type === '藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))}
           >
             新增
           </Button>
@@ -1590,7 +1703,7 @@ export default function OrderDetail() {
                   <MenuItem value="工程">工程</MenuItem>
                   <MenuItem value="財務">財務</MenuItem>
                   <MenuItem value="行政">行政</MenuItem>
-                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
+                  <MenuItem value="藥劑">藥劑</MenuItem>
                 </Select>
               </FormControl>
             </Box>
