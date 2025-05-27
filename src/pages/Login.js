@@ -118,32 +118,6 @@ const Login = () => {
         // existingUser remains null, fetchError might contain details but we treat it as not found
       }
   
-      if (existingUser) {
-        try {
-          // Check if the user is the speciific admin email
-          const role = (existingUser.email === "jongshingpest@gmail.com") ? "admin" : "user";
-          if (existingUser.email === "jongshingpest@gmail.com"){
-            console.log("is jonghsingpest")
-          }else{
-            console.log("is not pest")
-          }
-          // Update the user's role in the database
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({ role })
-            .eq('email', existingUser.email);
-      
-          if (updateError) {
-            console.error("Error updating user role:", updateError.message);
-          } else {
-            console.log(`User role updated to ${role} for ${existingUser.email}`);
-          }
-        } catch (err) {
-          console.error("Failed to update role:", err.message);
-        }
-      } else {
-        console.log("User not found.");
-      }
   
       if (!existingUser) {
         console.log("User not found in database, creating a new one...");
@@ -250,7 +224,7 @@ const Login = () => {
               textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
             }}
           >
-            中興客戶管理系統
+            中星客戶管理系統
           </Typography>
           <Typography 
             variant="h6" 
