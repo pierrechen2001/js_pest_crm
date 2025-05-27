@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 // MapComponent import removed if not directly used on this page layout
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲"];
-const billingStatusOptions = ["未請款", "部分請款", "已請款"];
+const billingStatusOptions = ["未請款", "部分請款", "已結清"];
 const getStatusStyle = (status, type) => {
   if (type === 'construction') {
     switch (status) {
@@ -29,7 +29,7 @@ const getStatusStyle = (status, type) => {
         return { bg: 'rgba(128, 128, 128, 0.1)', color: 'gray' };
       case '部分請款':
         return { bg: 'rgba(255, 152, 0, 0.1)', color: '#f57c00' };
-      case '已請款':
+      case '已結清':
         return { bg: 'rgba(76, 175, 80, 0.1)', color: 'green' };
       default:
         return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
@@ -182,8 +182,8 @@ export default function Orders({ projects: initialProjects = [], customers: init
 
     // 判斷兩個欄位都已達指定狀態
     if (
-      (field === 'construction_status' && value === '已完成' && otherStatus === '已請款') ||
-      (field === 'billing_status' && value === '已請款' && otherStatus === '已完成')
+      (field === 'construction_status' && value === '已完成' && otherStatus === '已結清') ||
+      (field === 'billing_status' && value === '已結清' && otherStatus === '已完成')
     ) {
       // 先查詢該專案是否已設置追蹤
       const { data: projectDetail, error: detailError } = await supabase
