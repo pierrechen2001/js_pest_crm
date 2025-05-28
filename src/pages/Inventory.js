@@ -25,7 +25,10 @@ const Inventory = () => {
     material_type_id: "",
     name: "",
     status: "正常",
-    last_maintenance: null
+    last_maintenance: null,
+    unit_price: "",
+    invoice_number: "",
+    vendor: ""
   });
 
   // 新增藥劑的狀態
@@ -42,7 +45,9 @@ const Inventory = () => {
   const [newOrder, setNewOrder] = useState({
     quantity: 0,
     date: "",
-    vendor: ""
+    vendor: "",
+    unit_price: "",
+    invoice_number: ""
   });
   const [newUsage, setNewUsage] = useState({
     quantity: 0,
@@ -176,7 +181,10 @@ const Inventory = () => {
         material_type_id: "",
         name: "",
         status: "正常",
-        last_maintenance: null
+        last_maintenance: null,
+        unit_price: "",
+        invoice_number: "",
+        vendor: ""
       });
     } catch (error) {
       console.error('Error adding material:', error);
@@ -294,7 +302,10 @@ const Inventory = () => {
         .from('material_components')
         .update({
           status: editingMaterial.status,
-          last_maintenance: editingMaterial.last_maintenance
+          last_maintenance: editingMaterial.last_maintenance,
+          unit_price: editingMaterial.unit_price,
+          invoice_number: editingMaterial.invoice_number,
+          vendor: editingMaterial.vendor
         })
         .eq('id', editingMaterial.id)
         .select(`
@@ -347,7 +358,7 @@ const Inventory = () => {
   const handleAddOrder = async () => {
     try {
       // 驗證必填欄位
-      if (!newOrder.quantity || !newOrder.date || !newOrder.vendor) {
+      if (!newOrder.quantity || !newOrder.date || !newOrder.vendor || !newOrder.unit_price || !newOrder.invoice_number) {
         alert('請填寫所有必填欄位！');
         return;
       }
@@ -372,7 +383,9 @@ const Inventory = () => {
           medicine_id: selectedMedicine.id,
           quantity: quantity,
           date: newOrder.date,
-          vendor: newOrder.vendor
+          vendor: newOrder.vendor,
+          unit_price: newOrder.unit_price,
+          invoice_number: newOrder.invoice_number
         }]);
 
       if (error) {
@@ -397,7 +410,9 @@ const Inventory = () => {
       setNewOrder({
         quantity: 0,
         date: "",
-        vendor: ""
+        vendor: "",
+        unit_price: "",
+        invoice_number: ""
       });
     } catch (error) {
       console.error('Error adding order:', error);
@@ -786,11 +801,13 @@ const Inventory = () => {
 
       // 根據記錄類型添加額外欄位
       if (historyType === 'order') {
-        if (!editingRecord.vendor) {
-          alert('請填寫廠商資訊！');
+        if (!editingRecord.vendor || !editingRecord.unit_price || !editingRecord.invoice_number) {
+          alert('請填寫所有必填欄位！');
           return;
         }
         updateData.vendor = editingRecord.vendor;
+        updateData.unit_price = editingRecord.unit_price;
+        updateData.invoice_number = editingRecord.invoice_number;
       } else {
         if (!editingRecord.project) {
           alert('請選擇專案！');
@@ -1117,6 +1134,9 @@ const Inventory = () => {
                     <TableCell>名稱</TableCell>
                   <TableCell>狀態</TableCell>
                   <TableCell>最後維護日期</TableCell>
+                  <TableCell>單價</TableCell>
+                  <TableCell>發票號碼</TableCell>
+                  <TableCell>廠商</TableCell>
                   <TableCell>操作</TableCell>
                   </TableRow>
                 </TableHead>
@@ -1128,6 +1148,9 @@ const Inventory = () => {
                     <TableCell>{material.name}</TableCell>
                     <TableCell>{material.status}</TableCell>
                     <TableCell>{material.last_maintenance || '未設定'}</TableCell>
+                    <TableCell>{material.unit_price || '未設定'}</TableCell>
+                    <TableCell>{material.invoice_number || '未設定'}</TableCell>
+                    <TableCell>{material.vendor || '未設定'}</TableCell>
                       <TableCell>
                         <Button
                         variant="outlined"
@@ -1274,6 +1297,33 @@ const Inventory = () => {
                   fullWidth
                   InputLabelProps={{ shrink: true }}
                 />
+
+                <TextField
+                  label="單價"
+                  type="text"
+                  value={newMaterial.unit_price}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setNewMaterial(prev => ({ ...prev, unit_price: value }));
+                    }
+                  }}
+                  fullWidth
+                />
+
+                <TextField
+                  label="發票號碼"
+                  value={newMaterial.invoice_number}
+                  onChange={(e) => setNewMaterial(prev => ({ ...prev, invoice_number: e.target.value }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="廠商"
+                  value={newMaterial.vendor}
+                  onChange={(e) => setNewMaterial(prev => ({ ...prev, vendor: e.target.value }))}
+                  fullWidth
+                />
               </>
             ) : (
               <TextField
@@ -1331,6 +1381,33 @@ const Inventory = () => {
                   onChange={(e) => setEditingMaterial(prev => ({ ...prev, last_maintenance: e.target.value }))}
                   fullWidth
                   InputLabelProps={{ shrink: true }}
+                />
+
+                <TextField
+                  label="單價"
+                  type="text"
+                  value={editingMaterial?.unit_price || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setEditingMaterial(prev => ({ ...prev, unit_price: value }));
+                    }
+                  }}
+                  fullWidth
+                />
+
+                <TextField
+                  label="發票號碼"
+                  value={editingMaterial?.invoice_number || ''}
+                  onChange={(e) => setEditingMaterial(prev => ({ ...prev, invoice_number: e.target.value }))}
+                  fullWidth
+                />
+
+                <TextField
+                  label="廠商"
+                  value={editingMaterial?.vendor || ''}
+                  onChange={(e) => setEditingMaterial(prev => ({ ...prev, vendor: e.target.value }))}
+                  fullWidth
                 />
               </>
             ) : (
@@ -1412,6 +1489,26 @@ const Inventory = () => {
               label="廠商"
               value={newOrder.vendor}
               onChange={(e) => setNewOrder(prev => ({ ...prev, vendor: e.target.value }))}
+              fullWidth
+            />
+
+            <TextField
+              label="單價"
+              type="text"
+              value={newOrder.unit_price}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setNewOrder(prev => ({ ...prev, unit_price: value }));
+                }
+              }}
+              fullWidth
+            />
+
+            <TextField
+              label="發票號碼"
+              value={newOrder.invoice_number}
+              onChange={(e) => setNewOrder(prev => ({ ...prev, invoice_number: e.target.value }))}
               fullWidth
             />
           </Box>
@@ -1532,7 +1629,11 @@ const Inventory = () => {
                     <TableCell>日期</TableCell>
                         <TableCell>數量</TableCell>
                     {historyType === 'order' ? (
-                      <TableCell>廠商</TableCell>
+                      <>
+                        <TableCell>廠商</TableCell>
+                        <TableCell>單價</TableCell>
+                        <TableCell>發票號碼</TableCell>
+                      </>
                     ) : (
                         <TableCell>專案</TableCell>
                     )}
@@ -1545,10 +1646,14 @@ const Inventory = () => {
                       <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
                       <TableCell>{record.quantity}</TableCell>
                       {historyType === 'order' ? (
-                        <TableCell>{record.vendor}</TableCell>
+                        <>
+                          <TableCell>{record.vendor}</TableCell>
+                          <TableCell>{record.unit_price || '未設定'}</TableCell>
+                          <TableCell>{record.invoice_number || '未設定'}</TableCell>
+                        </>
                       ) : (
                           <TableCell>{record.project}</TableCell>
-      )}
+                      )}
                       <TableCell>
                         <Button
                           variant="outlined"
@@ -1619,13 +1724,37 @@ const Inventory = () => {
             />
 
             {historyType === 'order' ? (
-              <TextField
-                label="廠商"
-                value={editingRecord?.vendor || ''}
-                onChange={(e) => setEditingRecord(prev => ({ ...prev, vendor: e.target.value }))}
-                fullWidth
-                required
-              />
+              <>
+                <TextField
+                  label="廠商"
+                  value={editingRecord?.vendor || ''}
+                  onChange={(e) => setEditingRecord(prev => ({ ...prev, vendor: e.target.value }))}
+                  fullWidth
+                  required
+                />
+
+                <TextField
+                  label="單價"
+                  type="text"
+                  value={editingRecord?.unit_price || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setEditingRecord(prev => ({ ...prev, unit_price: value }));
+                    }
+                  }}
+                  fullWidth
+                  required
+                />
+
+                <TextField
+                  label="發票號碼"
+                  value={editingRecord?.invoice_number || ''}
+                  onChange={(e) => setEditingRecord(prev => ({ ...prev, invoice_number: e.target.value }))}
+                  fullWidth
+                  required
+                />
+              </>
             ) : (
               <Autocomplete
                 options={projects}
