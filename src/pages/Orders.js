@@ -40,7 +40,7 @@ import { geocodeAddress, combineAddress } from '../lib/geocoding';
 // MapComponent import removed if not directly used on this page layout
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲", "已估價", "取消"];
-const billingStatusOptions = ["未請款", "部分請款", "已請款", "取消"];
+const billingStatusOptions = ["未請款", "部分請款", "已結清", "取消"];
 const getStatusStyle = (status, type) => {
   if (type === 'construction') {
     switch (status) {
@@ -1330,7 +1330,7 @@ const updateContact = (index, field, value) => {
           <Divider sx={{ my: 2 }} />
           <Typography variant="h6" gutterBottom>收款資訊</Typography>
 
-          {/* 收款方式和收款時間 */}
+          {/* 收款方式和結清日期 */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
             <FormControl fullWidth>
               <InputLabel>收款方式</InputLabel>
@@ -1357,12 +1357,12 @@ const updateContact = (index, field, value) => {
 
           {/* 收款金額 */}
           <TextField
-            name="amount"
+            name="construction_fee"
             label="收款金額"
             type="number"
             fullWidth
             margin="normal"
-            value={projectData.amount || ""}
+            value={projectData.construction_fee || ""}
             onChange={handleChange}
           />
 
@@ -1370,7 +1370,7 @@ const updateContact = (index, field, value) => {
           {projectData.payment_method === '匯款' && (
             <TextField
               name="fee"
-              label="手續費"
+              label="匯款手續費"
               type="number"
               fullWidth
               margin="normal"

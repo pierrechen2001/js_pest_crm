@@ -33,12 +33,35 @@ import {
   TableHead,
   TableRow,
   Chip,
+  InputAdornment,
 } from '@mui/material';
 import { Edit, Delete, ArrowBack, Add, Business, Receipt, LocationOn, Phone, Fax, Person, Note, Info, Build, Payment, ContactPhone, CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲", "估價", "取消"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款", "取消"];
 const taiwanCities = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"];
+
+// 狀態樣式函數
+const getStatusStyle = (status, type) => {
+  const statusColors = {
+    construction: {
+      "未開始": { bg: "#e3f2fd", color: "#1976d2" },
+      "進行中": { bg: "#fff3e0", color: "#f57c00" },
+      "已完成": { bg: "#e8f5e8", color: "#388e3c" },
+      "延遲": { bg: "#ffebee", color: "#d32f2f" },
+      "估價": { bg: "#f3e5f5", color: "#7b1fa2" },
+      "取消": { bg: "#fafafa", color: "#616161" }
+    },
+    billing: {
+      "未請款": { bg: "#e3f2fd", color: "#1976d2" },
+      "部分請款": { bg: "#fff3e0", color: "#f57c00" },
+      "已請款": { bg: "#e8f5e8", color: "#388e3c" },
+      "取消": { bg: "#fafafa", color: "#616161" }
+    }
+  };
+  
+  return statusColors[type]?.[status] || { bg: "#fafafa", color: "#616161" };
+};
 const taiwanDistricts = {
   "台北市": [
     "松山區", "信義區", "大安區", "中山區", "中正區", "大同區", "萬華區", 
@@ -51,6 +74,8 @@ const taiwanDistricts = {
   ],
   // 其他縣市區域略...
 };
+
+const validLogTypes = ['工程', '財務', '行政', '藥劑'];
 
 export default function OrderDetail() {
   const { projectId } = useParams();
@@ -65,6 +90,7 @@ export default function OrderDetail() {
   const [customer, setCustomer] = useState(null);
   const [projectLogs, setProjectLogs] = useState([]);
   const [openLogDialog, setOpenLogDialog] = useState(false);
+  const [openFinanceLogDialog, setOpenFinanceLogDialog] = useState(false);
   const [newLog, setNewLog] = useState({
     log_type: '工程',
     log_date: new Date().toISOString().split('T')[0],
@@ -73,7 +99,19 @@ export default function OrderDetail() {
     medicine_id: '',
     medicine_quantity: ''
   });
-
+  // 在 OrderDetail 組件內
+  const [financeFields, setFinanceFields] = useState({
+    invoice_number: '',
+    amount_no_tax: '',
+    tax: '',
+    amount_with_tax: '',
+    retention_invoice_issued: '否',
+    retention_percent: '',
+    retention_amount: '',
+    taxManuallyChanged: false,
+    amountWithTaxManuallyChanged: false,
+    retentionAmountManuallyChanged: false
+  });
   const [editedProject, setEditedProject] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openEditProjectDialog, setOpenEditProjectDialog] = useState(false);
@@ -81,7 +119,18 @@ export default function OrderDetail() {
   const [medicines, setMedicines] = useState([]);
 
   const handleOpenProjectDialog = () => {
-    setEditedProject(project);
+    // 準備編輯項目數據，確保 construction_items 有正確的格式
+    let constructionItems = [];
+    if (project.construction_items && Array.isArray(project.construction_items)) {
+      constructionItems = project.construction_items;
+    } else if (project.construction_item) {
+      constructionItems = project.construction_item.split(',').map(item => item.trim()).filter(Boolean);
+    }
+    
+    setEditedProject({
+      ...project,
+      construction_items: constructionItems
+    });
     setOpenEditProjectDialog(true);
   };
 
@@ -101,11 +150,34 @@ export default function OrderDetail() {
   const [editingLog, setEditingLog] = useState(null);
   const [openDeleteLogDialog, setOpenDeleteLogDialog] = useState(false);
   const [deletingLogId, setDeletingLogId] = useState(null);
+  
+  // 新增：財務日誌編輯相關狀態
+  const [openEditFinanceLogDialog, setOpenEditFinanceLogDialog] = useState(false);
+  const [editingFinanceLog, setEditingFinanceLog] = useState(null);
+  const [editFinanceFields, setEditFinanceFields] = useState({
+    invoice_number: '',
+    amount_no_tax: '',
+    tax: '',
+    amount_with_tax: '',
+    retention_invoice_issued: '否',
+    retention_percent: '',
+    retention_amount: '',
+    taxManuallyChanged: false,
+    amountWithTaxManuallyChanged: false,
+    retentionAmountManuallyChanged: false
+  });
   const location = useLocation();
   const [trackType, setTrackType] = useState("month"); // "month" or "year"
   const [trackValue, setTrackValue] = useState(1);
   const [trackDialogOpen, setTrackDialogOpen] = useState(false);
   const [trackRefresh, setTrackRefresh] = useState(0);
+  
+  // 施工項目相關狀態
+  const [constructionItemOptions, setConstructionItemOptions] = useState([
+    "白蟻防治", "除蟲", "環境消毒", "清潔", "裝修", "維修", "檢測"
+  ]);
+  const [newConstructionItem, setNewConstructionItem] = useState("");
+  const [constructionItemDialogOpen, setConstructionItemDialogOpen] = useState(false);
   
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -144,7 +216,7 @@ export default function OrderDetail() {
           .from('project_log')
           .select('*')
           .eq('project_id', projectId)
-          .order('log_date', { ascending: false });
+          .order('log_date', { ascending: true });
 
         if (logsError) throw logsError;
         setProjectLogs(logsData || []);
@@ -198,83 +270,223 @@ export default function OrderDetail() {
     }));
   };
 
+  // 處理施工項目選擇
+  const handleConstructionItemChange = (event, newValue) => {
+    setEditedProject(prev => ({
+      ...prev,
+      construction_items: newValue || [],
+      construction_item: (newValue || []).join(", ") // 保持向後兼容性
+    }));
+  };
+
+  // 新增自定義施工項目
+  const handleAddConstructionItem = () => {
+    if (newConstructionItem.trim() && !constructionItemOptions.includes(newConstructionItem.trim())) {
+      const newItem = newConstructionItem.trim();
+      setConstructionItemOptions(prev => [...prev, newItem]);
+      const currentItems = editedProject.construction_items || [];
+      setEditedProject(prev => ({
+        ...prev,
+        construction_items: [...currentItems, newItem],
+        construction_item: [...currentItems, newItem].join(", ")
+      }));
+      setNewConstructionItem("");
+      setConstructionItemDialogOpen(false);
+    }
+  };
+
+  // 刪除施工項目
+  const handleRemoveConstructionItem = (itemToRemove) => {
+    setEditedProject(prev => {
+      const updatedItems = (prev.construction_items || []).filter(item => item !== itemToRemove);
+      return {
+        ...prev,
+        construction_items: updatedItems,
+        construction_item: updatedItems.join(", ")
+      };
+    });
+  };
+
+  // const handleAddLog = async () => {
+  //   try {
+  //     // 驗證必填欄位
+  //     if (!newLog.content) {
+  //       alert('請輸入日誌內容！');
+  //       return;
+  //     }
+
+  //     // 確保日誌類型是有效的值
+  //     const validLogTypes = ['工程', '財務', '行政', '藥劑'];
+  //     // 移除所有空白字符，包括空格、換行等
+  //     const logType = newLog.log_type.replace(/\s+/g, '');
+      
+  //     console.log('=== 日誌類型追蹤 ===');
+  //     console.log('表單中的原始值:', newLog.log_type);
+  //     console.log('處理後的值:', logType);
+  //     console.log('允許的值列表:', validLogTypes);
+  //     console.log('是否在允許列表中:', validLogTypes.includes(logType));
+  //     console.log('值的長度:', logType.length);
+  //     console.log('值的字符編碼:', Array.from(logType).map(c => c.charCodeAt(0)));
+      
+  //     // 詳細比較每個字符
+  //     console.log('=== 字符比較 ===');
+  //     validLogTypes.forEach(validType => {
+  //       console.log(`比較 "${logType}" 和 "${validType}":`);
+  //       console.log('長度是否相同:', logType.length === validType.length);
+  //       console.log('字符編碼比較:');
+  //       Array.from(logType).forEach((char, i) => {
+  //         console.log(`位置 ${i}: ${char}(${char.charCodeAt(0)}) vs ${validType[i]}(${validType[i]?.charCodeAt(0)})`);
+  //       });
+  //     });
+  //     console.log('===================');
+
+  //     // 確保值完全匹配資料庫約束
+  //     if (!validLogTypes.includes(logType)) {
+  //       const errorMessage = `無效的日誌類型！\n\n` +
+  //         `您選擇的類型: "${logType}"\n` +
+  //         `允許的類型: ${validLogTypes.join(', ')}\n\n` +
+  //         '請選擇正確的日誌類型。\n\n' +
+  //         '技術細節：\n' +
+  //         `- 值的長度: ${logType.length}\n` +
+  //         `- 字符編碼: ${Array.from(logType).map(c => c.charCodeAt(0)).join(', ')}\n\n` +
+  //         '注意：如果您的選擇看起來正確但仍然失敗，請聯繫系統管理員更新資料庫約束。';
+  //       console.error(errorMessage);
+  //       alert(errorMessage);
+  //       return;
+  //     }
+
+  //     if (logType === '藥劑') {
+  //       if (!newLog.medicine_id || !newLog.medicine_quantity) {
+  //         alert('請選擇藥劑並輸入使用數量！');
+  //         return;
+  //       }
+  //     }
+
+  //     // 準備日誌資料
+  //     const logDataToInsert = {
+  //       project_id: projectId,
+  //       log_type: logType,
+  //       log_date: newLog.log_date,
+  //       content: newLog.content.trim(),
+  //       notes: (newLog.notes || '').trim(),
+  //       created_by: user?.name || '未知使用者'
+  //     };
+
+  //     // 如果是藥劑類型，將藥劑資訊加入內容中
+  //     if (logType === '藥劑') {
+  //       const selectedMedicine = medicines.find(m => m.id === newLog.medicine_id);
+  //       if (!selectedMedicine) {
+  //         alert('找不到選擇的藥劑！');
+  //         return;
+  //       }
+  //       // 修改內容格式為 "藥劑種類-使用量"
+  //       logDataToInsert.content = `${selectedMedicine.name}-${newLog.medicine_quantity}`;
+
+  //       // 新增使用記錄到 medicine_usages
+  //       const { error: usageError } = await supabase
+  //         .from('medicine_usages')
+  //         .insert([{
+  //           medicine_id: newLog.medicine_id,
+  //           quantity: parseFloat(newLog.medicine_quantity),
+  //           date: newLog.log_date,
+  //           project: project.project_name
+  //         }]);
+
+  //       if (usageError) {
+  //         console.error('Error inserting usage:', usageError);
+  //         throw new Error('新增藥劑使用記錄失敗：' + usageError.message);
+  //       }
+  //     }
+
+  //     console.log('=== 準備插入的資料 ===');
+  //     console.log('完整的插入資料:', JSON.stringify(logDataToInsert, null, 2));
+  //     console.log('log_type 的最終值:', logDataToInsert.log_type);
+  //     console.log('===================');
+
+  //     // 插入日誌記錄
+  //     const { data: insertedLog, error: logError } = await supabase
+  //       .from('project_log')
+  //       .insert([logDataToInsert])
+  //       .select();
+
+  //     if (logError) {
+  //       console.error('Error inserting log:', logError);
+  //       console.error('Failed data:', JSON.stringify(logDataToInsert, null, 2));
+        
+  //       // 更詳細的錯誤訊息
+  //       let errorMessage = '新增日誌失敗！\n\n';
+        
+  //       if (logError.message.includes('project_log_log_type_check')) {
+  //         errorMessage += '原因：日誌類型不符合資料庫要求\n\n' +
+  //           `您選擇的類型: "${logDataToInsert.log_type}"\n` +
+  //           `允許的類型: ${validLogTypes.join(', ')}\n\n` +
+  //           '請選擇正確的日誌類型。\n\n' +
+  //           '技術細節：\n' +
+  //           `- 值的長度: ${logDataToInsert.log_type.length}\n` +
+  //           `- 字符編碼: ${Array.from(logDataToInsert.log_type).map(c => c.charCodeAt(0)).join(', ')}`;
+  //       } else {
+  //         errorMessage += `錯誤訊息：${logError.message}\n\n` +
+  //           '請檢查輸入的資料是否正確。';
+  //       }
+        
+  //       throw new Error(errorMessage);
+  //     }
+
+  //     // 更新日誌列表
+  //     setProjectLogs([insertedLog[0], ...projectLogs]);
+      
+  //     // 重置表單
+  //     setOpenLogDialog(false);
+  //     setNewLog({
+  //       log_type: '工程',
+  //       log_date: new Date().toISOString().split('T')[0],
+  //       content: '',
+  //       notes: '',
+  //       medicine_id: '',
+  //       medicine_quantity: ''
+  //     });
+
+  //   } catch (error) {
+  //     console.error('Error in handleAddLog:', error);
+  //     setError(error.message);
+  //     alert(error.message);
+  //   }
+  // };
+
   const handleAddLog = async () => {
     try {
-      // 驗證必填欄位
-      if (!newLog.content) {
-        alert('請輸入日誌內容！');
-        return;
-      }
-
-      // 確保日誌類型是有效的值
-      const validLogTypes = ['工程', '財務', '行政', '藥劑'];
-      // 移除所有空白字符，包括空格、換行等
-      const logType = newLog.log_type.replace(/\s+/g, '');
-      
-      console.log('=== 日誌類型追蹤 ===');
-      console.log('表單中的原始值:', newLog.log_type);
-      console.log('處理後的值:', logType);
-      console.log('允許的值列表:', validLogTypes);
-      console.log('是否在允許列表中:', validLogTypes.includes(logType));
-      console.log('值的長度:', logType.length);
-      console.log('值的字符編碼:', Array.from(logType).map(c => c.charCodeAt(0)));
-      
-      // 詳細比較每個字符
-      console.log('=== 字符比較 ===');
-      validLogTypes.forEach(validType => {
-        console.log(`比較 "${logType}" 和 "${validType}":`);
-        console.log('長度是否相同:', logType.length === validType.length);
-        console.log('字符編碼比較:');
-        Array.from(logType).forEach((char, i) => {
-          console.log(`位置 ${i}: ${char}(${char.charCodeAt(0)}) vs ${validType[i]}(${validType[i]?.charCodeAt(0)})`);
-        });
-      });
-      console.log('===================');
-
-      // 確保值完全匹配資料庫約束
-      if (!validLogTypes.includes(logType)) {
-        const errorMessage = `無效的日誌類型！\n\n` +
-          `您選擇的類型: "${logType}"\n` +
-          `允許的類型: ${validLogTypes.join(', ')}\n\n` +
-          '請選擇正確的日誌類型。\n\n' +
-          '技術細節：\n' +
-          `- 值的長度: ${logType.length}\n` +
-          `- 字符編碼: ${Array.from(logType).map(c => c.charCodeAt(0)).join(', ')}\n\n` +
-          '注意：如果您的選擇看起來正確但仍然失敗，請聯繫系統管理員更新資料庫約束。';
-        console.error(errorMessage);
-        alert(errorMessage);
-        return;
-      }
-
-      if (logType === '藥劑') {
+      // 基本驗證
+      if (newLog.log_type === '藥劑') {
         if (!newLog.medicine_id || !newLog.medicine_quantity) {
           alert('請選擇藥劑並輸入使用數量！');
           return;
         }
+      } else if (newLog.log_type !== '財務' && !newLog.content) {
+        alert('請輸入日誌內容！');
+        return;
       }
 
-      // 準備日誌資料
-      const logDataToInsert = {
-        project_id: projectId,
-        log_type: logType,
-        log_date: newLog.log_date,
-        content: newLog.content.trim(),
-        notes: (newLog.notes || '').trim(),
-        created_by: user?.name || '未知使用者'
-      };
-
-      // 如果是藥劑類型，將藥劑資訊加入內容中
-      if (logType === '藥劑') {
+      // 組合 content
+      let content = newLog.content;
+      if (newLog.log_type === '財務') {
+        content = `
+          ${financeFields.invoice_number ? `<div><b>請款單編號：</b>${financeFields.invoice_number}</div>` : ''}
+          ${financeFields.amount_no_tax ? `<div><b>本期請款金額（未稅）：</b>${financeFields.amount_no_tax}</div>` : ''}
+          ${financeFields.tax ? `<div><b>稅金：</b>${financeFields.tax}</div>` : ''}
+          ${financeFields.amount_with_tax ? `<div><b>本期請款金額（含稅）：</b>${financeFields.amount_with_tax}</div>` : ''}
+          ${financeFields.retention_invoice_issued ? `<div><b>保留款發票已開：</b>${financeFields.retention_invoice_issued}</div>` : ''}
+          ${financeFields.retention_percent ? `<div><b>保留款%數：</b>${financeFields.retention_percent}</div>` : ''}
+          ${financeFields.retention_amount ? `<div><b>保留款金額：</b>${financeFields.retention_amount}</div>` : ''}
+        `.replace(/^\s+/gm, '');
+      } else if (newLog.log_type === '藥劑') {
         const selectedMedicine = medicines.find(m => m.id === newLog.medicine_id);
         if (!selectedMedicine) {
           alert('找不到選擇的藥劑！');
           return;
         }
-        // 修改內容格式為 "藥劑種類-使用量"
-        logDataToInsert.content = `${selectedMedicine.name}-${newLog.medicine_quantity}`;
-
-        // 新增使用記錄到 medicine_usages
-        const { error: usageError } = await supabase
+        content = `${selectedMedicine.name}-${newLog.medicine_quantity}`;
+        // 新增藥劑使用記錄
+        await supabase
           .from('medicine_usages')
           .insert([{
             medicine_id: newLog.medicine_id,
@@ -282,19 +494,19 @@ export default function OrderDetail() {
             date: newLog.log_date,
             project: project.project_name
           }]);
-
-        if (usageError) {
-          console.error('Error inserting usage:', usageError);
-          throw new Error('新增藥劑使用記錄失敗：' + usageError.message);
-        }
       }
 
-      console.log('=== 準備插入的資料 ===');
-      console.log('完整的插入資料:', JSON.stringify(logDataToInsert, null, 2));
-      console.log('log_type 的最終值:', logDataToInsert.log_type);
-      console.log('===================');
+      // 準備要插入的資料
+      const logDataToInsert = {
+        project_id: projectId,
+        log_type: newLog.log_type,
+        log_date: newLog.log_date,
+        content: content.trim(),
+        notes: (newLog.notes || '').trim(),
+        created_by: user?.name || '未知使用者'
+      };
 
-      // 插入日誌記錄
+      // 寫入資料庫
       const { data: insertedLog, error: logError } = await supabase
         .from('project_log')
         .insert([logDataToInsert])
@@ -336,12 +548,212 @@ export default function OrderDetail() {
         medicine_id: '',
         medicine_quantity: ''
       });
-
+      setFinanceFields({
+        invoice_number: '',
+        amount_no_tax: '',
+        tax: '',
+        amount_with_tax: '',
+        retention_invoice_issued: '否',
+        retention_percent: '',
+        retention_amount: ''
+      });
     } catch (error) {
       console.error('Error in handleAddLog:', error);
       setError(error.message);
       alert(error.message);
     }
+  };
+
+  const handleAddFinanceLog = async () => {
+    try {
+      // 驗證必填欄位
+      if (!financeFields.invoice_number) {
+        alert('請輸入請款單編號！');
+        return;
+      }
+
+      // 確認 projectId 是否正確獲取
+      if (!projectId) {
+        console.error('無法新增財務日誌：projectId 未定義');
+        alert('無法新增財務日誌，因為專案 ID 未定義');
+        return;
+      }
+
+      console.log('當前的 projectId:', projectId);
+
+      // 插入到 finance_logs 表
+      const financeData = {
+        project_id: projectId, // 確保這裡的 projectId 是有效的 UUID
+        log_date: newLog.log_date,
+        invoice_number: financeFields.invoice_number,
+        amount_no_tax: parseFloat(financeFields.amount_no_tax) || null,
+        tax: parseFloat(financeFields.tax) || null,
+        amount_with_tax: parseFloat(financeFields.amount_with_tax) || null,
+        retention_invoice_issued: financeFields.retention_invoice_issued === '是',
+        retention_percent: parseFloat(financeFields.retention_percent) || null,
+        retention_amount: parseFloat(financeFields.retention_amount) || null,
+        tax_manually_changed: financeFields.taxManuallyChanged || false,
+        amount_with_tax_manually_changed: financeFields.amountWithTaxManuallyChanged || false,
+        retention_amount_manually_changed: financeFields.retentionAmountManuallyChanged || false,
+      };
+
+      // 檢查必填欄位是否存在
+      if (!financeData.project_id) {
+        console.error('插入失敗：缺少 project_id', financeData);
+        alert('無法新增財務日誌，缺少 project_id');
+        return;
+      }
+
+      // 確保其他必要欄位不為 undefined
+      const requiredFields = ['invoice_number', 'amount_no_tax', 'tax', 'amount_with_tax'];
+      for (const field of requiredFields) {
+        if (financeData[field] === undefined) {
+          console.error(`插入失敗：缺少必要欄位 ${field}`, financeData);
+          alert(`無法新增財務日誌，缺少必要欄位：${field}`);
+          return;
+        }
+      }
+
+      console.log('準備插入的財務日誌資料:', financeData);
+
+      const { data: insertedData, error: financeError } = await supabase
+        .from('finance_logs')
+        .insert([financeData]);
+
+      if (financeError) {
+        console.error('插入財務日誌失敗:', financeError);
+        console.error('錯誤詳細信息:', financeError.details);
+        console.error('錯誤提示:', financeError.hint);
+        console.error('插入失敗的資料:', financeData);
+        alert('財務日誌新增失敗：' + financeError.message);
+        return;
+      }
+
+      console.log('插入成功的資料:', insertedData);
+
+      alert('財務日誌新增成功');
+      setOpenFinanceLogDialog(false); // 關閉對話框
+      setFinanceFields({}); // 清空表單
+    } catch (error) {
+      console.error('Error in handleAddFinanceLog:', error);
+      alert('財務日誌新增失敗：' + error.message);
+    }
+  };
+  
+
+  // 新增：處理財務日誌編輯
+  const handleEditFinanceLog = async () => {
+    try {
+      // 驗證必填欄位
+      if (!editFinanceFields.invoice_number) {
+        alert('請輸入請款單編號！');
+        return;
+      }
+
+      // 更新財務日誌內容
+      const updateData = {
+        project_id: projectId,
+        log_date: editingFinanceLog.log_date,
+        invoice_number: editFinanceFields.invoice_number,
+        amount_no_tax: parseFloat(editFinanceFields.amount_no_tax) || null,
+        tax: parseFloat(editFinanceFields.tax) || null,
+        amount_with_tax: parseFloat(editFinanceFields.amount_with_tax) || null,
+        retention_invoice_issued: editFinanceFields.retention_invoice_issued === '是',
+        retention_percent: parseFloat(editFinanceFields.retention_percent) || null,
+        retention_amount: parseFloat(editFinanceFields.retention_amount) || null,
+        tax_manually_changed: editFinanceFields.taxManuallyChanged || false,
+        amount_with_tax_manually_changed: editFinanceFields.amountWithTaxManuallyChanged || false,
+        retention_amount_manually_changed: editFinanceFields.retentionAmountManuallyChanged || false,
+      };
+
+      const { data, error } = await supabase
+        .from('finance_logs')
+        .update(updateData)
+        .eq('id', editingFinanceLog.id) // 假設 `id` 是 `finance_logs` 的主鍵
+        .select();
+
+      if (error) throw error;
+
+      // 更新日誌並重新排序以保持時間順序
+      const updatedLogs = projectLogs.map(log => 
+        log.id === editingFinanceLog.id ? data[0] : log
+      ).sort((a, b) => new Date(a.log_date) - new Date(b.log_date));
+
+      setProjectLogs(updatedLogs);
+      setOpenEditFinanceLogDialog(false);
+      setEditingFinanceLog(null);
+      setEditFinanceFields({
+        invoice_number: '',
+        amount_no_tax: '',
+        tax: '',
+        amount_with_tax: '',
+        retention_invoice_issued: '否',
+        retention_percent: '',
+        retention_amount: '',
+        taxManuallyChanged: false,
+        amountWithTaxManuallyChanged: false,
+        retentionAmountManuallyChanged: false
+      });
+
+      alert('財務日誌更新成功');
+    } catch (error) {
+      console.error('Error updating finance log:', error);
+      setError('更新財務日誌時發生錯誤：' + error.message);
+      alert('財務日誌更新失敗：' + error.message);
+    }
+  };
+
+  // 新增：開啟財務日誌編輯對話框
+  const handleOpenEditFinanceLog = (log) => {
+    if (!log.project_id) {
+      alert('無法編輯財務日誌，因為缺少有效的專案 ID！');
+      return;
+    }
+    setEditingFinanceLog(log);
+    
+    // 從資料庫欄位載入財務資料，如果沒有則從 content 解析
+    const financeData = {
+      invoice_number: log.invoice_number || '',
+      amount_no_tax: log.amount_no_tax ? log.amount_no_tax.toString() : '',
+      tax: log.tax ? log.tax.toString() : '',
+      amount_with_tax: log.amount_with_tax ? log.amount_with_tax.toString() : '',
+      retention_invoice_issued: log.retention_invoice_issued ? '是' : '否',
+      retention_percent: log.retention_percent ? log.retention_percent.toString() : '',
+      retention_amount: log.retention_amount ? log.retention_amount.toString() : '',
+      taxManuallyChanged: log.tax_manually_changed || false,
+      amountWithTaxManuallyChanged: log.amount_with_tax_manually_changed || false,
+      retentionAmountManuallyChanged: log.retention_amount_manually_changed || false
+    };
+
+    // 如果資料庫欄位為空，嘗試從 content 解析（向後兼容性）
+    if (!financeData.invoice_number && log.content) {
+      const parseFinanceContent = (content) => {
+        const extractValue = (fieldName) => {
+          const regex = new RegExp(`<b>${fieldName}：?</b>([^<]+)`, 'i');
+          const match = content.match(regex);
+          return match ? match[1].trim() : '';
+        };
+
+        return {
+          invoice_number: extractValue('請款單編號'),
+          amount_no_tax: extractValue('本期請款金額（未稅）'),
+          tax: extractValue('稅金'),
+          amount_with_tax: extractValue('本期請款金額（含稅）'),
+          retention_invoice_issued: extractValue('保留款發票已開'),
+          retention_percent: extractValue('保留款%數'),
+          retention_amount: extractValue('保留款金額'),
+          taxManuallyChanged: false,
+          amountWithTaxManuallyChanged: false,
+          retentionAmountManuallyChanged: false
+        };
+      };
+
+      const parsedData = parseFinanceContent(log.content);
+      Object.assign(financeData, parsedData);
+    }
+
+    setEditFinanceFields(financeData);
+    setOpenEditFinanceLogDialog(true);
   };
 
   const handleUpdateProject = async () => {
@@ -354,6 +766,7 @@ export default function OrderDetail() {
         site_district: editedProject.site_district,
         site_address: editedProject.site_address,
         construction_item: editedProject.construction_item,
+        construction_items: editedProject.construction_items || [], // 添加多選施工項目
         construction_fee: parseFloat(editedProject.construction_fee),
         start_date: editedProject.start_date,
         end_date: editedProject.end_date,
@@ -362,7 +775,7 @@ export default function OrderDetail() {
         project_notes: editedProject.project_notes,
         payment_method: editedProject.payment_method,
         payment_date: editedProject.payment_date,
-        amount: parseFloat(editedProject.amount) || null,
+        construction_fee: parseFloat(editedProject.construction_fee) || null,
         fee: parseFloat(editedProject.fee) || null,
         payer: editedProject.payer,
         payee: editedProject.payee,
@@ -390,7 +803,7 @@ export default function OrderDetail() {
         .update(updatedData)
         .eq('project_id', projectId)
         .select();
-        
+      
       if (error) throw error;
       
       setProject(data[0]);
@@ -425,6 +838,8 @@ export default function OrderDetail() {
   };
 
   const filteredLogs = projectLogs.filter(log => {
+    // 排除財務日誌，財務日誌在獨立區塊顯示
+    if (log.log_type === '財務') return false;
     if (filterType && log.log_type !== filterType) return false;
     if (filterDateRange.start && log.log_date < filterDateRange.start) return false;
     if (filterDateRange.end && log.log_date > filterDateRange.end) return false;
@@ -460,9 +875,12 @@ export default function OrderDetail() {
 
       if (error) throw error;
 
-      setProjectLogs(projectLogs.map(log => 
+      // 更新日誌並重新排序以保持時間順序
+      const updatedLogs = projectLogs.map(log => 
         log.log_id === editingLog.log_id ? data[0] : log
-      ));
+      ).sort((a, b) => new Date(a.log_date) - new Date(b.log_date));
+      
+      setProjectLogs(updatedLogs);
       setOpenEditLogDialog(false);
       setEditingLog(null);
     } catch (error) {
@@ -839,10 +1257,10 @@ export default function OrderDetail() {
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Typography><strong>收款方式：</strong> {project.payment_method}</Typography>
-                  <Typography><strong>收款金額：</strong> ${project.amount?.toLocaleString()}</Typography>
+                  <Typography><strong>收款金額：</strong> ${project.construction_fee?.toLocaleString()}</Typography>
                   <Typography><strong>結清日期：</strong> {project.payment_date}</Typography>
                   {project.payment_method === '匯款' && (
-                    <Typography><strong>手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
+                    <Typography><strong>匯款手續費：</strong> ${project.fee?.toLocaleString()}</Typography>
                   )}
                   {project.payment_method === '支票' && (
                     <>
@@ -909,375 +1327,334 @@ export default function OrderDetail() {
       >
         <DialogTitle>編輯專案資訊</DialogTitle>
         <DialogContent>
-          <Box mb={3}>
-      <Typography variant="subtitle1" fontWeight="bold ">基本資訊</Typography>
+          <Typography variant="h6" gutterBottom>基本資訊</Typography>
 
-{/* 第一行：專案名稱、施工狀態、請款狀態 */}
-<Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-  <Box sx={{ flex: 1 }}>
-    <TextField
-      fullWidth
-      label="專案名稱"
-      name="project_name"
-      value={editedProject.project_name || ''}
-      onChange={handleChange}
-      margin="normal"
-    />
-  </Box>
-  <Box sx={{ flex: 1 }}>
-    <FormControl fullWidth margin="normal">
-      <InputLabel>施工狀態</InputLabel>
-      <Select
-        name="construction_status"
-        value={editedProject.construction_status || '未開始'}
-        onChange={handleChange}
-      >
-        {constructionStatusOptions.map((option) => (
-          <MenuItem key={option} value={option}>{option}</MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-  </Box>
-  <Box sx={{ flex: 1 }}>
-    <FormControl fullWidth margin="normal">
-      <InputLabel>請款狀態</InputLabel>
-      <Select
-        name="billing_status"
-        value={editedProject.billing_status || '未請款'}
-        onChange={handleChange}
-      >
-        {billingStatusOptions.map((option) => (
-          <MenuItem key={option} value={option}>{option}</MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-  </Box>
-</Grid>
-
-{/* 第二行：縣市（2）、區域（2）、地址（6） */}
-<Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-  <Box sx={{ flex: 2 }}>
-    <Autocomplete
-      fullWidth
-      options={taiwanCities}
-      renderInput={(params) => <TextField {...params} label="施工縣市" margin="normal" />}
-      value={editedProject.site_city || ''}
-      onChange={(event, newValue) => handleCityChange(newValue)}
-    />
-  </Box>
-  <Box sx={{ flex: 2 }}>
-    <Autocomplete
-      fullWidth
-      options={taiwanDistricts[editedProject.site_city] || []}
-      renderInput={(params) => <TextField {...params} label="施工區域" margin="normal" />}
-      value={editedProject.site_district || ''}
-      onChange={(event, newValue) => handleDistrictChange(newValue)}
-    />
-  </Box>
-  <Box sx={{ flex: 6 }}>
-    <TextField
-      fullWidth
-      label="施工地址"
-      name="site_address"
-      value={editedProject.site_address || ''}
-      onChange={handleChange}
-      margin="normal"
-    />
-  </Box>
-</Grid>
-
-      <Typography variant="subtitle1" fontWeight="bold">施工資訊</Typography>
-
-      {/* 第一行：開始日期、結束日期、施工項目 */}
-      <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="開始日期"
-            type="date"
-            name="start_date"
-            value={editedProject.start_date || ''}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            margin="normal"
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="結束日期"
-            type="date"
-            name="end_date"
-            value={editedProject.end_date || ''}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            margin="normal"
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="施工項目"
-            name="construction_item"
-            value={editedProject.construction_item || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-      </Grid>
-
-      {/* 第二行：施工天數、施工金額、施工範圍 */}
-      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="施工天數"
-            type="number"
-            name="construction_days"
-            value={editedProject.construction_days || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="施工金額"
-            type="number"
-            name="construction_fee"
-            value={editedProject.construction_fee || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="施工範圍"
-            name="construction_scope"
-            value={editedProject.construction_scope || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-      </Grid>
-
-      {/* 第三行：注意事項 */}
-      <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="注意事項"
-            name="project_notes"
-            value={editedProject.project_notes || ''}
-            onChange={handleChange}
-            multiline
-            minRows={4}
-            margin="normal"
-          />
-        </Box>
-      </Grid>
-
-      <Typography variant="subtitle1" fontWeight="bold">收款資訊</Typography>
-      {/* 收款資訊 */}
-      <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>收款方式</InputLabel>
-            <Select
-              name="payment_method"
-              value={editedProject.payment_method || ''}
-              onChange={handleChange}
-            >
-              <MenuItem value="現金">現金</MenuItem>
-              <MenuItem value="匯款">匯款</MenuItem>
-              <MenuItem value="支票">支票</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="結清日期"
-            type="date"
-            name="payment_date"
-            value={editedProject.payment_date || ''}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            margin="normal"
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            label="收款金額"
-            type="number"
-            name="amount"
-            value={editedProject.amount || ''}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-      </Grid>
-
-      {/* 匯款相關資訊 */}
-      {editedProject.payment_method === '匯款' && (
-        <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-          <Box sx={{ flex: 1 }}>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
             <TextField
+              name="project_name"
+              label="專案名稱"
               fullWidth
-              label="手續費"
-              type="number"
-              name="fee"
-              value={editedProject.fee || ''}
+              value={editedProject.project_name || ''}
               onChange={handleChange}
-              margin="normal"
+              required
+            />
+            <FormControl fullWidth>
+              <InputLabel>施工狀態</InputLabel>
+              <Select
+                name="construction_status"
+                value={editedProject.construction_status || '未開始'}
+                onChange={handleChange}
+              >
+                {constructionStatusOptions.map((option) => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>請款狀態</InputLabel>
+              <Select
+                name="billing_status"
+                value={editedProject.billing_status || '未請款'}
+                onChange={handleChange}
+              >
+                {billingStatusOptions.map((option) => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
+
+          <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
+          
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ marginBottom: "20px" }}>
+              <Typography variant="subtitle1" gutterBottom>聯絡人 {i}</Typography>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <TextField
+                  label="職位"
+                  fullWidth
+                  name={`contact${i}_role`}
+                  value={editedProject[`contact${i}_role`] || ''}
+                  onChange={handleChange}
+                />
+                <TextField
+                  label="名字"
+                  fullWidth
+                  name={`contact${i}_name`}
+                  value={editedProject[`contact${i}_name`] || ''}
+                  onChange={handleChange}
+                />
+                <FormControl fullWidth>
+                  <InputLabel>聯絡方式類型</InputLabel>
+                  <Select
+                    name={`contact${i}_type`}
+                    value={editedProject[`contact${i}_type`] || ''}
+                    onChange={handleChange}
+                  >
+                    {["電話", "市話", "LineID", "Email"].map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  label={editedProject[`contact${i}_type`] || "聯絡方式"}
+                  fullWidth
+                  name={`contact${i}_contact`}
+                  value={editedProject[`contact${i}_contact`] || ''}
+                  onChange={(e) => {
+                    let formattedValue = e.target.value;
+                    const contactType = editedProject[`contact${i}_type`];
+
+                    if (contactType === "電話") {
+                      formattedValue = formattedValue
+                        .replace(/[^\d]/g, "")
+                        .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+                    } else if (contactType === "市話") {
+                      formattedValue = formattedValue
+                        .replace(/[^\d]/g, "")
+                        .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
+                    }
+
+                    handleChange({
+                      target: {
+                        name: `contact${i}_contact`,
+                        value: formattedValue
+                      }
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+
+          <Typography variant="h6" gutterBottom>施工資訊</Typography>
+
+          {/* 施工地址 */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
+            <div style={{ flex: 1 }}>
+              <Autocomplete
+                options={taiwanCities}
+                renderInput={(params) => <TextField {...params} label="施工縣市" fullWidth />}
+                value={editedProject.site_city || ''}
+                onChange={(event, newValue) => handleCityChange(newValue)}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <Autocomplete
+                options={taiwanDistricts[editedProject.site_city] || []}
+                renderInput={(params) => <TextField {...params} label="施工區域" fullWidth />}
+                value={editedProject.site_district || ''}
+                onChange={(event, newValue) => handleDistrictChange(newValue)}
+              />
+            </div>
+            <div style={{ flex: 3 }}>
+              <TextField
+                name="site_address"
+                label="施工地址"
+                fullWidth
+                value={editedProject.site_address || ''}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+            <TextField
+              name="start_date"
+              label="開始日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={editedProject.start_date || ''}
+              onChange={handleChange}
+            />
+            <TextField
+              name="end_date"
+              label="結束日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={editedProject.end_date || ''}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* 施工項目多選 */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>施工項目</Typography>
+            <Autocomplete
+              multiple
+              options={constructionItemOptions}
+              value={editedProject.construction_items || []}
+              onChange={handleConstructionItemChange}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    key={option}
+                    variant="outlined"
+                    label={option}
+                    {...getTagProps({ index })}
+                    onDelete={() => handleRemoveConstructionItem(option)}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  placeholder="選擇或輸入施工項目"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {params.InputProps.endAdornment}
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setConstructionItemDialogOpen(true)}
+                            size="small"
+                          >
+                            <Add />
+                          </IconButton>
+                        </InputAdornment>
+                      </>
+                    ),
+                  }}
+                />
+              )}
             />
           </Box>
-        </Grid>
-      )}
 
-      {/* 支票相關資訊 */}
-      {editedProject.payment_method === '支票' && (
-        <>
-          <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-            <Box sx={{ flex: 1 }}>
-              <TextField
-                fullWidth
-                label="付款人"
-                name="payer"
-                value={editedProject.payer || ''}
+          {/* 新增施工天數、施工範圍、注意事項 */}
+          <TextField
+            name="construction_days"
+            label="施工天數"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={editedProject.construction_days || ''}
+            onChange={handleChange}
+          />
+          <TextField
+            name="construction_scope"
+            label="施工範圍"
+            fullWidth
+            margin="normal"
+            value={editedProject.construction_scope || ''}
+            onChange={handleChange}
+          />
+          <TextField
+            name="project_notes"
+            label="注意事項"
+            fullWidth
+            multiline
+            rows={3}
+            margin="normal"
+            value={editedProject.project_notes || ''}
+            onChange={handleChange}
+          />
+
+          <Typography variant="h6" gutterBottom>收款資訊</Typography>
+
+          {/* 收款方式和結清日期 */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+            <FormControl fullWidth>
+              <InputLabel>收款方式</InputLabel>
+              <Select
+                name="payment_method"
+                value={editedProject.payment_method || ''}
                 onChange={handleChange}
-                margin="normal"
-              />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>收款人</InputLabel>
-                <Select
-                  name="payee"
-                  value={editedProject.payee || ''}
+              >
+                <MenuItem value="現金">現金</MenuItem>
+                <MenuItem value="匯款">匯款</MenuItem>
+                <MenuItem value="支票">支票</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              name="payment_date"
+              label="結清日期"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={editedProject.payment_date || ''}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* 收款金額 */}
+          <TextField
+            name="construction_fee"
+            label="收款金額"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={editedProject.construction_fee || ''}
+            onChange={handleChange}
+          />
+
+          {/* 匯款手續費 */}
+          {editedProject.payment_method === '匯款' && (
+            <TextField
+              name="fee"
+              label="匯款手續費"
+              type="number"
+              fullWidth
+              margin="normal"
+              value={editedProject.fee || ''}
+              onChange={handleChange}
+            />
+          )}
+
+          {/* 支票相關資訊 */}
+          {editedProject.payment_method === '支票' && (
+            <>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                <TextField
+                  name="payer"
+                  label="付款人"
+                  fullWidth
+                  value={editedProject.payer || ''}
                   onChange={handleChange}
-                >
-                  <MenuItem value="中星">中星</MenuItem>
-                  <MenuItem value="建興">建興</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </Grid>
-
-          <Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-            <Box sx={{ flex: 1 }}>
-              <TextField
-                fullWidth
-                label="支票號碼"
-                name="check_number"
-                value={editedProject.check_number || ''}
-                onChange={handleChange}
-                margin="normal"
-              />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <TextField
-                fullWidth
-                label="銀行分行"
-                name="bank_branch"
-                value={editedProject.bank_branch || ''}
-                onChange={handleChange}
-                margin="normal"
-              />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <TextField
-                fullWidth
-                label="到期日"
-                type="date"
-                name="due_date"
-                value={editedProject.due_date || ''}
-                onChange={handleChange}
-                InputLabelProps={{ shrink: true }}
-                margin="normal"
-              />
-            </Box>
-          </Grid>
-        </>
-      )}
-
-            <Typography variant="subtitle1" fontWeight="bold">聯絡人資訊</Typography>
-            {[1, 2, 3].map((i) => (
-              <Grid container alignItems="center" sx={{ mb: i === 3 ? 1 : 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }} key={i}>
-                <Box sx={{ flex: '0 0 100px' }}><Typography variant="subtitle2">聯絡人 {i}</Typography></Box>
-                <Box sx={{ flex: 1 }}>
-                  <FormControl fullWidth margin="normal">
-                    <InputLabel>職位</InputLabel>
-                    <Select
-                      name={`contact${i}_role`}
-                      value={editedProject[`contact${i}_role`] || ''}
-                      onChange={handleChange}
-                    >
-                      {["工地聯絡人", "會計", "設計師", "採購", "監造"].map((role) => (
-                        <MenuItem key={role} value={role}>{role}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="名字"
-                    name={`contact${i}_name`}
-                    value={editedProject[`contact${i}_name`] || ''}
+                />
+                <FormControl fullWidth>
+                  <InputLabel>收款人</InputLabel>
+                  <Select
+                    name="payee"
+                    value={editedProject.payee || ''}
                     onChange={handleChange}
-                    margin="normal"
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <FormControl fullWidth margin="normal">
-                    <InputLabel>聯絡方式類型</InputLabel>
-                    <Select
-                      name={`contact${i}_type`}
-                      value={editedProject[`contact${i}_type`] || ''}
-                      onChange={handleChange}
-                    >
-                      {["電話", "市話", "LineID", "Email"].map((type) => (
-                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="聯絡方式"
-                    name={`contact${i}_contact`}
-                    value={editedProject[`contact${i}_contact`] || ''}
-                    onChange={(e) => {
-                      let formattedValue = e.target.value;
-                      const contactType = editedProject[`contact${i}_type`];
+                  >
+                    <MenuItem value="中星">中星</MenuItem>
+                    <MenuItem value="建興">建興</MenuItem>
+                  </Select>
+                </FormControl>
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                <TextField
+                  name="check_number"
+                  label="支票號碼"
+                  fullWidth
+                  value={editedProject.check_number || ''}
+                  onChange={handleChange}
+                />
+                <TextField
+                  name="bank_branch"
+                  label="銀行分行"
+                  fullWidth
+                  value={editedProject.bank_branch || ''}
+                  onChange={handleChange}
+                />
+                <TextField
+                  name="due_date"
+                  label="到期日"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={editedProject.due_date || ''}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
 
-                      if (contactType === "電話") {
-                        formattedValue = formattedValue
-                          .replace(/[^\d]/g, "")
-                          .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                      } else if (contactType === "市話") {
-                        formattedValue = formattedValue
-                          .replace(/[^\d]/g, "")
-                          .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                      }
-
-                      handleChange({
-                        target: {
-                          name: `contact${i}_contact`,
-                          value: formattedValue
-                        }
-                      });
-                    }}
-                    margin="normal"
-                  />
-                </Box>
-              </Grid>
-            ))}
-          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseProjectDialog}>取消</Button>
@@ -1285,6 +1662,7 @@ export default function OrderDetail() {
         </DialogActions>
       </Dialog>
 
+      {/* 專案日誌區塊 (排除財務日誌) */}
       <Box mt={3}>
         <Card sx={{ borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -1313,8 +1691,8 @@ export default function OrderDetail() {
                   >
                     <MenuItem value="">全部</MenuItem>
                     <MenuItem value="工程">工程</MenuItem>
-                    <MenuItem value="財務">財務</MenuItem>
                     <MenuItem value="行政">行政</MenuItem>
+                    <MenuItem value="藥劑">藥劑</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1370,18 +1748,18 @@ export default function OrderDetail() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell width="10%">類型</TableCell>
-                  <TableCell width="12%">日期</TableCell>
-                  <TableCell width="35%">內容</TableCell>
-                  <TableCell width="15%">備註</TableCell>
-                  <TableCell width="12%">建立者</TableCell>
-                  <TableCell width="15%" align="center">操作</TableCell>
+                  <TableCell width="10%" sx={{ textAlign: 'center', padding: '8px' }}>類型</TableCell>
+                  <TableCell width="12%" sx={{ textAlign: 'center', padding: '8px' }}>日期</TableCell>
+                  <TableCell width="35%" sx={{ textAlign: 'center', padding: '8px' }}>內容</TableCell>
+                  <TableCell width="15%" sx={{ textAlign: 'center', padding: '8px' }}>備註</TableCell>
+                  <TableCell width="12%" sx={{ textAlign: 'center', padding: '8px' }}>建立者</TableCell>
+                  <TableCell width="15%" sx={{ textAlign: 'center', padding: '8px' }}>操作</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredLogs.map((log) => (
                   <TableRow key={log.log_id}>
-                    <TableCell>
+                    <TableCell sx={{ textAlign: 'center', padding: '8px' }}>
                       <Box
                         sx={{
                           display: 'inline-block',
@@ -1402,8 +1780,8 @@ export default function OrderDetail() {
                         {log.log_type}
                       </Box>
                     </TableCell>
-                    <TableCell>{log.log_date}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ textAlign: 'center', padding: '8px' }}>{log.log_date}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', padding: '8px' }}>
                       <Box
                         sx={{
                           position: 'relative',
@@ -1430,10 +1808,9 @@ export default function OrderDetail() {
                         </Typography>
                       )}
                     </TableCell>
-
-                    <TableCell>{log.notes}</TableCell>
-                    <TableCell>{log.created_by}</TableCell>
-                    <TableCell align="center">
+                    <TableCell sx={{ textAlign: 'center', padding: '8px' }}>{log.notes}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', padding: '8px' }}>{log.created_by}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', padding: '8px' }}>
                       <IconButton
                         size="small"
                         onClick={() => {
@@ -1469,10 +1846,170 @@ export default function OrderDetail() {
         </Card>
       </Box>
 
+      {/* 財務日誌區塊 */}
+      <Box mt={3}>
+        <Card sx={{ borderRadius: 2, p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6" fontWeight="bold" color="primary">財務日誌</Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              onClick={() => setOpenFinanceLogDialog(true)}
+              sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
+            >
+              新增財務日誌
+            </Button>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+
+          {(() => {
+            const financeLogss = projectLogs.filter(log => log.log_type === '財務');
+            if (financeLogss.length === 0) {
+              return (
+                <Typography color="textSecondary" align="center" sx={{ py: 4 }}>
+                  尚無財務日誌記錄
+                </Typography>
+              );
+            }
+
+            return (
+              <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: 'rgba(46, 125, 50, 0.05)' }}>
+                      <TableCell sx={{ fontWeight: 'bold', width: '10%', textAlign: 'center'  }}>日期</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '10%', textAlign: 'center'  }}>請款單編號</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '8%' }}>未稅金額</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '6%' }}>稅金</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '8%' }}>含稅金額</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '12%', textAlign: 'center'  }}>保留款發票已開</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '10%', textAlign: 'center'  }}>保留款%數</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>保留款金額</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '10%', textAlign: 'center'  }}>建立者</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '10%' }} align="center">操作</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {financeLogss.map((log) => {
+                      // 優先使用資料庫欄位，如果沒有則解析財務日誌內容
+                      const getFinanceData = (log) => {
+                        // 如果有資料庫欄位，直接使用
+                        if (log.invoice_number) {
+                          return {
+                            invoice_number: log.invoice_number,
+                            amount_no_tax: log.amount_no_tax,
+                            tax: log.tax,
+                            amount_with_tax: log.amount_with_tax,
+                            retention_invoice_issued: log.retention_invoice_issued ? '是' : '否',
+                            retention_percent: log.retention_percent,
+                            retention_amount: log.retention_amount
+                          };
+                        }
+
+                        // 否則從 content 解析（向後兼容性）
+                        const result = {
+                          invoice_number: '',
+                          amount_no_tax: '',
+                          tax: '',
+                          amount_with_tax: '',
+                          retention_invoice_issued: '',
+                          retention_percent: '',
+                          retention_amount: ''
+                        };
+
+                        if (!log.content) return result;
+
+                        // 使用正則表達式提取各個字段
+                        const extractValue = (fieldName) => {
+                          const regex = new RegExp(`<b>${fieldName}：?</b>([^<]+)`, 'i');
+                          const match = log.content.match(regex);
+                          return match ? match[1].trim() : '';
+                        };
+
+                        result.invoice_number = extractValue('請款單編號');
+                        result.amount_no_tax = extractValue('本期請款金額（未稅）');
+                        result.tax = extractValue('稅金');
+                        result.amount_with_tax = extractValue('本期請款金額（含稅）');
+                        result.retention_invoice_issued = extractValue('保留款發票已開');
+                        result.retention_percent = extractValue('保留款%數');
+                        result.retention_amount = extractValue('保留款金額');
+
+                        return result;
+                      };
+
+                      const financeData = getFinanceData(log);
+
+                      return (
+                        <TableRow key={log.log_id} sx={{ '&:hover': { backgroundColor: 'rgba(46, 125, 50, 0.02)' } }}>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>{log.log_date}</TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>{financeData.invoice_number}</TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>
+                            {financeData.amount_no_tax ? `$${Number(financeData.amount_no_tax).toLocaleString()}` : ''}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>
+                            {financeData.tax ? `$${Number(financeData.tax).toLocaleString()}` : ''}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>
+                            {financeData.amount_with_tax ? `$${Number(financeData.amount_with_tax).toLocaleString()}` : ''}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem', textAlign: 'center' }}>
+                            <Box
+                              sx={{
+                                display: 'inline-block',
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: 1,
+                                backgroundColor: financeData.retention_invoice_issued === '是' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 152, 0, 0.1)',
+                                color: financeData.retention_invoice_issued === '是' ? 'rgb(76, 175, 80)' : 'rgb(255, 152, 0)',
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {financeData.retention_invoice_issued}
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem', textAlign: 'center' }}>
+                            {financeData.retention_percent ? `${financeData.retention_percent}%` : ''}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>
+                            {financeData.retention_amount ? `$${Number(financeData.retention_amount).toLocaleString()}` : ''}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem', textAlign: 'center'}}>{log.created_by}</TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenEditFinanceLog(log)}
+                              sx={{ mr: 0.5 }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setDeletingLogId(log.log_id);
+                                setOpenDeleteLogDialog(true);
+                              }}
+                              color="error"
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            );
+          })()}
+        </Card>
+      </Box>
+
       <Dialog
         open={openLogDialog}
         onClose={() => setOpenLogDialog(false)}
-        maxWidth="lg"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>新增專案日誌</DialogTitle>
@@ -1500,7 +2037,6 @@ export default function OrderDetail() {
                   onChange={(e) => setNewLog({ ...newLog, log_type: e.target.value })}
                 >
                   <MenuItem value="工程">工程</MenuItem>
-                  <MenuItem value="財務">財務</MenuItem>
                   <MenuItem value="行政">行政</MenuItem>
                   <MenuItem value="藥劑">藥劑</MenuItem>
                 </Select>
@@ -1567,15 +2103,156 @@ export default function OrderDetail() {
           )}
 
           {/* 內容輸入區（整行） */}
-          <Box>
-            <Typography sx={{ mb: 1 }}>內容</Typography>
-            <ReactQuill
-              theme="snow"
-              value={newLog.content}
-              onChange={(value) => setNewLog({ ...newLog, content: value })}
-              style={{ height: '200px', backgroundColor: 'white' }}
-            />
-          </Box>
+          {newLog.log_type === '財務' ? (
+            <Box sx={{ overflowX: 'auto' }}>
+              <Typography sx={{ mb: 1 }}>財務資訊</Typography>
+              <Grid container spacing={1} wrap="nowrap">
+                <Grid item sx={{ minWidth: 200 }}>
+                  <TextField
+                    label="請款單編號"
+                    fullWidth
+                    value={financeFields.invoice_number}
+                    onChange={e => setFinanceFields(f => ({ ...f, invoice_number: e.target.value }))}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="本期請款金額（未稅）"
+                    type="number"
+                    fullWidth
+                    value={financeFields.amount_no_tax}
+                    onChange={e => {
+                      const value = e.target.value;
+                      // 自動計算稅金與含稅金額
+                      setFinanceFields(f => ({
+                        ...f,
+                        amount_no_tax: value,
+                        // 只有當使用者沒手動改過 tax/amount_with_tax 才自動計算
+                        tax: f.taxManuallyChanged ? f.tax : value ? (parseFloat(value) * 0.05).toFixed(0) : '',
+                        amount_with_tax: f.amountWithTaxManuallyChanged ? f.amount_with_tax : value ? (parseFloat(value) * 1.05).toFixed(0) : '',
+                      }));
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="稅金"
+                    type="number"
+                    fullWidth
+                    value={financeFields.tax}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setFinanceFields(f => ({
+                        ...f,
+                        tax: value,
+                        taxManuallyChanged: true
+                      }));
+                    }}
+                    onBlur={() => {
+                      // 若清空則恢復自動計算
+                      setFinanceFields(f => ({
+                        ...f,
+                        taxManuallyChanged: !(!f.tax)
+                      }));
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="本期請款金額（含稅）"
+                    type="number"
+                    fullWidth
+                    value={financeFields.amount_with_tax}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setFinanceFields(f => ({
+                        ...f,
+                        amount_with_tax: value,
+                        amountWithTaxManuallyChanged: true
+                      }));
+                    }}
+                    onBlur={() => {
+                      setFinanceFields(f => ({
+                        ...f,
+                        amountWithTaxManuallyChanged: !(!f.amount_with_tax)
+                      }));
+                    }}
+                  />
+                </Grid>
+              </Grid>
+              <Grid container spacing={1}>
+                <Grid item xs={12} md={4} sx={{ mt: 2 }}>
+                  <FormControl fullWidth sx={{ minWidth: 150 }}>
+                    <InputLabel>保留款發票已開</InputLabel>
+                    <Select
+                      value={financeFields.retention_invoice_issued}
+                      label="保留款發票已開"
+                      onChange={e => setFinanceFields(f => ({ ...f, retention_invoice_issued: e.target.value }))}
+                    >
+                      <MenuItem value="是">是</MenuItem>
+                      <MenuItem value="否">否</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={6} md={3} sx={{ mt: 2 }}>
+                  <TextField
+                    label="保留款%數"
+                    type="number"
+                    fullWidth
+                    value={financeFields.retention_percent}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setFinanceFields(f => {
+                        // 自動算保留款金額（如果沒手動改過）
+                        let autoRetentionAmount = f.retentionAmountManuallyChanged
+                          ? f.retention_amount
+                          : (f.amount_with_tax && value)
+                            ? (parseFloat(f.amount_with_tax) * parseFloat(value) / 100).toFixed(0)
+                            : '';
+                        return {
+                          ...f,
+                          retention_percent: value,
+                          retention_amount: autoRetentionAmount
+                        };
+                      });
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6} md={3} sx={{ mt: 2 }}>
+                  <TextField
+                    label="保留款金額"
+                    type="number"
+                    fullWidth
+                    value={financeFields.retention_amount}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setFinanceFields(f => ({
+                        ...f,
+                        retention_amount: value,
+                        retentionAmountManuallyChanged: true
+                      }));
+                    }}
+                    onBlur={() => {
+                      setFinanceFields(f => ({
+                        ...f,
+                        retentionAmountManuallyChanged: !(!f.retention_amount)
+                      }));
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          ) : (
+            <Box>
+              <Typography sx={{ mb: 1 }}>內容</Typography>
+              <ReactQuill
+                theme="snow"
+                value={newLog.content}
+                onChange={(value) => setNewLog({ ...newLog, content: value })}
+                style={{ height: '200px', backgroundColor: 'white' }}
+              />
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenLogDialog(false)}>取消</Button>
@@ -1583,7 +2260,9 @@ export default function OrderDetail() {
             onClick={handleAddLog} 
             variant="contained" 
             color="primary"
-            disabled={!newLog.content || (newLog.log_type === '藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))}
+            disabled={
+            (newLog.log_type === '藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))||
+            (newLog.log_type !== '財務' && newLog.log_type !== '藥劑' && !newLog.content)}
           >
             新增
           </Button>
@@ -1732,6 +2411,333 @@ export default function OrderDetail() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 財務日誌對話框 */}
+      <Dialog
+        open={openFinanceLogDialog}
+        onClose={() => setOpenFinanceLogDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>新增財務日誌</DialogTitle>
+        <DialogContent>
+          <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            {/* 日期 */}
+            <Box sx={{ flex: 2 }}>
+              <TextField
+                fullWidth
+                type="date"
+                label="日期"
+                value={newLog.log_date}
+                onChange={(e) => setNewLog({ ...newLog, log_date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+              />
+            </Box>
+
+            {/* 備註 */}
+            <Box sx={{ flex: 5 }}>
+              <TextField
+                fullWidth
+                label="備註"
+                value={newLog.notes}
+                onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
+                margin="normal"
+              />
+            </Box>
+          </Grid>
+
+          {/* 財務資訊輸入區 */}
+          <Box sx={{ overflowX: 'auto' }}>
+            <Typography sx={{ mb: 1 }}>財務資訊</Typography>
+            <Grid container spacing={1} wrap="nowrap">
+              <Grid item sx={{ minWidth: 200 }}>
+                <TextField
+                  label="請款單編號"
+                  fullWidth
+                  value={financeFields.invoice_number}
+                  onChange={e => setFinanceFields(f => ({ ...f, invoice_number: e.target.value }))}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="本期請款金額（未稅）"
+                  type="number"
+                  fullWidth
+                  value={financeFields.amount_no_tax}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setFinanceFields(f => ({
+                      ...f,
+                      amount_no_tax: value,
+                      // 自動計算稅金與含稅金額
+                      tax: f.taxManuallyChanged ? f.tax : value ? (parseFloat(value) * 0.05).toFixed(0) : '',
+                      amount_with_tax: f.amountWithTaxManuallyChanged ? f.amount_with_tax : value ? (parseFloat(value) * 1.05).toFixed(0) : '',
+                    }));
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="稅金"
+                  type="number"
+                  fullWidth
+                  value={financeFields.tax}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setFinanceFields(f => ({
+                      ...f,
+                      tax: value,
+                      taxManuallyChanged: true
+                    }));
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="本期請款金額（含稅）"
+                  type="number"
+                  fullWidth
+                  value={financeFields.amount_with_tax}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setFinanceFields(f => ({
+                      ...f,
+                      amount_with_tax: value,
+                      amountWithTaxManuallyChanged: true
+                    }));
+                  }}
+                />
+              </Grid>
+            </Grid>
+            <Grid container spacing={1}>
+              <Grid item xs={12} md={4} sx={{ mt: 2 }}>
+                <FormControl fullWidth sx={{ minWidth: 150 }}>
+                  <InputLabel>保留款發票已開</InputLabel>
+                  <Select
+                    value={financeFields.retention_invoice_issued}
+                    label="保留款發票已開"
+                    onChange={e => setFinanceFields(f => ({ ...f, retention_invoice_issued: e.target.value }))}
+                  >
+                    <MenuItem value="是">是</MenuItem>
+                    <MenuItem value="否">否</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6} md={3} sx={{ mt: 2 }}>
+                <TextField
+                  label="保留款%數"
+                  type="number"
+                  fullWidth
+                  value={financeFields.retention_percent}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setFinanceFields(f => {
+                      // 自動算保留款金額（如果沒手動改過）
+                      let autoRetentionAmount = f.retentionAmountManuallyChanged
+                        ? f.retention_amount
+                        : (f.amount_with_tax && value)
+                          ? (parseFloat(f.amount_with_tax) * parseFloat(value) / 100).toFixed(0)
+                          : '';
+                      return {
+                        ...f,
+                        retention_percent: value,
+                        retention_amount: autoRetentionAmount
+                      };
+                    });
+                  }}
+                />
+              </Grid>
+              <Grid item xs={6} md={3} sx={{ mt: 2 }}>
+                <TextField
+                  label="保留款金額"
+                  type="number"
+                  fullWidth
+                  value={financeFields.retention_amount}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setFinanceFields(f => ({
+                      ...f,
+                      retention_amount: value,
+                      retentionAmountManuallyChanged: true
+                    }));
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenFinanceLogDialog(false)}>取消</Button>
+          <Button 
+            onClick={handleAddFinanceLog} 
+            variant="contained" 
+            color="primary"
+          >
+            儲存財務日誌
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 編輯財務日誌對話框 */}
+      <Dialog
+        open={openEditFinanceLogDialog}
+        onClose={() => setOpenEditFinanceLogDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>編輯財務日誌</DialogTitle>
+        <DialogContent>
+          <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
+            {/* 日期 */}
+            <Box sx={{ flex: 2 }}>
+              <TextField
+                fullWidth
+                type="date"
+                label="日期"
+                value={editingFinanceLog?.log_date || ''}
+                onChange={(e) => setEditingFinanceLog(prev => ({ ...prev, log_date: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+                margin="normal"
+              />
+            </Box>
+
+            {/* 備註 */}
+            <Box sx={{ flex: 5 }}>
+              <TextField
+                fullWidth
+                label="備註"
+                value={editingFinanceLog?.notes || ''}
+                onChange={(e) => setEditingFinanceLog(prev => ({ ...prev, notes: e.target.value }))}
+                margin="normal"
+              />
+            </Box>
+          </Grid>
+
+          {/* 財務資訊輸入區 */}
+          <Box sx={{ overflowX: 'auto' }}>
+            <Typography sx={{ mb: 1 }}>財務資訊</Typography>
+            <Grid container spacing={1} wrap="nowrap">
+              <Grid item sx={{ minWidth: 200 }}>
+                <TextField
+                  label="請款單編號"
+                  fullWidth
+                  value={editFinanceFields.invoice_number}
+                  onChange={e => setEditFinanceFields(f => ({ ...f, invoice_number: e.target.value }))}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="本期請款金額（未稅）"
+                  type="number"
+                  fullWidth
+                  value={editFinanceFields.amount_no_tax}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setEditFinanceFields(f => ({
+                      ...f,
+                      amount_no_tax: value,
+                      tax: f.taxManuallyChanged ? f.tax : value ? (parseFloat(value) * 0.05).toFixed(0) : '',
+                      amount_with_tax: f.amountWithTaxManuallyChanged ? f.amount_with_tax : value ? (parseFloat(value) * 1.05).toFixed(0) : '',
+                    }));
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="稅金"
+                  type="number"
+                  fullWidth
+                  value={editFinanceFields.tax}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setEditFinanceFields(f => ({
+                      ...f,
+                      tax: value,
+                      taxManuallyChanged: true
+                    }));
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="本期請款金額（含稅）"
+                  type="number"
+                  fullWidth
+                  value={editFinanceFields.amount_with_tax}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setEditFinanceFields(f => ({
+                      ...f,
+                      amount_with_tax: value,
+                      amountWithTaxManuallyChanged: true
+                    }));
+                  }}
+                />
+              </Grid>
+            </Grid>
+            <Grid container spacing={1}>
+              <Grid item xs={12} md={4} sx={{ mt: 2 }}>
+                <FormControl fullWidth sx={{ minWidth: 150 }}>
+                  <InputLabel>保留款發票已開</InputLabel>
+                  <Select
+                    value={editFinanceFields.retention_invoice_issued}
+                    label="保留款發票已開"
+                    onChange={e => setEditFinanceFields(f => ({ ...f, retention_invoice_issued: e.target.value }))}
+                  >
+                    <MenuItem value="是">是</MenuItem>
+                    <MenuItem value="否">否</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4} sx={{ mt: 2 }}>
+                <TextField
+                  label="保留款%數"
+                  type="number"
+                  fullWidth
+                  value={editFinanceFields.retention_percent}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setEditFinanceFields(f => ({
+                      ...f,
+                      retention_percent: value,
+                      retention_amount: f.retentionAmountManuallyChanged ? f.retention_amount : 
+                        (value && f.amount_with_tax) ? (parseFloat(f.amount_with_tax) * (parseFloat(value) / 100)).toFixed(0) : ''
+                    }));
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={4} sx={{ mt: 2 }}>
+                <TextField
+                  label="保留款金額"
+                  type="number"
+                  fullWidth
+                  value={editFinanceFields.retention_amount}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setEditFinanceFields(f => ({
+                      ...f,
+                      retention_amount: value,
+                      retentionAmountManuallyChanged: true
+                    }));
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEditFinanceLogDialog(false)}>取消</Button>
+          <Button 
+            onClick={handleEditFinanceLog} 
+            variant="contained" 
+            color="primary"
+          >
+            更新財務日誌
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={trackDialogOpen} onClose={() => setTrackDialogOpen(false)}>
         <DialogTitle>設定追蹤提醒</DialogTitle>
         <DialogContent>
@@ -1774,6 +2780,7 @@ export default function OrderDetail() {
                       track_remind_date: null
                     })
                     .eq('project_id', project.project_id);
+
                   if (error) throw error;
                   setTrackDialogOpen(false);
                   setTrackRefresh(r => r + 1);
@@ -1816,6 +2823,37 @@ export default function OrderDetail() {
             }}
           >
             {isTracked ? '重設追蹤' : '確認'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新增自定義施工項目對話框 */}
+      <Dialog
+        open={constructionItemDialogOpen}
+        onClose={() => setConstructionItemDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>新增施工項目</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="施工項目名稱"
+            fullWidth
+            variant="outlined"
+            value={newConstructionItem}
+            onChange={(e) => setNewConstructionItem(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConstructionItemDialogOpen(false)}>取消</Button>
+          <Button
+            onClick={handleAddConstructionItem}
+            variant="contained"
+            disabled={!newConstructionItem.trim() || constructionItemOptions.includes(newConstructionItem.trim())}
+          >
+            新增
           </Button>
         </DialogActions>
       </Dialog>

@@ -30,7 +30,9 @@ import {
   DialogActions,
   Divider,
   useTheme,
-  Checkbox
+  Checkbox,
+  Chip,
+  InputAdornment
 } from '@mui/material';
 
 import {
@@ -40,7 +42,47 @@ import {
 } from '@mui/material';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddIcon from '@mui/icons-material/Add';
 
+// 狀態選項定義
+const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲", "已估價", "取消"];
+const billingStatusOptions = ["未請款", "部分請款", "已結清", "取消"];
+
+// 狀態顏色樣式函數
+const getStatusStyle = (status, type) => {
+  if (type === 'construction') {
+    switch (status) {
+      case '未開始':
+        return { bg: 'rgba(128, 128, 128, 0.1)', color: 'gray' };
+      case '進行中':
+        return { bg: 'rgba(25, 118, 210, 0.1)', color: '#1976d2' };
+      case '已完成':
+        return { bg: 'rgba(76, 175, 80, 0.1)', color: 'green' };
+      case '延遲':
+        return { bg: 'rgba(244, 67, 54, 0.1)', color: 'red' };
+      case '已估價':
+        return { bg: 'rgba(255, 193, 7, 0.1)', color: '#ffc107' };
+      case '取消':
+        return { bg: 'rgba(156, 39, 176, 0.1)', color: '#9c27b0' };
+      default:
+        return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
+    }
+  }
+  if (type === 'billing') {
+    switch (status) {
+      case '未請款':
+        return { bg: 'rgba(128, 128, 128, 0.1)', color: 'gray' };
+      case '部分請款':
+        return { bg: 'rgba(255, 152, 0, 0.1)', color: '#f57c00' };
+      case '已結清':
+        return { bg: 'rgba(76, 175, 80, 0.1)', color: 'green' };
+      case '取消':
+        return { bg: 'rgba(156, 39, 176, 0.1)', color: '#9c27b0' };
+      default:
+        return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
+    }
+  }
+};
 
 const taiwanCities = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"];
 const taiwanDistricts = {
@@ -142,6 +184,16 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   const [editedCustomer, setEditedCustomer] = useState(null);
   const [useCustomerAddress, setUseCustomerAddress] = useState(false);
   const [useCustomerContacts, setUseCustomerContacts] = useState(false);
+  
+  // 施工項目相關狀態
+  const [constructionItemOptions, setConstructionItemOptions] = useState([
+    "餌站安裝", "餌站檢測", "白蟻防治", "餌站埋設", "木料藥劑噴塗", "藥劑", "害蟲驅除", "老鼠餌站",
+    "空間消毒", "調查費用", "鼠害防治工程", "外牆清洗", "外牆去漆",
+    "門窗框去漆", "屋樑支撐工程", "牆身止潮帶", "外牆防護工程", "除鏽", "其他"
+  ]);
+  const [newConstructionItem, setNewConstructionItem] = useState("");
+  const [constructionItemDialogOpen, setConstructionItemDialogOpen] = useState(false);
+  
   const [projectData, setProjectData] = useState({
     project_name: "",
     customer_id: customerId,
@@ -149,6 +201,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     site_district: "",
     site_address: "",
     construction_item: "",
+    construction_items: [], // 新增多選施工項目陣列
     construction_fee: "",
     start_date: "",
     end_date: "",
@@ -253,6 +306,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
           site_district: projectData.site_district,
           site_address: projectData.site_address,
           construction_item: projectData.construction_item,
+          construction_items: projectData.construction_items, // 新增施工項目陣列
           construction_fee: safeFloat(projectData.construction_fee),
           start_date: safeDate(projectData.start_date),
           end_date: safeDate(projectData.end_date),
@@ -296,6 +350,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
         site_district: "",
         site_address: "",
         construction_item: "",
+        construction_items: [], // 重置施工項目陣列
         construction_fee: "",
         start_date: "",
         end_date: "",
@@ -349,6 +404,42 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     }
     updated[index] = { ...updated[index], [field]: value };
     setProjectData({ ...projectData, contacts: updated });
+  };
+
+  // 處理施工項目選擇
+  const handleConstructionItemChange = (event, newValue) => {
+    setProjectData(prev => ({
+      ...prev,
+      construction_items: newValue || [],
+      construction_item: (newValue || []).join(", ") // 保持向後兼容性
+    }));
+  };
+
+  // 新增自定義施工項目
+  const handleAddConstructionItem = () => {
+    if (newConstructionItem.trim() && !constructionItemOptions.includes(newConstructionItem.trim())) {
+      const newItem = newConstructionItem.trim();
+      setConstructionItemOptions(prev => [...prev, newItem]);
+      setProjectData(prev => ({
+        ...prev,
+        construction_items: [...(prev.construction_items || []), newItem],
+        construction_item: [...(prev.construction_items || []), newItem].join(", ")
+      }));
+      setNewConstructionItem("");
+      setConstructionItemDialogOpen(false);
+    }
+  };
+
+  // 刪除施工項目
+  const handleRemoveConstructionItem = (itemToRemove) => {
+    setProjectData(prev => {
+      const updatedItems = prev.construction_items.filter(item => item !== itemToRemove);
+      return {
+        ...prev,
+        construction_items: updatedItems,
+        construction_item: updatedItems.join(", ")
+      };
+    });
   };
 
   // 使用地址同客戶資料
@@ -799,14 +890,9 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
                           px: 1.5,
                           py: 0.5,
                           borderRadius: 1,
-                          backgroundColor: project.construction_status === '未開始' ? theme.palette.grey[200] :
-                                         project.construction_status === '進行中' ? theme.palette.info.light :
-                                         project.construction_status === '已完成' ? theme.palette.success.light :
-                                         theme.palette.warning.light,
-                          color: project.construction_status === '未開始' ? theme.palette.grey[700] :
-                                 project.construction_status === '進行中' ? theme.palette.info.dark :
-                                 project.construction_status === '已完成' ? theme.palette.success.dark :
-                                 theme.palette.warning.dark,
+                          backgroundColor: getStatusStyle(project.construction_status, 'construction').bg,
+                          color: getStatusStyle(project.construction_status, 'construction').color,
+                          fontWeight: 500,
                         }}
                       >
                         {project.construction_status}
@@ -819,14 +905,9 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
                           px: 1.5,
                           py: 0.5,
                           borderRadius: 1,
-                          backgroundColor: project.billing_status === '未請款' ? theme.palette.grey[200] :
-                                         project.billing_status === '已請款' ? theme.palette.info.light :
-                                         project.billing_status === '已收款' ? theme.palette.success.light :
-                                         theme.palette.warning.light,
-                          color: project.billing_status === '未請款' ? theme.palette.grey[700] :
-                                 project.billing_status === '已請款' ? theme.palette.info.dark :
-                                 project.billing_status === '已收款' ? theme.palette.success.dark :
-                                 theme.palette.warning.dark,
+                          backgroundColor: getStatusStyle(project.billing_status, 'billing').bg,
+                          color: getStatusStyle(project.billing_status, 'billing').color,
+                          fontWeight: 500,
                         }}
                       >
                         {project.billing_status}
@@ -1058,6 +1139,51 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
             />
           </div>
 
+          {/* 施工項目多選 */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>施工項目</Typography>
+            <Autocomplete
+              multiple
+              options={constructionItemOptions}
+              value={projectData.construction_items || []}
+              onChange={handleConstructionItemChange}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    key={option}
+                    variant="outlined"
+                    label={option}
+                    {...getTagProps({ index })}
+                    onDelete={() => handleRemoveConstructionItem(option)}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  placeholder="選擇或輸入施工項目"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {params.InputProps.endAdornment}
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setConstructionItemDialogOpen(true)}
+                            size="small"
+                          >
+                            <AddIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Box>
+
           {/* 施工天數、施工範圍、注意事項 */}
           <TextField
             name="construction_days"
@@ -1118,12 +1244,12 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
 
           {/* 收款金額 */}
           <TextField
-            name="amount"
+            name="construction_fee"
             label="收款金額"
             type="number"
             fullWidth
             margin="normal"
-            value={projectData.amount || ""}
+            value={projectData.construction_fee || ""}
             onChange={handleChange}
           />
 
@@ -1131,7 +1257,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
           {projectData.payment_method === '匯款' && (
             <TextField
               name="fee"
-              label="手續費"
+              label="匯款手續費"
               type="number"
               fullWidth
               margin="normal"
@@ -1199,6 +1325,37 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
             disabled={!projectData.project_name}
           >
             儲存
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新增自定義施工項目對話框 */}
+      <Dialog
+        open={constructionItemDialogOpen}
+        onClose={() => setConstructionItemDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>新增施工項目</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="施工項目名稱"
+            fullWidth
+            variant="outlined"
+            value={newConstructionItem}
+            onChange={(e) => setNewConstructionItem(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConstructionItemDialogOpen(false)}>取消</Button>
+          <Button
+            onClick={handleAddConstructionItem}
+            variant="contained"
+            disabled={!newConstructionItem.trim() || constructionItemOptions.includes(newConstructionItem.trim())}
+          >
+            新增
           </Button>
         </DialogActions>
       </Dialog>
