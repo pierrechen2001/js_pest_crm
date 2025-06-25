@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useAuth } from '../context/AuthContext';
+import AddressSelector from '../components/AddressSelector';
 import {
   Box,
   Card,
@@ -38,19 +39,6 @@ import { Edit, Delete, ArrowBack, Add, Business, Receipt, LocationOn, Phone, Fax
 
 const constructionStatusOptions = ["未開始", "進行中", "已完成", "延遲", "估價", "取消"];
 const billingStatusOptions = ["未請款", "部分請款", "已請款", "取消"];
-const taiwanCities = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"];
-const taiwanDistricts = {
-  "台北市": [
-    "松山區", "信義區", "大安區", "中山區", "中正區", "大同區", "萬華區", 
-    "文山區", "南港區", "內湖區", "士林區", "北投區"
-  ],
-  "新北市": [
-    "板橋區", "新莊區", "中和區", "永和區", "土城區", "樹林區", "三重區", 
-    "蘆洲區", "汐止區", "淡水區", "林口區", "三峽區", "鶯歌區", "金山區", 
-    "萬里區", "八里區", "瑞芳區", "平溪區", "雙溪區", "貢寮區", "石門區"
-  ],
-  // 其他縣市區域略...
-};
 
 export default function OrderDetail() {
   const { projectId } = useParams();
@@ -190,11 +178,20 @@ export default function OrderDetail() {
       site_district: ""
     }));
   };
-
   const handleDistrictChange = (newValue) => {
     setEditedProject(prev => ({
       ...prev,
       site_district: newValue
+    }));
+  };
+
+  // AddressSelector 回調函數
+  const handleAddressChange = (addressData) => {
+    setEditedProject(prev => ({
+      ...prev,
+      site_city: addressData.city,
+      site_district: addressData.district,
+      site_address: addressData.address
     }));
   };
 
@@ -954,34 +951,17 @@ export default function OrderDetail() {
   </Box>
 </Grid>
 
-{/* 第二行：縣市（2）、區域（2）、地址（6） */}
-<Grid container alignItems="center" sx={{ mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-  <Box sx={{ flex: 2 }}>
-    <Autocomplete
-      fullWidth
-      options={taiwanCities}
-      renderInput={(params) => <TextField {...params} label="施工縣市" margin="normal" />}
-      value={editedProject.site_city || ''}
-      onChange={(event, newValue) => handleCityChange(newValue)}
-    />
-  </Box>
-  <Box sx={{ flex: 2 }}>
-    <Autocomplete
-      fullWidth
-      options={taiwanDistricts[editedProject.site_city] || []}
-      renderInput={(params) => <TextField {...params} label="施工區域" margin="normal" />}
-      value={editedProject.site_district || ''}
-      onChange={(event, newValue) => handleDistrictChange(newValue)}
-    />
-  </Box>
-  <Box sx={{ flex: 6 }}>
-    <TextField
-      fullWidth
-      label="施工地址"
-      name="site_address"
-      value={editedProject.site_address || ''}
-      onChange={handleChange}
-      margin="normal"
+{/* 第二行：地址選擇器 */}
+<Grid container sx={{ mb: 2 }}>
+  <Box sx={{ width: '100%' }}>
+    <AddressSelector
+      city={editedProject.site_city || ''}
+      district={editedProject.site_district || ''}
+      address={editedProject.site_address || ''}
+      onAddressChange={handleAddressChange}
+      cityLabel="施工縣市"
+      districtLabel="施工區域"
+      addressLabel="施工地址"
     />
   </Box>
 </Grid>
