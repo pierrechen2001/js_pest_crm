@@ -47,6 +47,8 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [customerNoteExpanded, setCustomerNoteExpanded] = useState(false);
   const [projectNoteExpanded, setProjectNoteExpanded] = useState(false);
+  const [isConstructionScopeExpanded, setIsConstructionScopeExpanded] = useState(false);
+  const [isDisplayScopeExpanded, setIsDisplayScopeExpanded] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [error, setError] = useState(null);
   const [project, setProject] = useState(null);
@@ -743,7 +745,7 @@ export default function OrderDetail() {
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">施工資訊</Typography>
               </Box>
               <Grid container spacing={2}>                <Grid item xs={12} md={6}>
-                  <Typography><strong>開始日期：</strong> {project.start_date}</Typography>
+                  <Typography><strong>估價日期：</strong> {project.start_date}</Typography>
                   <Box sx={{ mb: 1 }}>
                     <Typography component="span"><strong>施工項目：</strong></Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
@@ -781,9 +783,38 @@ export default function OrderDetail() {
                   <Typography><strong>施工天數：</strong> {project.construction_days}</Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Typography><strong>結束日期：</strong> {project.end_date}</Typography>
+                  <Typography><strong>預計進場日期：</strong> {project.end_date}</Typography>
                   <Typography><strong>施工金額：</strong> ${project.construction_fee?.toLocaleString()}</Typography>
-                  <Typography><strong>施工範圍：</strong> {project.construction_scope}</Typography>
+                  <Box>
+                    <Typography component="span"><strong>施工範圍：</strong></Typography>
+                    {(() => {
+                      const scope = project.construction_scope || '無';
+                      const previewLength = 30;
+                      const isLong = scope.length > previewLength;
+                      const preview = isLong ? scope.slice(0, previewLength) + '...' : scope;
+
+                      return (
+                        <Typography component="span" sx={{ ml: 1 }}>
+                          {isDisplayScopeExpanded || !isLong ? scope : preview}
+                          {isLong && (
+                            <Typography
+                              component="span"
+                              onClick={() => setIsDisplayScopeExpanded(!isDisplayScopeExpanded)}
+                              sx={{
+                                color: 'primary.main',
+                                cursor: 'pointer',
+                                ml: 1,
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              {isDisplayScopeExpanded ? '收起' : '顯示更多'}
+                            </Typography>
+                          )}
+                        </Typography>
+                      );
+                    })()}
+                  </Box>
                 </Grid>
                 {/* <Grid item xs={12}>
                   <Typography><strong>注意事項：</strong> {project.project_notes}</Typography>
@@ -1030,7 +1061,7 @@ export default function OrderDetail() {
             margin="normal"
           />
         </Box>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, position: 'relative' }}>
           <TextField
             fullWidth
             label="施工範圍"
@@ -1038,7 +1069,40 @@ export default function OrderDetail() {
             value={editedProject.construction_scope || ''}
             onChange={handleChange}
             margin="normal"
+            multiline
+            rows={isConstructionScopeExpanded ? 8 : 2}
+            InputProps={{
+              style: { 
+                resize: 'none',
+                overflow: isConstructionScopeExpanded ? 'auto' : 'hidden'
+              }
+            }}
+            sx={{
+              '& .MuiInputBase-root': {
+                maxHeight: isConstructionScopeExpanded ? 'none' : '80px'
+              }
+            }}
           />
+          {editedProject.construction_scope && editedProject.construction_scope.length > 50 && (
+            <Button
+              size="small"
+              onClick={() => setIsConstructionScopeExpanded(!isConstructionScopeExpanded)}
+              sx={{
+                position: 'absolute',
+                bottom: 8,
+                right: 8,
+                minWidth: 'auto',
+                padding: '2px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 1)'
+                }
+              }}
+            >
+              {isConstructionScopeExpanded ? '收起' : '顯示更多'}
+            </Button>
+          )}
         </Box>
       </Grid>
 
