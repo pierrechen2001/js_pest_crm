@@ -377,8 +377,8 @@ const HomePage = () => {
         .select(`
           project_id,
           project_name,
-          start_date,
-          end_date,
+          quote_date,
+          expected_start_date,
           payment_date,
           construction_status,
           billing_status,
@@ -415,16 +415,16 @@ const HomePage = () => {
       // 將追蹤事件添加到專案事件中 
       // 轉換為行事曆事件格式
       const constructionEvents = projects
-        .filter(project => project.start_date)
+        .filter(project => project.quote_date)
         .map(project => {
           // 處理日期
           // 確保開始日期是 Date 物件
-          const startDate = parseISO(project.start_date);
+          const startDate = parseISO(project.quote_date);
           
           // 處理結束日期 - 如果沒有結束日期，使用開始日期
           let endDate;
-          if (project.end_date) {
-            endDate = parseISO(project.end_date);
+          if (project.expected_start_date) {
+            endDate = parseISO(project.expected_start_date);
             // 將結束日期設為該天的結束時間 (23:59:59)
             endDate.setHours(23, 59, 59, 999);
           } else {
@@ -479,13 +479,13 @@ const HomePage = () => {
       // 篩選出今天需要進行施工的專案（根據施工日期或施工狀態）
       const todayConstructionProjects = projects.filter(project => {
         // 如果有施工日期且是今天
-        if (project.start_date) {
-          const startDate = parseISO(project.start_date);
+        if (project.quote_date) {
+          const startDate = parseISO(project.quote_date);
           startDate.setHours(0, 0, 0, 0);
           
           let endDate;
-          if (project.end_date) {
-            endDate = parseISO(project.end_date);
+          if (project.expected_start_date) {
+            endDate = parseISO(project.expected_start_date);
             endDate.setHours(23, 59, 59, 999);
           } else {
             endDate = new Date(startDate);

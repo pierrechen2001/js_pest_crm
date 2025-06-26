@@ -5,6 +5,7 @@ import { geocodeAddress, combineAddress } from '../lib/geocoding';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddressSelector from '../components/AddressSelector';
 import CustomerForm from '../components/CustomerForm';
+import ProjectForm from '../components/ProjectForm';
 import {
   IconButton,
   Box,
@@ -84,76 +85,9 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   const [projects, setProjects] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [useCustomerAddress, setUseCustomerAddress] = useState(false);
-  const [useCustomerContacts, setUseCustomerContacts] = useState(false);
-  const [isConstructionScopeExpanded, setIsConstructionScopeExpanded] = useState(false);
-  const [projectData, setProjectData] = useState({
-    project_name: "",
-    customer_id: customerId,
-    site_city: "",
-    site_district: "",
-    site_address: "",
-    construction_item: "",
-    construction_fee: "",
-    start_date: "",
-    end_date: "",
-    construction_days: "",
-    construction_scope: "",
-    construction_notes: "",
-    payment_method: "",
-    payment_date: "",
-    construction_status: "未開始",
-    billing_status: "未請款",
-    contacts: [
-      { role: "", name: "", contactType: "", contact: "" },
-    ]
-  });
   const theme = useTheme();
 
   const customer = customers.find((c) => c.customer_id === customerId);
-
-  // 使用客戶資訊自動填入專案聯絡人
-  useEffect(() => {
-    if (customer) {
-      // 當客戶資訊改變時，更新專案聯絡人資訊
-      const contacts = [];
-      
-      if (customer.contact1_name) {
-        contacts.push({
-          role: customer.contact1_role || "",
-          name: customer.contact1_name || "",
-          contactType: customer.contact1_type || "",
-          contact: customer.contact1_contact || ""
-        });
-      }
-      
-      if (customer.contact2_name) {
-        contacts.push({
-          role: customer.contact2_role || "",
-          name: customer.contact2_name || "",
-          contactType: customer.contact2_type || "",
-          contact: customer.contact2_contact || ""
-        });
-      }
-      
-      if (customer.contact3_name) {
-        contacts.push({
-          role: customer.contact3_role || "",
-          name: customer.contact3_name || "",
-          contactType: customer.contact3_type || "",
-          contact: customer.contact3_contact || ""
-        });
-      }
-      
-      if (contacts.length > 0) {
-        setProjectData(prev => ({
-          ...prev,
-          customer_id: customerId,
-          contacts: contacts
-        }));
-      }
-    }
-  }, [customer, customerId]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -173,112 +107,9 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     fetchProjects();
   }, [customerId, fetchProjectsByCustomerId]);
 
-  // 處理新增專案
-  const handleSaveProject = async () => {
-    try {
-      // 日期欄位處理：空字串轉 null
-      const safeDate = (d) => d && d.length >= 10 ? d : null;
-      // 數字欄位處理：空字串轉 null
-      const safeInt = (n) => n === "" || n === undefined ? null : parseInt(n, 10);
-      const safeFloat = (n) => n === "" || n === undefined ? null : parseFloat(n);
-
-      // 1. 組合完整地址並進行 geocoding
-      const fullAddress = combineAddress(projectData.site_city, projectData.site_district, projectData.site_address);
-      const coords = await geocodeAddress(fullAddress);
-      const latitude = coords?.latitude || null;
-      const longitude = coords?.longitude || null;
-
-      // 4. 寫入 Supabase
-      const { data, error } = await supabase
-        .from('project')
-        .insert([{
-          project_name: projectData.project_name,
-          customer_id: customerId,
-          site_city: projectData.site_city,
-          site_district: projectData.site_district,
-          site_address: projectData.site_address,
-          construction_item: projectData.construction_item,
-          construction_fee: safeFloat(projectData.construction_fee),
-          start_date: safeDate(projectData.start_date),
-          end_date: safeDate(projectData.end_date),
-          construction_days: safeInt(projectData.construction_days),
-          construction_scope: projectData.construction_scope,
-          project_notes: projectData.construction_notes,
-          payment_method: projectData.payment_method,
-          payment_date: safeDate(projectData.payment_date),
-          construction_status: projectData.construction_status,
-          billing_status: projectData.billing_status,
-          contact1_role: projectData.contacts[0]?.role || "",
-          contact1_name: projectData.contacts[0]?.name || "",
-          contact1_type: projectData.contacts[0]?.contactType || "",
-          contact1_contact: projectData.contacts[0]?.contact || "",
-          contact2_role: projectData.contacts[1]?.role || "",
-          contact2_name: projectData.contacts[1]?.name || "",
-          contact2_type: projectData.contacts[1]?.contactType || "",
-          contact2_contact: projectData.contacts[1]?.contact || "",
-          contact3_role: projectData.contacts[2]?.role || "",
-          contact3_name: projectData.contacts[2]?.name || "",
-          contact3_type: projectData.contacts[2]?.contactType || "",
-          contact3_contact: projectData.contacts[2]?.contact || "",
-          latitude,
-          longitude
-        }])
-        .select();
-  
-      if (error) {
-        alert("儲存失敗：" + error.message);
-        console.error('Error saving project:', error);
-        return;
-      }
-  
-      setProjects(prev => [...prev, data[0]]);
-      setOpenDialog(false);
-      // 重置表單
-      setProjectData({
-        project_name: "",
-        customer_id: customerId,
-        site_city: "",
-        site_district: "",
-        site_address: "",
-        construction_item: "",
-        construction_fee: "",
-        start_date: "",
-        end_date: "",
-        construction_days: "",
-        construction_scope: "",
-        construction_notes: "",
-        payment_method: "",
-        payment_date: "",
-        construction_status: "未開始",
-        billing_status: "未請款",
-        contacts: [
-          { role: "", name: "", contactType: "", contact: "" },
-        ]
-      });
-      alert("專案已成功儲存！");
-    } catch (error) {
-      alert("儲存失敗，請稍後再試！");
-      console.error('Error saving project:', error);
-    }
-  };
-
-  // 處理表單變更
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProjectData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // 處理聯絡人更新
-  const updateContact = (index, field, value) => {
-    const updated = [...projectData.contacts];
-    if (!updated[index]) {
-      updated[index] = { role: "", name: "", contactType: "", contact: "" };
-    }
-    updated[index] = { ...updated[index], [field]: value };
-    setProjectData({ ...projectData, contacts: updated });
+  // 處理專案保存成功後的回調
+  const handleProjectSaved = (newProject) => {
+    setProjects(prev => [...prev, newProject]);
   };
 
   const handleDeleteCustomer = async () => {
@@ -344,15 +175,6 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       console.error('Error updating customer:', error);
       alert('更新客戶資料失敗，請稍後再試！');
     }
-  };
-
-  const handleProjectAddressChange = (addressData) => {
-    setProjectData(prev => ({
-      ...prev,
-      site_city: addressData.city,
-      site_district: addressData.district,
-      site_address: addressData.address
-    }));
   };
 
   // 在 useEffect 中初始化 editedCustomer
@@ -445,7 +267,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
             // 一般住家只顯示基本資訊
             <>
               <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}><b>住址：</b>{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
-              <Typography sx={{ mb: 1 }}><b>住家電話：</b>{customer.company_phone}</Typography>
+              <Typography sx={{ mb: 1 }}><b>市話：</b>{customer.company_phone}</Typography>
               <Typography sx={{ mb: 1 }}><b>信箱：</b>{customer.email}</Typography>
             </>
           ) : (
@@ -469,9 +291,9 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
               </Typography>
               <Typography sx={{ mb: 1 }}>
                 <b>
-                  {customer.customer_type === "建築師" ? "事務所電話：" :
-                   customer.customer_type === "古蹟、政府機關" ? "專案電話：" :
-                   "公司電話："}
+                  {customer.customer_type === "建築師" ? "事務所市話：" :
+                   customer.customer_type === "古蹟、政府機關" ? "市話：" :
+                   "公司市話："}
                 </b>
                 {customer.company_phone}
               </Typography>
@@ -598,7 +420,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
                   >
                     <TableCell>{project.project_name}</TableCell>
                     <TableCell>{`${project.site_city || ""}${project.site_district || ""}${project.site_address || ""}`}</TableCell>
-                    <TableCell>{project.start_date}</TableCell>
+                    <TableCell>{project.quote_date}</TableCell>
                     <TableCell>
                       <Box
                         sx={{
@@ -637,384 +459,15 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
 
       
       {/* 新增專案對話框 */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>新增專案</DialogTitle>
-        <DialogContent>
-          <Typography variant="h6" gutterBottom>基本資訊</Typography>
-          <TextField
-            name="project_name"
-            label="專案名稱"
-            fullWidth
-            margin="normal"
-            value={projectData.project_name}
-            onChange={handleChange}
-            required
-          />
-          
-          <Typography variant="h6" gutterBottom>聯絡人資訊</Typography>
-              <FormControl component="fieldset" sx={{ mb: 1 }}>
-                <Box display="flex" alignItems="center">
-                  <Checkbox
-                    checked={useCustomerContacts}
-                    onChange={(e) => {
-                      setUseCustomerContacts(e.target.checked);
-                      if (e.target.checked && customer) {
-                        // 同步聯絡人
-                        const contacts = [];
-                        if (customer.contact1_name) {
-                          contacts.push({
-                            role: customer.contact1_role || "",
-                            name: customer.contact1_name || "",
-                            contactType: customer.contact1_type || "",
-                            contact: customer.contact1_contact || ""
-                          });
-                        }
-                        if (customer.contact2_name) {
-                          contacts.push({
-                            role: customer.contact2_role || "",
-                            name: customer.contact2_name || "",
-                            contactType: customer.contact2_type || "",
-                            contact: customer.contact2_contact || ""
-                          });
-                        }
-                        if (customer.contact3_name) {
-                          contacts.push({
-                            role: customer.contact3_role || "",
-                            name: customer.contact3_name || "",
-                            contactType: customer.contact3_type || "",
-                            contact: customer.contact3_contact || ""
-                          });
-                        }
-                        setProjectData(prev => ({
-                          ...prev,
-                          contacts: contacts.length > 0 ? contacts : [{ role: "", name: "", contactType: "", contact: "" }]
-                        }));
-                      } else {
-                        // 清空聯絡人
-                        setProjectData(prev => ({
-                          ...prev,
-                          contacts: [{ role: "", name: "", contactType: "", contact: "" }]
-                        }));
-                      }
-                    }}
-                  />
-                  <Typography>聯絡資訊同客戶資料</Typography>
-                </Box>
-              </FormControl>
-                {projectData.contacts.map((contact, index) => (
-              <div key={index} style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px"}}>
-                <TextField
-                  label="職位"
-                  fullWidth
-                  value={contact.role || ""}
-                  onChange={(e) => updateContact(index, "role", e.target.value)}
-                />
-                <TextField
-                  label="名字"
-                  fullWidth
-                  value={contact.name || ""}
-                  onChange={(e) => updateContact(index, "name", e.target.value)}
-                />
-                <FormControl fullWidth>
-                  <InputLabel>聯絡方式類型</InputLabel>
-                  <Select
-                    value={contact.contactType || ""}
-                    onChange={(e) => updateContact(index, "contactType", e.target.value)}
-                  >
-                    {["電話", "市話", "LineID", "Email"].map((type) => (
-                      <MenuItem key={type} value={type}>{type}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  label={contact.contactType || "聯絡方式"}
-                  fullWidth
-                  value={contact.contact || ""}
-                  onChange={(e) => {
-                    let formattedValue = e.target.value;
-
-                    if (contact.contactType === "電話") {
-                      formattedValue = formattedValue
-                        .replace(/[^\d]/g, "")
-                        .replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-                    } else if (contact.contactType === "市話") {
-                      formattedValue = formattedValue
-                        .replace(/[^\d]/g, "")
-                        .replace(/(\d{2})(\d{4})(\d{4})/, "($1)$2-$3");
-                    }
-
-                    updateContact(index, "contact", formattedValue);
-                  }}
-                />
-                {index > 0 && (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => {
-                      const updatedContacts = projectData.contacts.filter((_, i) => i !== index);
-                      setProjectData({ ...projectData, contacts: updatedContacts });
-                    }}
-                  >
-                    刪除
-                  </Button>
-                )}
-              </div>
-            ))}
-            
-            <Button
-              variant="outlined"
-              onClick={() => {
-                const updatedContacts = [
-                  ...projectData.contacts,
-                  { role: "", name: "", contactType: "", contact: "" }
-                ];
-                setProjectData({ ...projectData, contacts: updatedContacts });
-              }}
-              disabled={projectData.contacts.length >= 3}
-            >
-              新增聯絡人
-            </Button>
-
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="h6" gutterBottom>施工資訊</Typography>
-          <FormControl component="fieldset" style={{ marginTop: 0, marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <Checkbox
-                    checked={useCustomerAddress}
-                    onChange={(e) => {
-                      setUseCustomerAddress(e.target.checked);
-                      if (e.target.checked && customer) {
-                        setProjectData(prev => ({
-                          ...prev,
-                          site_city: customer.contact_city || "",
-                          site_district: customer.contact_district || "",
-                          site_address: customer.contact_address || ""
-                        }));
-                      } else {
-                        setProjectData(prev => ({
-                          ...prev,
-                          site_city: "",
-                          site_district: "",
-                          site_address: ""
-                        }));
-                      }
-                    }}
-                  />
-                  <Typography>地址同客戶資料</Typography>
-                </div>              </FormControl>
-          {/* 施工地址 */}
-          <div style={{ marginBottom: "10px" }}>
-            <AddressSelector
-              city={projectData.site_city || ""}
-              district={projectData.site_district || ""}
-              address={projectData.site_address || ""}
-              onAddressChange={handleProjectAddressChange}
-              cityLabel="施工縣市"
-              districtLabel="施工區域"
-              addressLabel="施工地址"
-            />
-          </div>
-      
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-            <TextField
-              name="start_date"
-              label="開始日期"
-              type="date"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={projectData.start_date || ""}
-              onChange={handleChange}
-            />
-            <TextField
-              name="end_date"
-              label="結束日期"
-              type="date"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={projectData.end_date || ""}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* 施工天數、施工範圍、注意事項 */}
-          <TextField
-            name="construction_days"
-            label="施工天數"
-            type="number"
-            fullWidth
-            margin="normal"
-            value={projectData.construction_days || ""}
-            onChange={handleChange}
-          />
-          <Box sx={{ position: 'relative' }}>
-            <TextField
-              name="construction_scope"
-              label="施工範圍"
-              fullWidth
-              margin="normal"
-              multiline
-              rows={isConstructionScopeExpanded ? 8 : 2}
-              value={projectData.construction_scope || ""}
-              onChange={handleChange}
-              InputProps={{
-                style: { 
-                  resize: 'none',
-                  overflow: isConstructionScopeExpanded ? 'auto' : 'hidden'
-                }
-              }}
-              sx={{
-                '& .MuiInputBase-root': {
-                  maxHeight: isConstructionScopeExpanded ? 'none' : '80px'
-                }
-              }}
-            />
-            {projectData.construction_scope && projectData.construction_scope.length > 50 && (
-              <Button
-                size="small"
-                onClick={() => setIsConstructionScopeExpanded(!isConstructionScopeExpanded)}
-                sx={{
-                  position: 'absolute',
-                  bottom: 8,
-                  right: 8,
-                  minWidth: 'auto',
-                  padding: '2px 8px',
-                  fontSize: '0.75rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 1)'
-                  }
-                }}
-              >
-                {isConstructionScopeExpanded ? '收起' : '顯示更多'}
-              </Button>
-            )}
-          </Box>
-        
-          <TextField
-            name="construction_notes"
-            label="注意事項"
-            fullWidth
-            multiline
-            rows={3}
-            margin="normal"
-            value={projectData.construction_notes || ""}
-            onChange={handleChange}
-          />
-
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="h6" gutterBottom>收款資訊</Typography>
-
-          {/* 收款方式和收款時間 */}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-            <FormControl fullWidth>
-              <InputLabel>收款方式</InputLabel>
-              <Select
-                name="payment_method"
-                value={projectData.payment_method || ""}
-                onChange={handleChange}
-              >
-                <MenuItem value="現金">現金</MenuItem>
-                <MenuItem value="匯款">匯款</MenuItem>
-                <MenuItem value="支票">支票</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              name="payment_date"
-              label="結清日期"
-              type="date"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={projectData.payment_date || ""}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* 收款金額 */}
-          <TextField
-            name="amount"
-            label="收款金額"
-            type="number"
-            fullWidth
-            margin="normal"
-            value={projectData.amount || ""}
-            onChange={handleChange}
-          />
-
-          {/* 匯款相關資訊 */}
-          {projectData.payment_method === '匯款' && (
-            <TextField
-              name="fee"
-              label="手續費"
-              type="number"
-              fullWidth
-              margin="normal"
-              value={projectData.fee || ""}
-              onChange={handleChange}
-            />
-          )}
-
-          {/* 支票相關資訊 */}
-          {projectData.payment_method === '支票' && (
-            <>
-              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-                <TextField
-                  name="payer"
-                  label="付款人"
-                  fullWidth
-                  value={projectData.payer || ""}
-                  onChange={handleChange}
-                />
-                <FormControl fullWidth>
-                  <InputLabel>收款人</InputLabel>
-                  <Select
-                    name="payee"
-                    value={projectData.payee || ""}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="中星">中星</MenuItem>
-                    <MenuItem value="建興">建興</MenuItem>
-                  </Select>
-                </FormControl>
-              </div>
-              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-                <TextField
-                  name="check_number"
-                  label="支票號碼"
-                  fullWidth
-                  value={projectData.check_number || ""}
-                  onChange={handleChange}
-                />
-                <TextField
-                  name="bank_branch"
-                  label="銀行分行"
-                  fullWidth
-                  value={projectData.bank_branch || ""}
-                  onChange={handleChange}
-                />
-                <TextField
-                  name="due_date"
-                  label="到期日"
-                  type="date"
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  value={projectData.due_date || ""}
-                  onChange={handleChange}
-                />
-              </div>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>取消</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleSaveProject}
-            disabled={!projectData.project_name}
-          >
-            儲存
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ProjectForm
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        onSave={handleProjectSaved}
+        customers={[]}
+        preSelectedCustomer={customer}
+        showCustomerSearch={false}
+        mode="create"
+      />
     </Box>
   );
 };

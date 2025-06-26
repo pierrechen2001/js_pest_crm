@@ -5,7 +5,7 @@ import { Add } from "@mui/icons-material";
 import CustomerForm from '../components/CustomerForm';
 
 const customerTypes = ["古蹟、政府機關", "一般住家", "建築師", "營造、設計公司"];
-const filterOptions = ["客戶名稱", "聯絡人姓名", "聯絡電話", "地址"];
+const filterOptions = ["客戶名稱", "聯絡人姓名", "聯絡手機", "地址"];
 
 const Customers = ({ 
   customers, 
@@ -115,7 +115,7 @@ const Customers = ({
               customer.contact2_name?.toLowerCase().includes(searchLower) ||
               customer.contact3_name?.toLowerCase().includes(searchLower)
             );
-          case "聯絡電話":
+          case "聯絡手機":
             return (
               customer.contact1_contact?.includes(searchLower) ||
               customer.contact2_contact?.includes(searchLower) ||
@@ -244,7 +244,7 @@ const Customers = ({
               <TableCell style={{ width: "12%" }}>客戶分類</TableCell>
               <TableCell style={{ width: "20%" }}>客戶名稱</TableCell>
               <TableCell style={{ width: "13%" }}>聯絡人</TableCell>
-              <TableCell style={{ width: "13%" }}>聯絡電話</TableCell>
+              <TableCell style={{ width: "13%" }}>聯絡手機</TableCell>
               <TableCell style={{ width: "35%" }}>地址</TableCell>
             </TableRow>
           </TableHead>

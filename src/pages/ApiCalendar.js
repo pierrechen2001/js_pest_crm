@@ -58,6 +58,7 @@ const ApiCalendar = () => {
   const calendarId = "jongshingpest@gmail.com";
   
   // 新增：顯示控制
+  const [showQuoteDates, setShowQuoteDates] = useState(true); // 顯示估價日期
   const [showConstructionDates, setShowConstructionDates] = useState(true); // 顯示施工日期
   const [showPaymentDates, setShowPaymentDates] = useState(true); // 顯示收款日期
   const [showTrackDates, setShowTrackDates] = useState(true); // 顯示追蹤提醒
@@ -522,8 +523,8 @@ const ApiCalendar = () => {
         .select(`
           project_id,
           project_name,
-          start_date,
-          end_date,
+          quote_date,
+          expected_start_date,
           payment_date,
           construction_status,
           billing_status,
@@ -541,42 +542,57 @@ const ApiCalendar = () => {
       if (error) throw error;
       
       // 轉換為行事曆事件格式
-      const constructionEvents = projects
-        .filter(project => project.start_date)
-        .map(project => {
-          // 處理結束日期，確保結束日期當天也能顯示
-          let endDate = project.end_date || project.start_date;
-          // 將日期字符串轉換為日期對象
-          if (typeof endDate === 'string') {
-            const date = new Date(endDate);
-            // 增加一天
-            date.setDate(date.getDate() + 1);
-            endDate = date.toISOString().split('T')[0];
+      // 新增估價事件 - 僅顯示估價日期當天
+      const quoteEvents = projects
+        .filter(project => project.quote_date)
+        .map(project => ({
+          id: `quote-${project.project_id}`,
+          title: `估價: ${project.project_name}`,
+          start: project.quote_date,
+          end: project.quote_date, // 只顯示當天
+          description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.construction_status}`,
+          backgroundColor: '#e8f5e9', // 淡綠色
+          borderColor: '#81c784',
+          textColor: '#333333',
+          type: 'quote', // 自定義標記
+          extendedProps: {
+            projectId: project.project_id,
+            projectName: project.project_name,
+            customerName: project.customer_database?.customer_name || '未知',
+            site_city: project.site_city || '',
+            site_district: project.site_district || '',
+            site_address: project.site_address || '',
+            construction_status: project.construction_status || '',
+            billing_status: project.billing_status || '',
+            isProjectEvent: true
           }
-          
-          return {
-            id: `construction-${project.project_id}`,
-            title: `施工: ${project.project_name}`,
-            start: project.start_date,
-            end: endDate,
-            description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.construction_status}`,
-            backgroundColor: '#f0f4ff', // 淡藍色
-            borderColor: '#a0b4ff',
-            textColor: '#333333',
-            type: 'construction', // 自定義標記
-            extendedProps: {
-              projectId: project.project_id,
-              projectName: project.project_name,
-              customerName: project.customer_database?.customer_name || '未知',
-              site_city: project.site_city || '',
-              site_district: project.site_district || '',
-              site_address: project.site_address || '',
-              construction_status: project.construction_status || '',
-              billing_status: project.billing_status || '',
-              isProjectEvent: true
-            }
-          };
-        });
+        }));
+
+      // 修改施工事件 - 僅顯示預計進場日期當天
+      const constructionEvents = projects
+        .filter(project => project.expected_start_date)
+        .map(project => ({
+          id: `construction-${project.project_id}`,
+          title: `施工: ${project.project_name}`,
+          start: project.expected_start_date,
+          end: project.expected_start_date, // 只顯示預計進場當天
+          description: `客戶: ${project.customer_database?.customer_name || '未知'}\n狀態: ${project.construction_status}`,
+          backgroundColor: '#f0f4ff', // 淡藍色
+          borderColor: '#a0b4ff',
+          textColor: '#333333',
+          type: 'construction', // 自定義標記
+          extendedProps: {
+            projectId: project.project_id,
+            projectName: project.project_name,
+            customerName: project.customer_database?.customer_name || '未知',
+            site_city: project.site_city || '',
+            site_district: project.site_district || '',
+            site_address: project.site_address || '',
+            construction_status: project.construction_status || '',
+            billing_status: project.billing_status || '',
+            isProjectEvent: true
+          }
+        }));
         
       const paymentEvents = projects
         .filter(project => project.payment_date)
@@ -642,7 +658,7 @@ const ApiCalendar = () => {
         console.log('trackEvents:', trackEvents); // ← 加這行
 
       setTrackEvents(trackEvents);
-      setProjectEvents([...constructionEvents, ...paymentEvents, ...trackEvents]);
+      setProjectEvents([...quoteEvents, ...constructionEvents, ...paymentEvents, ...trackEvents]);
     } catch (error) {
       console.error("Error fetching project dates:", error);
       setProjectError(`無法獲取專案日期: ${error.message}`);
@@ -655,6 +671,11 @@ const ApiCalendar = () => {
   const getMergedEvents = useCallback(() => {
     // 根據選項篩選專案事件
     let filteredProjectEvents = [];
+    
+    if (showQuoteDates) {
+      filteredProjectEvents = [...filteredProjectEvents, 
+        ...projectEvents.filter(event => event.type === 'quote')];
+    }
     
     if (showConstructionDates) {
       filteredProjectEvents = [...filteredProjectEvents, 
@@ -671,7 +692,7 @@ const ApiCalendar = () => {
     }
     // 返回合併後的事件列表
     return [...events, ...filteredProjectEvents];
-  }, [events, projectEvents, trackEvents, showConstructionDates, showPaymentDates, showTrackDates]);
+  }, [events, projectEvents, trackEvents, showQuoteDates, showConstructionDates, showPaymentDates, showTrackDates]);
 
   // 添加專案事件點擊處理
   const handleEventClick = useCallback((info) => {
@@ -802,6 +823,16 @@ const ApiCalendar = () => {
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <FormControlLabel
+            control={
+              <Checkbox 
+                checked={showQuoteDates} 
+                onChange={(e) => setShowQuoteDates(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="顯示估價日期"
+          />
           <FormControlLabel
             control={
               <Checkbox 

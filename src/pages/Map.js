@@ -12,7 +12,6 @@ import {
   Chip
 } from '@mui/material';
 
-
 const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
 
 if (!apiKey) {
@@ -247,7 +246,7 @@ const MapComponent = ({ projects = [] }) => {
             if (activeInfoWindowRef.current) {
               activeInfoWindowRef.current.close();
             }
-            const startDate = project.start_date ? new Date(project.start_date).toLocaleDateString() : 'N/A';
+            const quoteDate = project.quote_date ? new Date(project.quote_date).toLocaleDateString() : 'N/A';
             const contractAmount = project.construction_fee ? `${project.construction_fee.toLocaleString()} 元` : 'N/A';
             const projectTitleText = project.project_name || '未提供專案名稱';
             const projectTitleElement = document.createElement('div');
@@ -256,7 +255,7 @@ const MapComponent = ({ projects = [] }) => {
             projectTitleElement.textContent = projectTitleText;
             const projectDetails = `
               <div style="font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;">
-                <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
+                <p style="margin: 0 0 4px 0;"><strong>估價日期:</strong> ${quoteDate}</p>
                 <p style="margin: 0 0 10px 0;"><strong>施工金額:</strong> ${contractAmount}</p>
                 <a href="/order/${project.project_id}" target="_blank" style="color: #1a73e8; text-decoration: none; font-weight: bold;">查看專案詳細頁面</a>
               </div>
@@ -315,7 +314,7 @@ const MapComponent = ({ projects = [] }) => {
                 if (activeInfoWindowRef.current) {
                   activeInfoWindowRef.current.close();
                 }
-                const startDate = project.start_date ? new Date(project.start_date).toLocaleDateString() : 'N/A';
+                const quoteDate = project.quote_date ? new Date(project.quote_date).toLocaleDateString() : 'N/A';
                 const contractAmount = project.construction_fee ? `${project.construction_fee.toLocaleString()} 元` : 'N/A';
                 const projectTitleText = project.project_name || '未提供專案名稱';
                 const projectTitleElement = document.createElement('div');
@@ -324,7 +323,7 @@ const MapComponent = ({ projects = [] }) => {
                 projectTitleElement.textContent = projectTitleText;
                 const projectDetails = `
                   <div style="font-family: Arial, sans-serif; font-size: 13px; color: #555555; line-height: 1.5; margin-top: 8px;">
-                    <p style="margin: 0 0 4px 0;"><strong>開始時間:</strong> ${startDate}</p>
+                    <p style="margin: 0 0 4px 0;"><strong>估價日期:</strong> ${quoteDate}</p>
                     <p style="margin: 0 0 10px 0;"><strong>施工金額:</strong> ${contractAmount}</p>
                     <a href="/order/${project.project_id}" target="_blank" style="color: #1a73e8; text-decoration: none; font-weight: bold;">查看專案詳細頁面</a>
                   </div>

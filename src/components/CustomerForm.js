@@ -51,7 +51,7 @@ const CustomerForm = ({
   });
 
   const customerTypes = ["古蹟、政府機關", "一般住家", "建築師", "營造、設計公司"];
-  const contactTypes = ["LineID", "市話", "手機", "信箱"];
+  const contactTypes = ["手機", "市話", "LineID", "信箱"];
 
   // 初始化資料
   useEffect(() => {
@@ -112,7 +112,7 @@ const CustomerForm = ({
   };
 
   // 處理電話號碼變更（支援分機號碼）
-  const handlePhoneChange = (value, field) => {
+  const handlePhoneChange = (value, field, contactType = null) => {
     // 保留原始輸入中的#字符用於分機號碼
     const parts = value.split('#');
     const phoneNumber = parts[0];
@@ -122,8 +122,23 @@ const CustomerForm = ({
     let cleanPhone = phoneNumber.replace(/[^\d]/g, "");
     let formattedValue = cleanPhone;
     
-    // 台灣市話格式化規則（根據區碼對照表）
-    if (cleanPhone.startsWith("0") && cleanPhone.length >= 2) {
+    // 判斷聯絡方式類型來決定格式化方式
+    if (contactType === "手機") {
+      // 手機號碼處理 (09開頭，10碼) - 格式: xxxx-xxx-xxx
+      if (cleanPhone.length > 10) {
+        // 超過10碼，自動添加分機號碼
+        const phoneDigits = cleanPhone.substring(0, 10);
+        const extensionDigits = cleanPhone.substring(10);
+        formattedValue = phoneDigits.replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+        if (extensionDigits) {
+          formattedValue += `#${extensionDigits}`;
+        }
+      } else {
+        // 手機號碼格式化: xxxx-xxx-xxx
+        formattedValue = cleanPhone.replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
+      }
+    } else if (contactType === "市話" || (!contactType && cleanPhone.startsWith("0") && !cleanPhone.startsWith("09"))) {
+      // 市話格式化邏輯（根據區碼對照表）
       const getPhoneFormat = (phone) => {
         // 根據區碼判斷格式
         if (phone.startsWith("02")) {
@@ -244,30 +259,6 @@ const CustomerForm = ({
         } else {
           const regex = new RegExp(`(\\d{${format.groups[0]}})(\\d{${format.groups[1]}})(\\d+)`);
           formattedValue = cleanPhone.replace(regex, "($1)$2-$3");
-        }
-      }
-    } else {
-      // 手機號碼處理 (09開頭，10碼)
-      if (cleanPhone.startsWith("09") && cleanPhone.length > 10) {
-        const phoneDigits = cleanPhone.substring(0, 10);
-        const extensionDigits = cleanPhone.substring(10);
-        
-        // 格式化手機號碼
-        formattedValue = phoneDigits.replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-        
-        // 自動添加分機號碼
-        if (extensionDigits) {
-          formattedValue += `#${extensionDigits}`;
-        }
-      } else if (cleanPhone.startsWith("09") && cleanPhone.length === 10) {
-        // 完整手機號碼格式化
-        formattedValue = cleanPhone.replace(/(\d{4})(\d{3})(\d{3})/, "$1-$2-$3");
-      } else if (cleanPhone.startsWith("09") && cleanPhone.length > 4) {
-        // 部分手機號碼格式化
-        if (cleanPhone.length <= 7) {
-          formattedValue = cleanPhone.replace(/(\d{4})(\d+)/, "$1-$2");
-        } else {
-          formattedValue = cleanPhone.replace(/(\d{4})(\d{3})(\d+)/, "$1-$2-$3");
         }
       }
     }
@@ -398,9 +389,8 @@ const CustomerForm = ({
     onClose();
   };
 
-  // 取得電話標籤
   const getPhoneLabel = () => {
-    return selectedCustomerType === "一般住家" ? "市話" : "公司電話（市話）";
+    return selectedCustomerType === "一般住家" ? "市話" : "公司手機";
   };
 
   // 是否顯示公司相關欄位
@@ -597,8 +587,8 @@ const CustomerForm = ({
                   onChange={(e) => {
                     const contactType = customerData[`contact${i}_type`];
                     if (contactType === "市話" || contactType === "手機") {
-                      // 使用 handlePhoneChange 處理市話和手機格式化
-                      handlePhoneChange(e.target.value, `contact${i}_contact`);
+                      // 使用 handlePhoneChange 處理市話和手機格式化，傳入聯絡方式類型
+                      handlePhoneChange(e.target.value, `contact${i}_contact`, contactType);
                     } else {
                       // 其他類型（LineID、信箱）直接儲存
                       handleContactChange(i, 'contact', e.target.value);
