@@ -10,6 +10,9 @@ const AddressSelector = ({
   onDistrictChange, 
   onAddressChange,
   prefix = "site", // "site" or "contact"
+  cityLabel = null, // 自定義縣市標籤
+  districtLabel = null, // 自定義區域標籤
+  addressLabel = null, // 自定義地址標籤
   disabled = false,
   required = false,
   errors = {}
@@ -22,6 +25,11 @@ const AddressSelector = ({
     }
   };
 
+  // 動態生成標籤
+  const getCityLabel = () => cityLabel || `${prefix === 'site' ? '施工' : '聯絡'}縣市`;
+  const getDistrictLabel = () => districtLabel || `${prefix === 'site' ? '施工' : '聯絡'}區域`;
+  const getAddressLabel = () => addressLabel || `${prefix === 'site' ? '施工' : '聯絡'}地址`;
+
   return (
     <Box sx={{ display: "flex", gap: 2, alignItems: "center", width: "100%" }}>
       <Box sx={{ flex: 1 }}>
@@ -33,7 +41,7 @@ const AddressSelector = ({
           renderInput={(params) => (
             <TextField 
               {...params} 
-              label={`${prefix === 'site' ? '施工' : '聯絡'}縣市`} 
+              label={getCityLabel()} 
               fullWidth 
               required={required}
               error={!!errors.city}
@@ -52,7 +60,7 @@ const AddressSelector = ({
           renderInput={(params) => (
             <TextField 
               {...params} 
-              label={`${prefix === 'site' ? '施工' : '聯絡'}區域`} 
+              label={getDistrictLabel()} 
               fullWidth 
               required={required}
               error={!!errors.district}
@@ -64,7 +72,7 @@ const AddressSelector = ({
       
       <Box sx={{ flex: 3 }}>
         <TextField
-          label={`${prefix === 'site' ? '施工' : '聯絡'}地址`}
+          label={getAddressLabel()}
           fullWidth
           value={address || ""}
           onChange={(e) => onAddressChange(e.target.value)}

@@ -5,7 +5,6 @@ import { geocodeAddress, combineAddress } from '../lib/geocoding';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddressSelector from '../components/AddressSelector';
 import CustomerForm from '../components/CustomerForm';
-
 import {
   IconButton,
   Box,
@@ -41,6 +40,43 @@ import {
 } from '@mui/material';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+// 狀態樣式函數 - 與 Orders.js 保持一致
+const getStatusStyle = (status, type) => {
+  if (type === 'construction') {
+    switch (status) {
+      case '未開始':
+        return { bg: 'rgba(128, 128, 128, 0.1)', color: 'gray' };
+      case '進行中':
+        return { bg: 'rgba(25, 118, 210, 0.1)', color: '#1976d2' };
+      case '已完成':
+        return { bg: 'rgba(76, 175, 80, 0.1)', color: 'green' };
+      case '延遲':
+        return { bg: 'rgba(244, 67, 54, 0.1)', color: 'red' };
+      case '已估價':
+        return { bg: 'rgba(255, 193, 7, 0.1)', color: '#ffc107' };
+      case '取消':
+        return { bg: 'rgba(156, 39, 176, 0.1)', color: '#9c27b0' };
+      default:
+        return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
+    }
+  }
+  if (type === 'billing') {
+    switch (status) {
+      case '未請款':
+        return { bg: 'rgba(128, 128, 128, 0.1)', color: 'gray' };
+      case '部分請款':
+        return { bg: 'rgba(255, 152, 0, 0.1)', color: '#f57c00' };
+      case '已結清':
+        return { bg: 'rgba(76, 175, 80, 0.1)', color: 'green' };
+      case '取消':
+        return { bg: 'rgba(156, 39, 176, 0.1)', color: '#9c27b0' };
+      default:
+        return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
+    }
+  }
+  return { bg: 'rgba(0,0,0,0.05)', color: 'black' };
+};
 
 const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   const { customerId } = useParams();
@@ -569,14 +605,8 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
                           px: 1.5,
                           py: 0.5,
                           borderRadius: 1,
-                          backgroundColor: project.construction_status === '未開始' ? theme.palette.grey[200] :
-                                         project.construction_status === '進行中' ? theme.palette.info.light :
-                                         project.construction_status === '已完成' ? theme.palette.success.light :
-                                         theme.palette.warning.light,
-                          color: project.construction_status === '未開始' ? theme.palette.grey[700] :
-                                 project.construction_status === '進行中' ? theme.palette.info.dark :
-                                 project.construction_status === '已完成' ? theme.palette.success.dark :
-                                 theme.palette.warning.dark,
+                          backgroundColor: getStatusStyle(project.construction_status, 'construction').bg,
+                          color: getStatusStyle(project.construction_status, 'construction').color,
                         }}
                       >
                         {project.construction_status}
@@ -589,14 +619,8 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
                           px: 1.5,
                           py: 0.5,
                           borderRadius: 1,
-                          backgroundColor: project.billing_status === '未請款' ? theme.palette.grey[200] :
-                                         project.billing_status === '已請款' ? theme.palette.info.light :
-                                         project.billing_status === '已收款' ? theme.palette.success.light :
-                                         theme.palette.warning.light,
-                          color: project.billing_status === '未請款' ? theme.palette.grey[700] :
-                                 project.billing_status === '已請款' ? theme.palette.info.dark :
-                                 project.billing_status === '已收款' ? theme.palette.success.dark :
-                                 theme.palette.warning.dark,
+                          backgroundColor: getStatusStyle(project.billing_status, 'billing').bg,
+                          color: getStatusStyle(project.billing_status, 'billing').color,
                         }}
                       >
                         {project.billing_status}

@@ -489,6 +489,18 @@ const CustomerForm = ({
                   }));
                 }}
                 prefix="contact"
+                cityLabel={selectedCustomerType === "一般住家" ? "縣市" : 
+                          selectedCustomerType === "建築師" ? "事務所縣市" :
+                          selectedCustomerType === "古蹟、政府機關" ? "專案縣市" :
+                          "公司縣市"}
+                districtLabel={selectedCustomerType === "一般住家" ? "區域" : 
+                              selectedCustomerType === "建築師" ? "事務所區域" :
+                              selectedCustomerType === "古蹟、政府機關" ? "專案區域" :
+                              "公司區域"}
+                addressLabel={selectedCustomerType === "一般住家" ? "詳細地址" : 
+                             selectedCustomerType === "建築師" ? "事務所詳細地址" :
+                             selectedCustomerType === "古蹟、政府機關" ? "專案詳細地址" :
+                             "公司詳細地址"}
               />
             </div>
 
