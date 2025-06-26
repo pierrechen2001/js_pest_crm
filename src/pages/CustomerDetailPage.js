@@ -86,6 +86,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [useCustomerAddress, setUseCustomerAddress] = useState(false);
   const [useCustomerContacts, setUseCustomerContacts] = useState(false);
+  const [isConstructionScopeExpanded, setIsConstructionScopeExpanded] = useState(false);
   const [projectData, setProjectData] = useState({
     project_name: "",
     customer_id: customerId,
@@ -845,14 +846,49 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
             value={projectData.construction_days || ""}
             onChange={handleChange}
           />
-          <TextField
-            name="construction_scope"
-            label="施工範圍"
-            fullWidth
-            margin="normal"
-            value={projectData.construction_scope || ""}
-            onChange={handleChange}
-          />
+          <Box sx={{ position: 'relative' }}>
+            <TextField
+              name="construction_scope"
+              label="施工範圍"
+              fullWidth
+              margin="normal"
+              multiline
+              rows={isConstructionScopeExpanded ? 8 : 2}
+              value={projectData.construction_scope || ""}
+              onChange={handleChange}
+              InputProps={{
+                style: { 
+                  resize: 'none',
+                  overflow: isConstructionScopeExpanded ? 'auto' : 'hidden'
+                }
+              }}
+              sx={{
+                '& .MuiInputBase-root': {
+                  maxHeight: isConstructionScopeExpanded ? 'none' : '80px'
+                }
+              }}
+            />
+            {projectData.construction_scope && projectData.construction_scope.length > 50 && (
+              <Button
+                size="small"
+                onClick={() => setIsConstructionScopeExpanded(!isConstructionScopeExpanded)}
+                sx={{
+                  position: 'absolute',
+                  bottom: 8,
+                  right: 8,
+                  minWidth: 'auto',
+                  padding: '2px 8px',
+                  fontSize: '0.75rem',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 1)'
+                  }
+                }}
+              >
+                {isConstructionScopeExpanded ? '收起' : '顯示更多'}
+              </Button>
+            )}
+          </Box>
         
           <TextField
             name="construction_notes"
