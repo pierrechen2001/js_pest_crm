@@ -4,12 +4,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { geocodeAddress, combineAddress } from '../lib/geocoding';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddressSelector from '../components/AddressSelector';
+import CustomerForm from '../components/CustomerForm';
 
 import {
   IconButton,
   Box,
   Card,
-  CardContent,
   Grid,
   Table,
   TableBody,
@@ -18,7 +18,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Autocomplete,
   FormControl,
   InputLabel,
   Select,
@@ -49,7 +48,6 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   const [projects, setProjects] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editedCustomer, setEditedCustomer] = useState(null);
   const [useCustomerAddress, setUseCustomerAddress] = useState(false);
   const [useCustomerContacts, setUseCustomerContacts] = useState(false);
   const [projectData, setProjectData] = useState({
@@ -235,21 +233,6 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
       [name]: value
     }));
   };
-  
-  const handleCityChange = (newValue) => {
-    setProjectData((prev) => ({
-      ...prev,
-      site_city: newValue,
-      site_district: "", // 當縣市變更時，清空區域
-    }));
-  };
-  
-  const handleDistrictChange = (newValue) => {
-    setProjectData((prev) => ({
-      ...prev,
-      site_district: newValue,
-    }));
-  };
 
   // 處理聯絡人更新
   const updateContact = (index, field, value) => {
@@ -259,18 +242,6 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
     }
     updated[index] = { ...updated[index], [field]: value };
     setProjectData({ ...projectData, contacts: updated });
-  };
-
-  // 使用地址同客戶資料
-  const fillCustomerAddress = () => {
-    if (customer) {
-      setProjectData(prev => ({
-        ...prev,
-        site_city: customer.contact_city || "",
-        site_district: customer.contact_district || "",
-        site_address: customer.contact_address || ""
-      }));
-    }
   };
 
   const handleDeleteCustomer = async () => {
@@ -293,83 +264,49 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   };
 
   // 新增編輯客戶資料的函數
-  const handleEditCustomer = async () => {
+  const handleEditCustomer = async (updatedData) => {
     try {
-      const { data, error } = await supabase
+      // 轉換欄位名稱格式以符合資料庫期望
+      const formattedData = {
+        customer_type: updatedData.customerType,
+        customer_name: updatedData.customer_name,
+        contact_city: updatedData.contact_city,
+        contact_district: updatedData.contact_district,
+        contact_address: updatedData.contact_address,
+        email: updatedData.email,
+        tax_id: updatedData.tax_id,
+        invoice_title: updatedData.invoice_title,
+        notes: updatedData.notes,
+        company_phone: updatedData.company_phone,
+        fax: updatedData.fax,
+        contact1_role: updatedData.contact1_role,
+        contact1_name: updatedData.contact1_name,
+        contact1_type: updatedData.contact1_type,
+        contact1_contact: updatedData.contact1_contact,
+        contact2_role: updatedData.contact2_role,
+        contact2_name: updatedData.contact2_name,
+        contact2_type: updatedData.contact2_type,
+        contact2_contact: updatedData.contact2_contact,
+        contact3_role: updatedData.contact3_role,
+        contact3_name: updatedData.contact3_name,
+        contact3_type: updatedData.contact3_type,
+        contact3_contact: updatedData.contact3_contact,
+      };
+
+      const { error } = await supabase
         .from('customer_database')
-        .update({
-          customer_name: editedCustomer.customer_name,
-          contact1_role: editedCustomer.contact1_role,
-          contact1_name: editedCustomer.contact1_name,
-          contact1_type: editedCustomer.contact1_type,
-          contact1_contact: editedCustomer.contact1_contact,
-          contact2_role: editedCustomer.contact2_role,
-          contact2_name: editedCustomer.contact2_name,
-          contact2_type: editedCustomer.contact2_type,
-          contact2_contact: editedCustomer.contact2_contact,
-          contact3_role: editedCustomer.contact3_role,
-          contact3_name: editedCustomer.contact3_name,
-          contact3_type: editedCustomer.contact3_type,
-          contact3_contact: editedCustomer.contact3_contact,
-          contact_city: editedCustomer.contact_city,
-          contact_district: editedCustomer.contact_district,
-          contact_address: editedCustomer.contact_address,
-          company_phone: editedCustomer.company_phone,
-          fax: editedCustomer.fax,
-          tax_id: editedCustomer.tax_id,
-          invoice_title: editedCustomer.invoice_title,
-          notes: editedCustomer.notes
-        })
+        .update(formattedData)
         .eq('customer_id', customerId)
         .select();
 
       if (error) throw error;
 
-      // 更新本地狀態
-      const updatedCustomers = customers.map(c => 
-        c.customer_id === customerId ? data[0] : c
-      );
-      setEditedCustomer(data[0]);
       setOpenEditDialog(false);
       window.location.reload(); // 重新載入頁面以更新資料
     } catch (error) {
       console.error('Error updating customer:', error);
       alert('更新客戶資料失敗，請稍後再試！');
     }
-  };
-
-  // 處理編輯表單變更
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditedCustomer(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // 處理城市和區域變更
-  const handleEditCityChange = (newValue) => {
-    setEditedCustomer(prev => ({
-      ...prev,
-      contact_city: newValue,
-      contact_district: "" // 當縣市變更時，清空區域
-    }));
-  };
-  const handleEditDistrictChange = (newValue) => {
-    setEditedCustomer(prev => ({
-      ...prev,
-      contact_district: newValue
-    }));
-  };
-
-  // AddressSelector 回調函數
-  const handleEditAddressChange = (addressData) => {
-    setEditedCustomer(prev => ({
-      ...prev,
-      contact_city: addressData.city,
-      contact_district: addressData.district,
-      contact_address: addressData.address
-    }));
   };
 
   const handleProjectAddressChange = (addressData) => {
@@ -384,7 +321,7 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
   // 在 useEffect 中初始化 editedCustomer
   useEffect(() => {
     if (customer) {
-      setEditedCustomer(customer);
+      // 如果需要可以在這裡處理其他邏輯
     }
   }, [customer]);
 
@@ -408,130 +345,14 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
             {customer.customer_name}
           </Typography>
         </Box>
-          <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="md" fullWidth>
-            <DialogTitle>編輯客戶資料</DialogTitle>
-            <DialogContent>
-              <Typography variant="h6" gutterBottom>客戶基本資訊</Typography>
-              <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-                <TextField
-                  label="客戶名稱"
-                  fullWidth
-                  name="customer_name"
-                  value={editedCustomer?.customer_name || ""}
-                  onChange={handleEditChange}
-                />              </div>
-              <div style={{ marginBottom: "20px" }}>
-                <AddressSelector
-                  city={editedCustomer?.contact_city || ""}
-                  district={editedCustomer?.contact_district || ""}
-                  address={editedCustomer?.contact_address || ""}
-                  onAddressChange={handleEditAddressChange}
-                  cityLabel="縣市"
-                  districtLabel="區域"
-                  addressLabel="路名/詳細地址"
-                />
-              </div>
-              <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-                <TextField
-                  label="統一編號"
-                  fullWidth
-                  name="tax_id"
-                  value={editedCustomer?.tax_id || ""}
-                  onChange={handleEditChange}
-                />
-                <TextField
-                  label="抬頭"
-                  fullWidth
-                  name="invoice_title"
-                  value={editedCustomer?.invoice_title || ""}
-                  onChange={handleEditChange}
-                />
-              </div>
-
-              <Typography variant="h6" gutterBottom>聯絡資訊</Typography>
-              <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "20px" }}>
-                <TextField
-                  label="公司電話（市話）"
-                  fullWidth
-                  name="company_phone"
-                  value={editedCustomer?.company_phone || ""}
-                  onChange={handleEditChange}
-                />
-                <TextField
-                  label="傳真號碼"
-                  fullWidth
-                  name="fax"
-                  value={editedCustomer?.fax || ""}
-                  onChange={handleEditChange}
-                />
-                <TextField
-                  label="公司信箱"
-                  fullWidth
-                  name="email"
-                  value={editedCustomer?.email || ""}
-                  onChange={handleEditChange}
-                />
-              </div>
-
-              {/* 聯絡人資訊（動態三組） */}
-              {[1, 2, 3].map(i => (
-                <div key={i} style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px" }}>
-                  <TextField
-                    label={`聯絡人${i}職位`}
-                    name={`contact${i}_role`}
-                    fullWidth
-                    margin="dense"
-                    value={editedCustomer?.[`contact${i}_role`] || ""}
-                    onChange={handleEditChange}
-                  />
-                  <TextField
-                    label={`聯絡人${i}姓名`}
-                    name={`contact${i}_name`}
-                    fullWidth
-                    margin="dense"
-                    value={editedCustomer?.[`contact${i}_name`] || ""}
-                    onChange={handleEditChange}
-                  />
-                  <FormControl fullWidth>
-                    <InputLabel>聯絡方式類型</InputLabel>
-                    <Select
-                      name={`contact${i}_type`}
-                      value={editedCustomer?.[`contact${i}_type`] || ""}
-                      onChange={handleEditChange}
-                      label="聯絡方式類型"
-                    >
-                      {["LineID", "市話", "電話", "信箱"].map((type) => (
-                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <TextField
-                    label={`聯絡人${i}聯絡方式`}
-                    name={`contact${i}_contact`}
-                    fullWidth
-                    margin="dense"
-                    value={editedCustomer?.[`contact${i}_contact`] || ""}
-                    onChange={handleEditChange}
-                  />
-                </div>
-              ))}
-
-              <TextField
-                label="注意事項"
-                name="notes"
-                fullWidth
-                margin="normal"
-                multiline
-                rows={3}
-                value={editedCustomer?.notes || ""}
-                onChange={handleEditChange}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOpenEditDialog(false)}>取消</Button>
-              <Button variant="contained" onClick={handleEditCustomer}>儲存</Button>
-            </DialogActions>
-          </Dialog>
+          <CustomerForm
+            open={openEditDialog}
+            onClose={() => setOpenEditDialog(false)}
+            onSave={handleEditCustomer}
+            initialData={customer}
+            mode="edit"
+            customerType={customer?.customer_type}
+          />
         <Box>
           <Button variant="contained" color="primary" sx={{ mr: 2, borderRadius: 2, textTransform: 'none', px: 3 }} onClick={() => setOpenEditDialog(true)}>編輯客戶</Button>
           <Button variant="outlined" color="error" sx={{ borderRadius: 2, textTransform: 'none', px: 3 }} onClick={handleDeleteCustomer}>刪除客戶</Button>
@@ -579,15 +400,57 @@ const CustomerDetails = ({ customers, fetchProjectsByCustomerId }) => {
         }}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography fontWeight="bold">公司資訊</Typography>
+          <Typography fontWeight="bold">客戶概覽</Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ flex: 1, width: '100%', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}><b>公司名稱：</b>{customer.customer_name}</Typography>
-          <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}><b>公司地址：</b>{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
-          <Typography sx={{ mb: 1 }}><b>公司電話：</b>{customer.company_phone}</Typography>
-          <Typography sx={{ mb: 1 }}><b>傳真：</b>{customer.fax}</Typography>
-          <Typography sx={{ mb: 1 }}><b>統一編號：</b>{customer.tax_id}</Typography>
-          <Typography sx={{ mb: 1 }}><b>抬頭：</b>{customer.invoice_title}</Typography>
+          {/* 根據客戶類型顯示不同的資訊 */}
+          {customer.customer_type === "一般住家" ? (
+            // 一般住家只顯示基本資訊
+            <>
+              <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}><b>住址：</b>{`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}</Typography>
+              <Typography sx={{ mb: 1 }}><b>住家電話：</b>{customer.company_phone}</Typography>
+              <Typography sx={{ mb: 1 }}><b>信箱：</b>{customer.email}</Typography>
+            </>
+          ) : (
+            // 其他類型顯示完整公司資訊
+            <>
+              <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}>
+                <b>
+                  {customer.customer_type === "建築師" ? "事務所名稱：" :
+                   customer.customer_type === "古蹟、政府機關" ? "專案名稱：" :
+                   "公司名稱："}
+                </b>
+                {customer.customer_name}
+              </Typography>
+              <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 1 }}>
+                <b>
+                  {customer.customer_type === "建築師" ? "事務所地址：" :
+                   customer.customer_type === "古蹟、政府機關" ? "專案地址：" :
+                   "公司地址："}
+                </b>
+                {`${customer.contact_city || ""}${customer.contact_district || ""}${customer.contact_address || ""}`}
+              </Typography>
+              <Typography sx={{ mb: 1 }}>
+                <b>
+                  {customer.customer_type === "建築師" ? "事務所電話：" :
+                   customer.customer_type === "古蹟、政府機關" ? "專案電話：" :
+                   "公司電話："}
+                </b>
+                {customer.company_phone}
+              </Typography>
+              <Typography sx={{ mb: 1 }}>
+                <b>
+                  {customer.customer_type === "建築師" ? "事務所信箱：" :
+                   customer.customer_type === "古蹟、政府機關" ? "專案信箱：" :
+                   "公司信箱："}
+                </b>
+                {customer.email}
+              </Typography>
+              <Typography sx={{ mb: 1 }}><b>傳真：</b>{customer.fax}</Typography>
+              <Typography sx={{ mb: 1 }}><b>統一編號：</b>{customer.tax_id}</Typography>
+              <Typography sx={{ mb: 1 }}><b>抬頭：</b>{customer.invoice_title}</Typography>
+            </>
+          )}
         </AccordionDetails>
       </Accordion>
     </Grid>
