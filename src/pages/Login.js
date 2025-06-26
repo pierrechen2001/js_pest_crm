@@ -142,6 +142,7 @@ const Login = () => {
         // Store user info and redirect
         localStorage.setItem("loginMethod", "google");
         localStorage.setItem("userRoles", JSON.stringify([isAdmin ? 'admin' : 'user']));
+        localStorage.setItem("isApproved", JSON.stringify(isAdmin ? true : false));
         if (isAdmin) {
           navigate("/");
         } else {

@@ -76,8 +76,13 @@ export const AuthProvider = ({ children }) => {
       // Set user data
       const fulluser = await fetchFullUser(profile.getEmail());
 
-    // 2) store the roles array you just got
+      if (!fulluser) {
+        throw new Error('User not found in database');
+      }
+
+    // 2) store the roles array and approval status you just got
       localStorage.setItem("userRoles", JSON.stringify(fulluser.roles));
+      localStorage.setItem("isApproved", JSON.stringify(fulluser.isApproved));
 
     // 3) set React state
       setUser({
@@ -239,16 +244,17 @@ export const AuthProvider = ({ children }) => {
             
             try {
               userRoles = JSON.parse(localStorage.getItem("userRoles") || '["user"]');
-              isApproved = JSON.parse(localStorage.getItem("isApproved") || 'false');
+              const isApprovedStr = localStorage.getItem("isApproved");
+              isApproved = isApprovedStr ? JSON.parse(isApprovedStr) : undefined;
             } catch (parseError) {
               console.warn("Error parsing localStorage data, using defaults:", parseError);
               userRoles = ["user"];
-              isApproved = false;
+              isApproved = undefined;
             }
             
             // Basic check: If essential data from localStorage is missing or invalid after finding a session user, redirect.
             // This might indicate a corrupted state or a user deleted from the 'users' table while the session was active.
-            if (!userRoles || userRoles.length === 0) {
+            if (!userRoles || userRoles.length === 0 || isApproved === undefined) {
                console.warn("Essential user data missing from localStorage after session found. Fetching fresh data...");
                
                // Try to fetch fresh user data
@@ -324,11 +330,35 @@ export const AuthProvider = ({ children }) => {
         
         // Attempt to get roles and approval status from localStorage
         const userRoles = JSON.parse(localStorage.getItem("userRoles") || '["user"]');
-        const isApproved = JSON.parse(localStorage.getItem("isApproved") || 'false');
+        const isApprovedStr = localStorage.getItem("isApproved");
+        const isApproved = isApprovedStr ? JSON.parse(isApprovedStr) : undefined;
 
         // Basic check: If essential data from localStorage is missing or invalid after sign-in, redirect.
-        if (!userRoles || userRoles.length === 0) {
-           console.warn("Essential user data missing from localStorage after SIGNED_IN event. Redirecting to login.");
+        if (!userRoles || userRoles.length === 0 || isApproved === undefined) {
+           console.warn("Essential user data missing from localStorage after SIGNED_IN event. Fetching fresh data...");
+           
+           // Try to fetch fresh user data
+           try {
+             const fullUser = await fetchFullUser(session.user.email);
+             if (fullUser) {
+               localStorage.setItem("userRoles", JSON.stringify(fullUser.roles));
+               localStorage.setItem("isApproved", JSON.stringify(fullUser.isApproved));
+               
+               setUser({
+                 id: session.user.id,
+                 email: session.user.email,
+                 name: session.user.name,
+                 roles: fullUser.roles,
+                 isApproved: fullUser.isApproved,
+                 loginMethod: localStorage.getItem("loginMethod") || "email"
+               });
+               return;
+             }
+           } catch (fetchError) {
+             console.error("Error fetching fresh user data:", fetchError);
+           }
+           
+           // If we can't fetch fresh data, redirect to login
            setUser(null);
            navigate('/login');
            return;
@@ -349,6 +379,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         localStorage.removeItem("userRoles");
         localStorage.removeItem("loginMethod");
+        localStorage.removeItem("isApproved");
         navigate('/login');
       } else if (session?.user && !session.user.email) {
          // Handle cases where a session user exists but email is missing (unexpected)
@@ -395,6 +426,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Check if user has a specific role
+  const hasRole = useCallback((role) => {
+    return user?.roles?.includes(role) || false;
+  }, [user]);
+
   // Retry function for auth initialization
   const retryAuth = useCallback(() => {
     setLoading(true);
@@ -417,7 +453,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         googleAuth,
-        retryAuth
+        retryAuth,
+        hasRole
       }}
     >
       {loading || error ? (
