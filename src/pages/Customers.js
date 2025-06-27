@@ -3,9 +3,9 @@ import { Box, Button, TextField, MenuItem, Select, FormControl, InputLabel, Tabl
 import { useNavigate } from 'react-router-dom';
 import { Add } from "@mui/icons-material";
 import CustomerForm from '../components/CustomerForm';
+import { CUSTOMER_TYPES } from '../utils/constants';
 
-const customerTypes = ["古蹟、政府機關", "一般住家", "建築師", "營造、設計公司"];
-const filterOptions = ["客戶名稱", "聯絡人姓名", "聯絡手機", "地址"];
+const filterOptions = ["客戶名稱", "聯絡人姓名", "聯絡電話", "地址"];
 
 const Customers = ({ 
   customers, 
@@ -193,7 +193,7 @@ const Customers = ({
       {/* 客戶類型篩選按鈕 */}
       <div style={{ display: "flex", gap: "10px", marginBottom: 10 }}>
         <Button variant={selectedType === "" ? "contained" : "outlined"} onClick={() => setSelectedType("")} color="secondary" sx={{ fontWeight: 600 }}>全部</Button>
-        {customerTypes.map((type) => (
+        {CUSTOMER_TYPES.map((type) => (
           <Button
             key={type}
             variant={selectedType === type ? "contained" : "outlined"}

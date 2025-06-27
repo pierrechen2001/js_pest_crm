@@ -1064,6 +1064,7 @@ const ApiCalendar = () => {
               label="活動類型"
             >
               <MenuItem value="default">一般活動</MenuItem>
+              <MenuItem value="quote">估價</MenuItem>
               <MenuItem value="design">設計</MenuItem>
               <MenuItem value="testing">測試</MenuItem>
               <MenuItem value="marketing">營銷/銷售</MenuItem>
