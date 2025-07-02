@@ -160,145 +160,58 @@ export default function OrderDetail() {
 
   const handleAddLog = async () => {
     try {
-      // 驗證必填欄位
-      if (!newLog.content) {
-        alert('請輸入日誌內容！');
-        return;
-      }
-
-      // 確保日誌類型是有效的值
-      const validLogTypes = ['工程', '財務', '行政', '藥劑'];
-      // 移除所有空白字符，包括空格、換行等
+      if (!newLog.content) { alert('請輸入日誌內容！'); return; }
       const logType = newLog.log_type.replace(/\s+/g, '');
-      
-      console.log('=== 日誌類型追蹤 ===');
-      console.log('表單中的原始值:', newLog.log_type);
-      console.log('處理後的值:', logType);
-      console.log('允許的值列表:', validLogTypes);
-      console.log('是否在允許列表中:', validLogTypes.includes(logType));
-      console.log('值的長度:', logType.length);
-      console.log('值的字符編碼:', Array.from(logType).map(c => c.charCodeAt(0)));
-      
-      // 詳細比較每個字符
-      console.log('=== 字符比較 ===');
-      validLogTypes.forEach(validType => {
-        console.log(`比較 "${logType}" 和 "${validType}":`);
-        console.log('長度是否相同:', logType.length === validType.length);
-        console.log('字符編碼比較:');
-        Array.from(logType).forEach((char, i) => {
-          console.log(`位置 ${i}: ${char}(${char.charCodeAt(0)}) vs ${validType[i]}(${validType[i]?.charCodeAt(0)})`);
-        });
-      });
-      console.log('===================');
-
-      // 確保值完全匹配資料庫約束
-      if (!validLogTypes.includes(logType)) {
-        const errorMessage = `無效的日誌類型！\n\n` +
-          `您選擇的類型: "${logType}"\n` +
-          `允許的類型: ${validLogTypes.join(', ')}\n\n` +
-          '請選擇正確的日誌類型。\n\n' +
-          '技術細節：\n' +
-          `- 值的長度: ${logType.length}\n` +
-          `- 字符編碼: ${Array.from(logType).map(c => c.charCodeAt(0)).join(', ')}\n\n` +
-          '注意：如果您的選擇看起來正確但仍然失敗，請聯繫系統管理員更新資料庫約束。';
-        console.error(errorMessage);
-        alert(errorMessage);
-        return;
-      }
-
-      if (logType === '藥劑') {
+      if (logType === '使用藥劑') {
         if (!newLog.medicine_id || !newLog.medicine_quantity) {
-          alert('請選擇藥劑並輸入使用數量！');
-          return;
+          alert('請選擇藥劑並輸入使用數量！'); return;
         }
       }
-
-      // 準備日誌資料
+      const medicineId = newLog.medicine_id;
+      const quantity = parseFloat(newLog.medicine_quantity);
+      const logDate = newLog.log_date;
+      const projectName = project.project_name;
+      const medicineName = medicines.find(m => m.id === medicineId)?.name || '';
       const logDataToInsert = {
         project_id: projectId,
         log_type: logType,
-        log_date: newLog.log_date,
-        content: newLog.content.trim(),
+        log_date: logDate,
+        content: logType === '使用藥劑'
+          ? `${medicineName}-${quantity}`
+          : newLog.content.trim(),
         notes: (newLog.notes || '').trim(),
         created_by: user?.name || '未知使用者'
       };
-
-      // 如果是藥劑類型，將藥劑資訊加入內容中
-      if (logType === '藥劑') {
-        const selectedMedicine = medicines.find(m => m.id === newLog.medicine_id);
-        if (!selectedMedicine) {
-          alert('找不到選擇的藥劑！');
-          return;
-        }
-        // 修改內容格式為 "藥劑種類-使用量"
-        logDataToInsert.content = `${selectedMedicine.name}-${newLog.medicine_quantity}`;
-
-        // 新增使用記錄到 medicine_usages
+      // 先新增 project_log
+      const { data: insertedLog, error: logError } = await supabase
+        .from('project_log').insert([logDataToInsert]).select();
+      if (logError) throw logError;
+      // 若是「使用藥劑」，同步新增 medicine_usages
+      if (logType === '使用藥劑') {
         const { error: usageError } = await supabase
           .from('medicine_usages')
           .insert([{
-            medicine_id: newLog.medicine_id,
-            quantity: parseFloat(newLog.medicine_quantity),
-            date: newLog.log_date,
-            project: project.project_name
+            medicine_id: medicineId,
+            quantity,
+            date: logDate,
+            project: projectName
           }]);
-
         if (usageError) {
-          console.error('Error inserting usage:', usageError);
-          throw new Error('新增藥劑使用記錄失敗：' + usageError.message);
+          // 回滾 project_log
+          await supabase.from('project_log')
+            .delete()
+            .eq('log_type', '使用藥劑')
+            .eq('log_date', logDate)
+            .eq('project_id', projectId)
+            .eq('content', `${medicineName}-${quantity}`);
+          alert('新增藥劑使用紀錄失敗，日誌已回滾！');
+          return;
         }
       }
-
-      console.log('=== 準備插入的資料 ===');
-      console.log('完整的插入資料:', JSON.stringify(logDataToInsert, null, 2));
-      console.log('log_type 的最終值:', logDataToInsert.log_type);
-      console.log('===================');
-
-      // 插入日誌記錄
-      const { data: insertedLog, error: logError } = await supabase
-        .from('project_log')
-        .insert([logDataToInsert])
-        .select();
-
-      if (logError) {
-        console.error('Error inserting log:', logError);
-        console.error('Failed data:', JSON.stringify(logDataToInsert, null, 2));
-        
-        // 更詳細的錯誤訊息
-        let errorMessage = '新增日誌失敗！\n\n';
-        
-        if (logError.message.includes('project_log_log_type_check')) {
-          errorMessage += '原因：日誌類型不符合資料庫要求\n\n' +
-            `您選擇的類型: "${logDataToInsert.log_type}"\n` +
-            `允許的類型: ${validLogTypes.join(', ')}\n\n` +
-            '請選擇正確的日誌類型。\n\n' +
-            '技術細節：\n' +
-            `- 值的長度: ${logDataToInsert.log_type.length}\n` +
-            `- 字符編碼: ${Array.from(logDataToInsert.log_type).map(c => c.charCodeAt(0)).join(', ')}`;
-        } else {
-          errorMessage += `錯誤訊息：${logError.message}\n\n` +
-            '請檢查輸入的資料是否正確。';
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      // 更新日誌列表
       setProjectLogs([insertedLog[0], ...projectLogs]);
-      
-      // 重置表單
       setOpenLogDialog(false);
-      setNewLog({
-        log_type: '工程',
-        log_date: new Date().toISOString().split('T')[0],
-        content: '',
-        notes: '',
-        medicine_id: '',
-        medicine_quantity: ''
-      });
-
+      setNewLog({ log_type: '工程', log_date: new Date().toISOString().split('T')[0], content: '', notes: '', medicine_id: '', medicine_quantity: '' });
     } catch (error) {
-      console.error('Error in handleAddLog:', error);
       setError(error.message);
       alert(error.message);
     }
@@ -379,62 +292,55 @@ export default function OrderDetail() {
 
   const handleDeleteLog = async () => {
     try {
-      // 先獲取要刪除的日誌記錄
       const logToDelete = projectLogs.find(log => log.log_id === deletingLogId);
-      
-      if (!logToDelete) {
-        throw new Error('找不到要刪除的日誌記錄');
-      }
-
-      // 如果是藥劑的日誌，先刪除對應的使用記錄
-      if (logToDelete.log_type === '藥劑') {
-        // 從內容中解析藥劑名稱和數量
-        const [medicineName, quantity] = logToDelete.content.split('-');
-        
-        // 找到對應的藥劑 ID
-        const { data: medicineData, error: medicineError } = await supabase
+      if (!logToDelete) { alert('找不到要刪除的日誌記錄'); return; }
+      if (logToDelete.log_type === '使用藥劑') {
+        // 解析 content 取得藥劑名稱與數量
+        let medicineName = '', quantity = 0;
+        if (logToDelete.content && logToDelete.content.includes('-')) {
+          const [name, qty] = logToDelete.content.split('-');
+          medicineName = name;
+          quantity = parseFloat(qty);
+        }
+        const logDate = logToDelete.log_date;
+        const projectName = project.project_name;
+        // 查找 medicine_id
+        const { data: medicineData, error: medError } = await supabase
           .from('medicines')
           .select('id')
           .eq('name', medicineName)
           .single();
-
-        if (medicineError) {
-          console.error('Error finding medicine:', medicineError);
-          throw medicineError;
-        }
-
-        if (!medicineData) {
-          throw new Error('找不到對應的藥劑');
-        }
-
-        // 刪除使用記錄
-        const { error: usageError } = await supabase
+        if (medError || !medicineData) { alert('找不到藥劑'); return; }
+        // 查找所有符合的 medicine_usages
+        const { data: usages, error: usageError } = await supabase
+          .from('medicine_usages')
+          .select('id, created_at')
+          .eq('medicine_id', medicineData.id)
+          .eq('quantity', quantity)
+          .eq('date', logDate)
+          .eq('project', projectName);
+        if (usageError) { alert('查詢藥劑使用紀錄失敗'); return; }
+        if (!usages || usages.length === 0) { alert('找不到對應的藥劑使用紀錄，無法刪除'); return; }
+        // 找到最早一筆
+        usages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const usageIdToDelete = usages[0].id;
+        // 刪除該筆 medicine_usages
+        const { error: delUsageError } = await supabase
           .from('medicine_usages')
           .delete()
-          .eq('medicine_id', medicineData.id)
-          .eq('quantity', parseFloat(quantity))
-          .eq('date', logToDelete.log_date)
-          .eq('project', project.project_name);
-
-        if (usageError) {
-          console.error('Error deleting medicine usage:', usageError);
-          throw usageError;
-        }
+          .eq('id', usageIdToDelete);
+        if (delUsageError) { alert('刪除藥劑使用紀錄失敗'); return; }
       }
-
-      // 刪除日誌記錄
+      // 刪除日誌
       const { error } = await supabase
         .from('project_log')
         .delete()
         .eq('log_id', deletingLogId);
-
       if (error) throw error;
-
       setProjectLogs(projectLogs.filter(log => log.log_id !== deletingLogId));
       setOpenDeleteLogDialog(false);
       setDeletingLogId(null);
     } catch (error) {
-      console.error('Error deleting log:', error);
       setError('刪除日誌時發生錯誤：' + error.message);
     }
   };
@@ -924,6 +830,7 @@ export default function OrderDetail() {
                     <MenuItem value="工程">工程</MenuItem>
                     <MenuItem value="財務">財務</MenuItem>
                     <MenuItem value="行政">行政</MenuItem>
+                    <MenuItem value="使用藥劑">使用藥劑</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1000,10 +907,12 @@ export default function OrderDetail() {
                           backgroundColor: 
                             log.log_type === '工程' ? 'rgba(25, 118, 210, 0.1)' :
                             log.log_type === '財務' ? 'rgba(46, 125, 50, 0.1)' :
+                            log.log_type === '使用藥劑' ? 'rgba(237, 108, 2, 0.1)' :
                             'rgba(237, 108, 2, 0.1)',
                           color: 
                             log.log_type === '工程' ? 'rgb(25, 118, 210)' :
                             log.log_type === '財務' ? 'rgb(46, 125, 50)' :
+                            log.log_type === '使用藥劑' ? 'rgb(237, 108, 2)' :
                             'rgb(237, 108, 2)',
                           fontWeight: 500,
                         }}
@@ -1111,7 +1020,7 @@ export default function OrderDetail() {
                   <MenuItem value="工程">工程</MenuItem>
                   <MenuItem value="財務">財務</MenuItem>
                   <MenuItem value="行政">行政</MenuItem>
-                  <MenuItem value="藥劑">藥劑</MenuItem>
+                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -1139,7 +1048,7 @@ export default function OrderDetail() {
           </Grid>
 
           {/* 藥劑選擇（僅在藥劑類型時顯示） */}
-          {newLog.log_type === '藥劑' && (
+          {newLog.log_type === '使用藥劑' && (
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={6}>
                 <FormControl fullWidth>
@@ -1192,7 +1101,7 @@ export default function OrderDetail() {
             onClick={handleAddLog} 
             variant="contained" 
             color="primary"
-            disabled={!newLog.content || (newLog.log_type === '藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))}
+            disabled={!newLog.content || (newLog.log_type === '使用藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))}
           >
             新增
           </Button>
@@ -1252,7 +1161,7 @@ export default function OrderDetail() {
                   <MenuItem value="工程">工程</MenuItem>
                   <MenuItem value="財務">財務</MenuItem>
                   <MenuItem value="行政">行政</MenuItem>
-                  <MenuItem value="藥劑">藥劑</MenuItem>
+                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
                 </Select>
               </FormControl>
             </Box>

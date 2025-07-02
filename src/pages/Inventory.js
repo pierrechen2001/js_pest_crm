@@ -423,86 +423,56 @@ const Inventory = () => {
   // 處理新增使用記錄
   const handleAddUsage = async () => {
     try {
-      // 驗證必填欄位
       if (!newUsage.quantity || !newUsage.date || !newUsage.project) {
-        alert('請填寫所有必填欄位！');
-        return;
+        alert('請填寫所有必填欄位！'); return;
       }
-
-      // 確保日期格式正確
-      const usageDate = new Date(newUsage.date);
-      if (isNaN(usageDate.getTime())) {
-        alert('日期格式不正確！');
-        return;
-      }
-
-      // 確保數量為有效數字（允許小數點）
       const quantity = parseFloat(newUsage.quantity);
-      if (isNaN(quantity)) {
-        alert('請輸入有效的數量！');
-        return;
-      }
-
-      // 獲取選中的專案資訊
+      const usageDate = newUsage.date;
       const selectedProject = projects.find(p => p.project_id === newUsage.project);
-      if (!selectedProject) {
-        alert('找不到選擇的專案資訊！');
-        return;
-      }
-
-      // 新增藥劑使用記錄
-      const { error: usageError } = await supabase
+      if (!selectedProject) { alert('找不到選擇的專案資訊！'); return; }
+      // 先新增 medicine_usages
+      const { data: usageData, error: usageError } = await supabase
         .from('medicine_usages')
         .insert([{
           medicine_id: selectedMedicine.id,
-          quantity: quantity,
-          date: newUsage.date,
+          quantity,
+          date: usageDate,
           project: selectedProject.project_name
-        }]);
-
-      if (usageError) {
-        console.error('Error details:', usageError);
-        throw usageError;
-      }
-
-      // 新增專案日誌
+        }])
+        .select();
+      if (usageError) throw usageError;
+      // 再新增 project_log（log_type: '使用藥劑'，content: '藥劑名稱-使用量'）
       const { error: logError } = await supabase
         .from('project_log')
         .insert([{
           project_id: newUsage.project,
           log_type: '使用藥劑',
-          log_date: newUsage.date,
-          content: `${selectedMedicine.name}-${quantity.toFixed(2)}`,
+          log_date: usageDate,
+          content: `${selectedMedicine.name}-${quantity}`,
           notes: '',
           created_by: '庫存頁面'
         }]);
-
       if (logError) {
-        console.error('Error adding project log:', logError);
-        throw logError;
+        // 回滾 medicine_usages
+        await supabase.from('medicine_usages')
+          .delete()
+          .eq('medicine_id', selectedMedicine.id)
+          .eq('quantity', quantity)
+          .eq('date', usageDate)
+          .eq('project', selectedProject.project_name);
+        alert('新增專案日誌失敗，藥劑使用紀錄已回滾！');
+        return;
       }
-
-      // 重新獲取藥劑資料以更新列表
+      // 更新 UI
       const { data: updatedData, error: fetchError } = await supabase
         .from('medicines')
-        .select(`
-          *,
-          medicine_orders (*),
-          medicine_usages (*)
-        `);
-
+        .select(`*, medicine_orders (*), medicine_usages (*)`);
       if (fetchError) throw fetchError;
-      
       setMedicines(updatedData || []);
       setUsageDialogOpen(false);
       setSelectedMedicine(null);
-      setNewUsage({
-        quantity: '',
-        date: "",
-        project: ""
-      });
+      setNewUsage({ quantity: '', date: '', project: '' });
     } catch (error) {
-      console.error('Error adding usage:', error);
       alert('新增使用記錄失敗：' + (error.message || '請稍後再試！'));
     }
   };
@@ -964,95 +934,71 @@ const Inventory = () => {
 
   // 處理刪除記錄
   const handleDeleteRecord = async (record) => {
-    if (!window.confirm(`確定要刪除這筆${historyType === 'order' ? '訂購' : '使用'}記錄嗎？`)) {
-      return;
-    }
-
+    if (!window.confirm(`確定要刪除這筆${historyType === 'order' ? '訂購' : '使用'}記錄嗎？`)) return;
     try {
       const tableName = historyType === 'order' ? 'medicine_orders' : 'medicine_usages';
-      
-      // 如果是使用記錄，先刪除對應的專案日誌
       if (historyType === 'usage') {
-        // 先找到對應的專案 ID
+        const medicineId = record.medicine_id;
+        const quantity = parseFloat(record.quantity);
+        const date = record.date;
+        const projectName = record.project;
+        // 查找 project_id
         const { data: projectData, error: projectError } = await supabase
           .from('project')
           .select('project_id')
-          .eq('project_name', record.project)
+          .eq('project_name', projectName)
           .single();
-
-        if (projectError) {
-          console.error('Error finding project:', projectError);
-          throw projectError;
-        }
-
-        if (!projectData) {
-          throw new Error('找不到對應的專案');
-        }
-
-        // 刪除專案日誌
-        const { error: logError } = await supabase
+        if (projectError || !projectData) { alert('找不到對應的專案'); return; }
+        // 查找 medicine 名稱
+        const { data: medicineData, error: medError } = await supabase
+          .from('medicines')
+          .select('name')
+          .eq('id', medicineId)
+          .single();
+        if (medError || !medicineData) { alert('找不到藥劑名稱'); return; }
+        const medicineName = medicineData.name;
+        // 查找所有符合的 project_log（log_type、log_date、content）
+        const { data: logs, error: logError } = await supabase
           .from('project_log')
-          .delete()
+          .select('log_id, created_at, content')
           .eq('project_id', projectData.project_id)
           .eq('log_type', '使用藥劑')
-          .eq('log_date', record.date)
-          .eq('content', `${selectedMedicine.name}-${parseFloat(record.quantity).toFixed(2)}`);
-
-        if (logError) {
-          console.error('Error deleting project log:', logError);
-          throw logError;
-        }
+          .eq('log_date', date);
+        if (logError) { alert('查詢專案日誌失敗'); return; }
+        // content 必須完全等於 "藥劑名稱-使用量"
+        let matchedLogs = (logs || []).filter(l => l.content === `${medicineName}-${quantity}`);
+        if (matchedLogs.length === 0) { alert('找不到對應的專案日誌，無法刪除'); return; }
+        // 找到最早一筆
+        matchedLogs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const logIdToDelete = matchedLogs[0].log_id;
+        // 刪除該筆 project_log
+        const { error: delLogError } = await supabase
+          .from('project_log')
+          .delete()
+          .eq('log_id', logIdToDelete);
+        if (delLogError) { alert('刪除專案日誌失敗'); return; }
       }
-      
-      // 刪除記錄
+      // 刪除 medicine_usages
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq('id', record.id);
-
+        .eq('medicine_id', record.medicine_id)
+        .eq('quantity', record.quantity)
+        .eq('date', record.date)
+        .eq('project', record.project);
       if (error) throw error;
-
-      // 重新獲取所有藥劑資料
+      // 更新 UI
       const { data: allMedicines, error: fetchError } = await supabase
         .from('medicines')
-        .select(`
-          id,
-          name,
-          created_at,
-          updated_at,
-          medicine_orders (
-            id,
-            medicine_id,
-            quantity,
-            date,
-            vendor
-          ),
-          medicine_usages (
-            id,
-            medicine_id,
-            quantity,
-            date,
-            project
-          )
-        `);
-
+        .select(`id, name, created_at, updated_at, medicine_orders (*), medicine_usages (*)`);
       if (fetchError) throw fetchError;
-
-      // 更新藥劑列表
       setMedicines(allMedicines || []);
-      
-      // 更新選中的藥劑資料
       const updatedMedicine = allMedicines.find(m => m.id === selectedMedicine.id);
-      if (updatedMedicine) {
-        setSelectedMedicine(updatedMedicine);
-      }
-      
-      // 更新過濾後的歷史記錄
+      if (updatedMedicine) setSelectedMedicine(updatedMedicine);
       if (dateRange.startDate && dateRange.endDate) {
         filterHistory(updatedMedicine, dateRange.startDate, dateRange.endDate);
       }
     } catch (error) {
-      console.error('Error deleting record:', error);
       alert('刪除記錄失敗：' + (error.message || '請稍後再試！'));
     }
   };
