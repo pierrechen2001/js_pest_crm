@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from "react-router-dom";
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+
 import { useAuth } from '../context/AuthContext';
 import ProjectForm from '../components/ProjectForm';
 import {
@@ -53,18 +52,21 @@ export default function OrderDetail() {
   const [projectLogs, setProjectLogs] = useState([]);
   const [openLogDialog, setOpenLogDialog] = useState(false);
   const [newLog, setNewLog] = useState({
-    log_type: '工程',
     log_date: new Date().toISOString().split('T')[0],
-    content: '',
-    notes: '',
-    medicine_id: '',
-    medicine_quantity: ''
+    amount: '',
+    amount_untaxed: '',
+    amount_taxed: '',
+    personnel: '',
+    work_item: '',
+    work_scope: '',
+    warranty_years: '',
+    notes: ''
   });
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openEditProjectDialog, setOpenEditProjectDialog] = useState(false);
 
-  const [medicines, setMedicines] = useState([]);
+
 
   const handleOpenProjectDialog = () => {
     setOpenEditProjectDialog(true);
@@ -74,7 +76,6 @@ export default function OrderDetail() {
     setOpenEditProjectDialog(false);
   };
 
-  const [filterType, setFilterType] = useState('');
   const [filterDateRange, setFilterDateRange] = useState({
     start: '',
     end: ''
@@ -140,77 +141,49 @@ export default function OrderDetail() {
     fetchProjectLogs();
   }, [projectId]);
 
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('medicines')
-          .select('*');
 
-        if (error) throw error;
-        setMedicines(data || []);
-      } catch (error) {
-        console.error('Error fetching medicines:', error);
-        setError('獲取藥劑列表失敗：' + error.message);
-      }
-    };
-
-    fetchMedicines();
-  }, []);
 
   const handleAddLog = async () => {
     try {
-      if (!newLog.content) { alert('請輸入日誌內容！'); return; }
-      const logType = newLog.log_type.replace(/\s+/g, '');
-      if (logType === '使用藥劑') {
-        if (!newLog.medicine_id || !newLog.medicine_quantity) {
-          alert('請選擇藥劑並輸入使用數量！'); return;
-        }
+      // 基本驗證
+      if (!newLog.log_date) {
+        alert('請選擇日期！'); 
+        return; 
       }
-      const medicineId = newLog.medicine_id;
-      const quantity = parseFloat(newLog.medicine_quantity);
-      const logDate = newLog.log_date;
-      const projectName = project.project_name;
-      const medicineName = medicines.find(m => m.id === medicineId)?.name || '';
+
       const logDataToInsert = {
         project_id: projectId,
-        log_type: logType,
-        log_date: logDate,
-        content: logType === '使用藥劑'
-          ? `${medicineName}-${quantity}`
-          : newLog.content.trim(),
+        log_date: newLog.log_date,
+        amount: parseFloat(newLog.amount) || 0,
+        amount_untaxed: parseFloat(newLog.amount_untaxed) || 0,
+        amount_taxed: parseFloat(newLog.amount_taxed) || 0,
+        personnel: (newLog.personnel || '').trim(),
+        work_item: (newLog.work_item || '').trim(),
+        work_scope: (newLog.work_scope || '').trim(),
+        warranty_years: parseFloat(newLog.warranty_years) || 0,
         notes: (newLog.notes || '').trim(),
         created_by: user?.name || '未知使用者'
       };
-      // 先新增 project_log
+
+      // 新增 project_log
       const { data: insertedLog, error: logError } = await supabase
         .from('project_log').insert([logDataToInsert]).select();
+      
       if (logError) throw logError;
-      // 若是「使用藥劑」，同步新增 medicine_usages
-      if (logType === '使用藥劑') {
-        const { error: usageError } = await supabase
-          .from('medicine_usages')
-          .insert([{
-            medicine_id: medicineId,
-            quantity,
-            date: logDate,
-            project: projectName
-          }]);
-        if (usageError) {
-          // 回滾 project_log
-          await supabase.from('project_log')
-            .delete()
-            .eq('log_type', '使用藥劑')
-            .eq('log_date', logDate)
-            .eq('project_id', projectId)
-            .eq('content', `${medicineName}-${quantity}`);
-          alert('新增藥劑使用紀錄失敗，日誌已回滾！');
-          return;
-        }
-      }
+
       setProjectLogs([insertedLog[0], ...projectLogs]);
       setOpenLogDialog(false);
-      setNewLog({ log_type: '工程', log_date: new Date().toISOString().split('T')[0], content: '', notes: '', medicine_id: '', medicine_quantity: '' });
+      setNewLog({ 
+        log_date: new Date().toISOString().split('T')[0], 
+        amount: '',
+        amount_untaxed: '',
+        amount_taxed: '',
+        personnel: '',
+        work_item: '',
+        work_scope: '',
+        warranty_years: '',
+        notes: '' 
+      });
     } catch (error) {
       setError(error.message);
       alert(error.message);
@@ -244,21 +217,21 @@ export default function OrderDetail() {
   };
 
   const filteredLogs = projectLogs.filter(log => {
-    if (filterType && log.log_type !== filterType) return false;
     if (filterDateRange.start && log.log_date < filterDateRange.start) return false;
     if (filterDateRange.end && log.log_date > filterDateRange.end) return false;
     if (filterKeyword) {
       const keyword = filterKeyword.toLowerCase();
       return (
-        log.content.toLowerCase().includes(keyword) ||
-        log.notes?.toLowerCase().includes(keyword)
+        (log.work_item && log.work_item.toLowerCase().includes(keyword)) ||
+        (log.work_scope && log.work_scope.toLowerCase().includes(keyword)) ||
+        (log.personnel && log.personnel.toLowerCase().includes(keyword)) ||
+        (log.notes && log.notes.toLowerCase().includes(keyword))
       );
     }
     return true;
   });
 
   const handleResetFilter = () => {
-    setFilterType('');
     setFilterDateRange({ start: '', end: '' });
     setFilterKeyword('');
   };
@@ -268,10 +241,15 @@ export default function OrderDetail() {
       const { data, error } = await supabase
         .from('project_log')
         .update({
-          log_type: editingLog.log_type,
           log_date: editingLog.log_date,
-          content: editingLog.content,
-          notes: editingLog.notes,
+          amount: parseFloat(editingLog.amount) || 0,
+          amount_untaxed: parseFloat(editingLog.amount_untaxed) || 0,
+          amount_taxed: parseFloat(editingLog.amount_taxed) || 0,
+          personnel: (editingLog.personnel || '').trim(),
+          work_item: (editingLog.work_item || '').trim(),
+          work_scope: (editingLog.work_scope || '').trim(),
+          warranty_years: parseFloat(editingLog.warranty_years) || 0,
+          notes: (editingLog.notes || '').trim(),
           updated_at: new Date().toISOString()
         })
         .eq('log_id', editingLog.log_id)
@@ -293,50 +271,19 @@ export default function OrderDetail() {
   const handleDeleteLog = async () => {
     try {
       const logToDelete = projectLogs.find(log => log.log_id === deletingLogId);
-      if (!logToDelete) { alert('找不到要刪除的日誌記錄'); return; }
-      if (logToDelete.log_type === '使用藥劑') {
-        // 解析 content 取得藥劑名稱與數量
-        let medicineName = '', quantity = 0;
-        if (logToDelete.content && logToDelete.content.includes('-')) {
-          const [name, qty] = logToDelete.content.split('-');
-          medicineName = name;
-          quantity = parseFloat(qty);
-        }
-        const logDate = logToDelete.log_date;
-        const projectName = project.project_name;
-        // 查找 medicine_id
-        const { data: medicineData, error: medError } = await supabase
-          .from('medicines')
-          .select('id')
-          .eq('name', medicineName)
-          .single();
-        if (medError || !medicineData) { alert('找不到藥劑'); return; }
-        // 查找所有符合的 medicine_usages
-        const { data: usages, error: usageError } = await supabase
-          .from('medicine_usages')
-          .select('id, created_at')
-          .eq('medicine_id', medicineData.id)
-          .eq('quantity', quantity)
-          .eq('date', logDate)
-          .eq('project', projectName);
-        if (usageError) { alert('查詢藥劑使用紀錄失敗'); return; }
-        if (!usages || usages.length === 0) { alert('找不到對應的藥劑使用紀錄，無法刪除'); return; }
-        // 找到最早一筆
-        usages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        const usageIdToDelete = usages[0].id;
-        // 刪除該筆 medicine_usages
-        const { error: delUsageError } = await supabase
-          .from('medicine_usages')
-          .delete()
-          .eq('id', usageIdToDelete);
-        if (delUsageError) { alert('刪除藥劑使用紀錄失敗'); return; }
+      if (!logToDelete) { 
+        alert('找不到要刪除的日誌記錄'); 
+        return; 
       }
+
       // 刪除日誌
       const { error } = await supabase
         .from('project_log')
         .delete()
         .eq('log_id', deletingLogId);
+      
       if (error) throw error;
+
       setProjectLogs(projectLogs.filter(log => log.log_id !== deletingLogId));
       setOpenDeleteLogDialog(false);
       setDeletingLogId(null);
@@ -818,23 +765,7 @@ export default function OrderDetail() {
 
           <Box sx={{ mb: 3 }}>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={2}>
-                <FormControl fullWidth size="small" sx={{ minWidth: '90px' }}>
-                  <InputLabel>類型</InputLabel>
-                  <Select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    label="類型"
-                  >
-                    <MenuItem value="">全部</MenuItem>
-                    <MenuItem value="工程">工程</MenuItem>
-                    <MenuItem value="財務">財務</MenuItem>
-                    <MenuItem value="行政">行政</MenuItem>
-                    <MenuItem value="使用藥劑">使用藥劑</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={2}>
+              <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
                   size="small"
@@ -846,7 +777,7 @@ export default function OrderDetail() {
                   sx={{ minWidth: '150px' }}
                 />
               </Grid>
-              <Grid item xs={12} md={2}>
+              <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
                   size="small"
@@ -863,6 +794,7 @@ export default function OrderDetail() {
                   fullWidth
                   size="small"
                   label="關鍵字搜尋"
+                  placeholder="搜尋人員、施作工項、範圍或備註"
                   value={filterKeyword}
                   onChange={(e) => setFilterKeyword(e.target.value)}
                   sx={{ minWidth: '200px' }}
@@ -886,70 +818,85 @@ export default function OrderDetail() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell width="10%">類型</TableCell>
-                  <TableCell width="12%">日期</TableCell>
-                  <TableCell width="35%">內容</TableCell>
-                  <TableCell width="15%">備註</TableCell>
-                  <TableCell width="12%">建立者</TableCell>
-                  <TableCell width="15%" align="center">操作</TableCell>
+                  <TableCell width="10%">日期</TableCell>
+                  <TableCell width="8%">金額</TableCell>
+                  <TableCell width="8%">未稅</TableCell>
+                  <TableCell width="8%">含稅</TableCell>
+                  <TableCell width="10%">人員</TableCell>
+                  <TableCell width="15%">施作工項</TableCell>
+                  <TableCell width="15%">範圍</TableCell>
+                  <TableCell width="8%">保固年限</TableCell>
+                  <TableCell width="8%">建立者</TableCell>
+                  <TableCell width="10%" align="center">操作</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredLogs.map((log) => (
                   <TableRow key={log.log_id}>
-                    <TableCell>
-                      <Box
-                        sx={{
-                          display: 'inline-block',
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: 1,
-                          backgroundColor: 
-                            log.log_type === '工程' ? 'rgba(25, 118, 210, 0.1)' :
-                            log.log_type === '財務' ? 'rgba(46, 125, 50, 0.1)' :
-                            log.log_type === '使用藥劑' ? 'rgba(237, 108, 2, 0.1)' :
-                            'rgba(237, 108, 2, 0.1)',
-                          color: 
-                            log.log_type === '工程' ? 'rgb(25, 118, 210)' :
-                            log.log_type === '財務' ? 'rgb(46, 125, 50)' :
-                            log.log_type === '使用藥劑' ? 'rgb(237, 108, 2)' :
-                            'rgb(237, 108, 2)',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {log.log_type}
-                      </Box>
-                    </TableCell>
                     <TableCell>{log.log_date}</TableCell>
                     <TableCell>
+                      {log.amount > 0 ? `$${parseFloat(log.amount).toLocaleString()}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {log.amount_untaxed > 0 ? `$${parseFloat(log.amount_untaxed).toLocaleString()}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {log.amount_taxed > 0 ? `$${parseFloat(log.amount_taxed).toLocaleString()}` : '-'}
+                    </TableCell>
+                    <TableCell>{log.personnel || '-'}</TableCell>
+                    <TableCell>
                       <Box
                         sx={{
-                          position: 'relative',
-                          display: '-webkit-box',
-                          WebkitLineClamp: expandedLogId === log.log_id ? 'none' : 2,
-                          WebkitBoxOrient: 'vertical',
+                          maxWidth: '150px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          wordBreak: 'break-word',
-                          maxHeight: expandedLogId === log.log_id ? 'none' : '3.2em',
+                          whiteSpace: expandedLogId === log.log_id ? 'normal' : 'nowrap'
                         }}
-                        dangerouslySetInnerHTML={{ __html: log.content }}
-                      />
-                      {log.content?.length > 60 && ( // 如果內容稍長就顯示按鈕（你可視情況調整閾值）
+                        title={log.work_item}
+                      >
+                        {log.work_item || '-'}
+                      </Box>
+                      {log.work_item && log.work_item.length > 20 && (
                         <Typography
                           variant="body2"
                           color="primary"
-                          sx={{ cursor: 'pointer', mt: 1 }}
+                          sx={{ cursor: 'pointer', fontSize: '0.75rem' }}
                           onClick={() =>
                             setExpandedLogId(prev => (prev === log.log_id ? null : log.log_id))
                           }
                         >
-                          {expandedLogId === log.log_id ? '收起' : '顯示更多'}
+                          {expandedLogId === log.log_id ? '收起' : '更多'}
                         </Typography>
                       )}
                     </TableCell>
-
-                    <TableCell>{log.notes}</TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          maxWidth: '150px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: expandedLogId === log.log_id ? 'normal' : 'nowrap'
+                        }}
+                        title={log.work_scope}
+                      >
+                        {log.work_scope || '-'}
+                      </Box>
+                      {log.work_scope && log.work_scope.length > 20 && (
+                        <Typography
+                          variant="body2"
+                          color="primary"
+                          sx={{ cursor: 'pointer', fontSize: '0.75rem' }}
+                          onClick={() =>
+                            setExpandedLogId(prev => (prev === log.log_id ? null : log.log_id))
+                          }
+                        >
+                          {expandedLogId === log.log_id ? '收起' : '更多'}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {log.warranty_years > 0 ? `${log.warranty_years}年` : '-'}
+                    </TableCell>
                     <TableCell>{log.created_by}</TableCell>
                     <TableCell align="center">
                       <IconButton
@@ -976,7 +923,7 @@ export default function OrderDetail() {
                 ))}
                 {filteredLogs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={10} align="center">
                       <Typography color="textSecondary">尚無日誌記錄</Typography>
                     </TableCell>
                   </TableRow>
@@ -995,9 +942,9 @@ export default function OrderDetail() {
       >
         <DialogTitle>新增專案日誌</DialogTitle>
         <DialogContent>
-          <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-            {/* 日期 */}
-            <Box sx={{ flex: 2 }}>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* 第一行：日期、金額、未稅、含稅 */}
+            <Grid item xs={12} sm={3}>
               <TextField
                 fullWidth
                 type="date"
@@ -1005,95 +952,106 @@ export default function OrderDetail() {
                 value={newLog.log_date}
                 onChange={(e) => setNewLog({ ...newLog, log_date: e.target.value })}
                 InputLabelProps={{ shrink: true }}
-                margin="normal"
+                required
               />
-            </Box>
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="金額"
+                type="number"
+                value={newLog.amount}
+                onChange={(e) => setNewLog({ ...newLog, amount: e.target.value })}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="未稅"
+                type="number"
+                value={newLog.amount_untaxed}
+                onChange={(e) => setNewLog({ ...newLog, amount_untaxed: e.target.value })}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="含稅"
+                type="number"
+                value={newLog.amount_taxed}
+                onChange={(e) => setNewLog({ ...newLog, amount_taxed: e.target.value })}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+                }}
+              />
+            </Grid>
 
-            {/* 日誌類型 */}
-            <Box sx={{ flex: 3 }}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>日誌類型</InputLabel>
-                <Select
-                  value={newLog.log_type}
-                  onChange={(e) => setNewLog({ ...newLog, log_type: e.target.value })}
-                >
-                  <MenuItem value="工程">工程</MenuItem>
-                  <MenuItem value="財務">財務</MenuItem>
-                  <MenuItem value="行政">行政</MenuItem>
-                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+            {/* 第二行：人員、施作工項 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="人員"
+                value={newLog.personnel}
+                onChange={(e) => setNewLog({ ...newLog, personnel: e.target.value })}
+                placeholder="負責人員姓名"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="施作工項"
+                value={newLog.work_item}
+                onChange={(e) => setNewLog({ ...newLog, work_item: e.target.value })}
+                placeholder="具體施作項目"
+              />
+            </Grid>
 
-            {/* 備註 */}
-            <Box sx={{ flex: 5 }}>
+            {/* 第三行：範圍、保固年限 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="範圍"
+                value={newLog.work_scope}
+                onChange={(e) => setNewLog({ ...newLog, work_scope: e.target.value })}
+                placeholder="工作範圍描述"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="保固年限"
+                type="number"
+                value={newLog.warranty_years}
+                onChange={(e) => setNewLog({ ...newLog, warranty_years: e.target.value })}
+                InputProps={{
+                  endAdornment: <Typography sx={{ ml: 1 }}>年</Typography>
+                }}
+                inputProps={{ 
+                  step: "0.1",
+                  min: "0"
+                }}
+              />
+            </Grid>
+
+            {/* 第四行：備註 */}
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="備註"
+                multiline
+                rows={3}
                 value={newLog.notes}
                 onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
-                margin="normal"
-                sx={{
-                  '& .MuiInputBase-root': {
-                    height: '56px',
-                    alignItems: 'center',
-                  },
-                  '& input': {
-                    height: '100%',
-                    boxSizing: 'border-box',
-                  },
-                }}
+                placeholder="其他備註資訊"
               />
-            </Box>
-          </Grid>
-
-          {/* 藥劑選擇（僅在藥劑類型時顯示） */}
-          {newLog.log_type === '使用藥劑' && (
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>選擇藥劑</InputLabel>
-                  <Select
-                    value={newLog.medicine_id}
-                    onChange={(e) => setNewLog({ ...newLog, medicine_id: e.target.value })}
-                    label="選擇藥劑"
-                  >
-                    {medicines.map((medicine) => (
-                      <MenuItem key={medicine.id} value={medicine.id}>
-                        {medicine.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="使用數量"
-                  type="text"
-                  value={newLog.medicine_quantity}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                      setNewLog({ ...newLog, medicine_quantity: value });
-                    }
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
             </Grid>
-          )}
-
-          {/* 內容輸入區（整行） */}
-          <Box>
-            <Typography sx={{ mb: 1 }}>內容</Typography>
-            <ReactQuill
-              theme="snow"
-              value={newLog.content}
-              onChange={(value) => setNewLog({ ...newLog, content: value })}
-              style={{ height: '200px', backgroundColor: 'white' }}
-            />
-          </Box>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenLogDialog(false)}>取消</Button>
@@ -1101,7 +1059,7 @@ export default function OrderDetail() {
             onClick={handleAddLog} 
             variant="contained" 
             color="primary"
-            disabled={!newLog.content || (newLog.log_type === '使用藥劑' && (!newLog.medicine_id || !newLog.medicine_quantity))}
+            disabled={!newLog.log_date}
           >
             新增
           </Button>
@@ -1137,9 +1095,9 @@ export default function OrderDetail() {
       >
         <DialogTitle>編輯專案日誌</DialogTitle>
         <DialogContent sx={{ flexGrow: 1, overflowY: 'auto', px: 2 }}>
-          {/* 日期 / 類型 / 備註 */}
-          <Grid container alignItems="center" sx={{ mt: 1, mb: 2, display: 'flex', flexWrap: 'nowrap', gap: 2 }}>
-            <Box sx={{ flex: 2 }}>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* 第一行：日期、金額、未稅、含稅 */}
+            <Grid item xs={12} sm={3}>
               <TextField
                 fullWidth
                 type="date"
@@ -1147,57 +1105,106 @@ export default function OrderDetail() {
                 value={editingLog?.log_date || ''}
                 onChange={(e) => setEditingLog(prev => ({ ...prev, log_date: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
-                margin="normal"
+                required
               />
-            </Box>
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="金額"
+                type="number"
+                value={editingLog?.amount || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, amount: e.target.value }))}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="未稅"
+                type="number"
+                value={editingLog?.amount_untaxed || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, amount_untaxed: e.target.value }))}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="含稅"
+                type="number"
+                value={editingLog?.amount_taxed || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, amount_taxed: e.target.value }))}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+                }}
+              />
+            </Grid>
 
-            <Box sx={{ flex: 3 }}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>日誌類型</InputLabel>
-                <Select
-                  value={editingLog?.log_type || ''}
-                  onChange={(e) => setEditingLog(prev => ({ ...prev, log_type: e.target.value }))}
-                >
-                  <MenuItem value="工程">工程</MenuItem>
-                  <MenuItem value="財務">財務</MenuItem>
-                  <MenuItem value="行政">行政</MenuItem>
-                  <MenuItem value="使用藥劑">使用藥劑</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+            {/* 第二行：人員、施作工項 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="人員"
+                value={editingLog?.personnel || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, personnel: e.target.value }))}
+                placeholder="負責人員姓名"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="施作工項"
+                value={editingLog?.work_item || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, work_item: e.target.value }))}
+                placeholder="具體施作項目"
+              />
+            </Grid>
 
-            <Box sx={{ flex: 5 }}>
+            {/* 第三行：範圍、保固年限 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="範圍"
+                value={editingLog?.work_scope || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, work_scope: e.target.value }))}
+                placeholder="工作範圍描述"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="保固年限"
+                type="number"
+                value={editingLog?.warranty_years || ''}
+                onChange={(e) => setEditingLog(prev => ({ ...prev, warranty_years: e.target.value }))}
+                InputProps={{
+                  endAdornment: <Typography sx={{ ml: 1 }}>年</Typography>
+                }}
+                inputProps={{ 
+                  step: "0.1",
+                  min: "0"
+                }}
+              />
+            </Grid>
+
+            {/* 第四行：備註 */}
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="備註"
+                multiline
+                rows={3}
                 value={editingLog?.notes || ''}
                 onChange={(e) => setEditingLog(prev => ({ ...prev, notes: e.target.value }))}
-                margin="normal"
-                // 👇 保證高度與 Select/TextField 對齊
-                sx={{
-                  '& .MuiInputBase-root': {
-                    height: '56px',
-                    alignItems: 'center',
-                  },
-                  '& input': {
-                    height: '100%',
-                    boxSizing: 'border-box',
-                  },
-                }}
+                placeholder="其他備註資訊"
               />
-            </Box>
+            </Grid>
           </Grid>
-
-          {/* 內容欄位 */}
-          <Box>
-            <Typography sx={{ mb: 1 }}>內容</Typography>
-            <ReactQuill
-              theme="snow"
-              value={editingLog?.content || ''}
-              onChange={(value) => setEditingLog(prev => ({ ...prev, content: value }))}
-              style={{ height: '200px', backgroundColor: 'white' }}
-            />
-          </Box>
         </DialogContent>
         <DialogActions>
           <Button 
@@ -1212,7 +1219,7 @@ export default function OrderDetail() {
             onClick={handleEditLog} 
             variant="contained" 
             color="primary"
-            disabled={!editingLog?.content}
+            disabled={!editingLog?.log_date}
           >
             儲存
           </Button>
