@@ -175,6 +175,8 @@ const HomePage = () => {
   const [projectError, setProjectError] = useState(null);
   const [gapiInitialized, setGapiInitialized] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  // 新增狀態管理
+  const [showQuoteDates, setShowQuoteDates] = useState(true);
   const [showConstructionDates, setShowConstructionDates] = useState(true);
   const [showPaymentDates, setShowPaymentDates] = useState(true);
   const [showTrackDates, setShowTrackDates] = useState(true);
@@ -395,178 +397,98 @@ const HomePage = () => {
         
       if (error) throw error;
       
+      // 轉換為行事曆事件格式 - 參考 ApiCalendar.js 的邏輯
+      
+      // 估價事件 - 僅顯示估價日期當天
+      const quoteEvents = projects
+        .filter(project => project.quote_date)
+        .map(project => ({
+          id: `quote-${project.project_id}`,
+          title: `估價: ${project.project_name}`,
+          start: project.quote_date,
+          end: project.quote_date,
+          description: `客戶: ${project.customer_database?.customer_name || '未知'}`,
+          type: 'quote',
+          projectId: project.project_id
+        }));
+
+      // 施工事件 - 僅顯示預計進場日期當天
+      const constructionEvents = projects
+        .filter(project => project.expected_start_date)
+        .map(project => ({
+          id: `construction-${project.project_id}`,
+          title: `施工: ${project.project_name}`,
+          start: project.expected_start_date,
+          end: project.expected_start_date,
+          description: `客戶: ${project.customer_database?.customer_name || '未知'}`,
+          type: 'construction',
+          projectId: project.project_id
+        }));
+        
+      // 收款事件 - 僅顯示收款日期當天
+      const paymentEvents = projects
+        .filter(project => project.payment_date)
+        .map(project => ({
+          id: `payment-${project.project_id}`,
+          title: `收款: ${project.project_name}`,
+          start: project.payment_date,
+          end: project.payment_date,
+          description: `客戶: ${project.customer_database?.customer_name || '未知'}`,
+          type: 'payment',
+          projectId: project.project_id
+        }));
+
+      // 追蹤事件 - 僅顯示追蹤提醒日期當天
       const trackEvents = projects
         .filter(project => project.is_tracked && project.track_remind_date)
         .map(project => ({
           id: `track-${project.project_id}`,
-          title: `追蹤：${project.project_name}`,
+          title: `追蹤: ${project.project_name}`,
           start: project.track_remind_date,
           end: project.track_remind_date,
-          description: `請追蹤客戶：${project.customer_database?.customer_name || ''}\n專案地址：${project.site_city || ''}${project.site_district || ''}${project.site_address || ''}`,
-          backgroundColor: '#ffe082', // 你可以自訂顏色
-          borderColor: '#ffb300',
-          textColor: '#333333',
+          description: `客戶: ${project.customer_database?.customer_name || '未知'}`,
           type: 'track',
-          extendedProps: {
-            projectId: project.project_id,
-            isProjectEvent: true
-          }
+          projectId: project.project_id
         }));
-      // 將追蹤事件添加到專案事件中 
-      // 轉換為行事曆事件格式
-      const constructionEvents = projects
-        .filter(project => project.quote_date)
-        .map(project => {
-          // 處理日期
-          // 確保開始日期是 Date 物件
-          const startDate = parseISO(project.quote_date);
-          
-          // 處理結束日期 - 如果沒有結束日期，使用開始日期
-          let endDate;
-          if (project.expected_start_date) {
-            endDate = parseISO(project.expected_start_date);
-            // 將結束日期設為該天的結束時間 (23:59:59)
-            endDate.setHours(23, 59, 59, 999);
-          } else {
-            // 如果沒有提供結束日期，使用開始日期的結束時間
-            endDate = new Date(startDate);
-            endDate.setHours(23, 59, 59, 999);
-          }
-          
-          // 簡化標題，移除"施工:"前綴
-          return {
-            id: `construction-${project.project_id}`,
-            title: project.project_name, // 移除"施工:"前綴
-            start: startDate,
-            end: endDate,
-            description: project.customer_database?.customer_name || '未知客戶', // 簡化描述
-            type: 'construction',
-            projectId: project.project_id
-          };
-        });
-        
-      const paymentEvents = projects
-        .filter(project => project.payment_date)
-        .map(project => {
-          // 處理收款日期
-          const paymentDate = parseISO(project.payment_date);
-          
-          // 設定為一整天的事件
-          const paymentEndDate = new Date(paymentDate);
-          paymentEndDate.setHours(23, 59, 59, 999);
-          
-          // 簡化標題，移除"收款:"前綴
-          return {
-            id: `payment-${project.project_id}`,
-            title: project.project_name, // 移除"收款:"前綴
-            start: paymentDate,
-            end: paymentEndDate,
-            description: project.customer_database?.customer_name || '未知客戶', // 簡化描述
-            type: 'payment',
-            projectId: project.project_id
-          };
-        });
       
       // 設置專案事件
-      setProjectEvents([...constructionEvents, ...paymentEvents, ...trackEvents]);
+      setProjectEvents([...quoteEvents, ...constructionEvents, ...paymentEvents, ...trackEvents]);
       
       // 更新統計資料 - 今日事件數量
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
       
-      // 篩選出今天需要進行施工的專案（根據施工日期或施工狀態）
-      const todayConstructionProjects = projects.filter(project => {
-        // 如果有施工日期且是今天
-        if (project.quote_date) {
-          const startDate = parseISO(project.quote_date);
-          startDate.setHours(0, 0, 0, 0);
-          
-          let endDate;
-          if (project.expected_start_date) {
-            endDate = parseISO(project.expected_start_date);
-            endDate.setHours(23, 59, 59, 999);
-          } else {
-            endDate = new Date(startDate);
-            endDate.setHours(23, 59, 59, 999);
-          }
-          
-          if (today.getTime() >= startDate.getTime() && today.getTime() <= endDate.getTime()) {
-            return true;
-          }
-        }
-        
-        // 檢查施工狀態是否為進行中
-        const constructionStatus = (project.construction_status || '').toLowerCase();
-        if (constructionStatus === '進行中' || constructionStatus === 'in progress') {
-          return true;
-        }
-        
-        return false;
-      });
-      
-      // 篩選出今天需要進行請款的專案
-      const todayPaymentProjects = projects.filter(project => {
-        // 如果有請款日期且是今天
-        if (project.payment_date) {
-          const paymentDate = parseISO(project.payment_date);
-          paymentDate.setHours(0, 0, 0, 0);
-          
-          if (paymentDate.getTime() === today.getTime()) {
-            return true;
-          }
-        }
-        
-        // 檢查請款狀態是否為待收款
-        const billingStatus = (project.billing_status || '').toLowerCase();
-        if (billingStatus === '已請款' && billingStatus !== '已收款') {
-          return true;
-        }
-        
-        return false;
-      });
-      
-      // 將今日需要處理的專案轉換為事件
-      const todayConstructionProjectEvents = todayConstructionProjects.filter(project => 
-        !constructionEvents.some(event => event.projectId === project.project_id)).length;
-      
-      const todayPaymentProjectEvents = todayPaymentProjects.filter(project => 
-        !paymentEvents.some(event => event.projectId === project.project_id)).length;
-      
-      // 計算今天的施工事件 - 檢查今天是否在施工日期範圍內
-      const todayConstructionEvents = constructionEvents.filter(event => {
-        const eventStart = new Date(event.start);
-        eventStart.setHours(0, 0, 0, 0);
-        
-        const eventEnd = new Date(event.end);
-        eventEnd.setHours(23, 59, 59, 999);
-        
-        return (today.getTime() >= eventStart.getTime() && today.getTime() <= eventEnd.getTime());
-      }).length;
-      
-      // 計算今天的收款事件
-      const todayPaymentEvents = paymentEvents.filter(event => {
+      // 計算今天的各類事件數量
+      const todayQuoteEvents = quoteEvents.filter(event => {
         const eventDate = new Date(event.start);
         eventDate.setHours(0, 0, 0, 0);
-        
         return eventDate.getTime() === today.getTime();
       }).length;
       
-      // 計算今天的追蹤事件
+      const todayConstructionEvents = constructionEvents.filter(event => {
+        const eventDate = new Date(event.start);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === today.getTime();
+      }).length;
+      
+      const todayPaymentEvents = paymentEvents.filter(event => {
+        const eventDate = new Date(event.start);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === today.getTime();
+      }).length;
+      
       const todayTrackEvents = trackEvents.filter(event => {
         const eventDate = new Date(event.start);
         eventDate.setHours(0, 0, 0, 0);
-        
         return eventDate.getTime() === today.getTime();
       }).length;
       
       // 獲取現有的 Google Calendar 事件數量
       const existingGoogleEvents = stats.todayEvents || 0;
       
-      // 今日行程總數 = Google日曆事件 + 施工事件 + 收款事件 + 追蹤事件 + 今日施工專案 + 今日請款專案
-      const totalTodayEvents = existingGoogleEvents + todayConstructionEvents + todayPaymentEvents + 
-                               todayTrackEvents + todayConstructionProjectEvents + todayPaymentProjectEvents;
+      // 今日行程總數 = Google日曆事件 + 各類專案事件
+      const totalTodayEvents = existingGoogleEvents + todayQuoteEvents + todayConstructionEvents + 
+                               todayPaymentEvents + todayTrackEvents;
       
       setStats(prev => ({
         ...prev,
@@ -586,11 +508,11 @@ const HomePage = () => {
     // 根據選項篩選專案事件
     let filteredProjectEvents = [];
     
-    if (showTrackDates) {
+    if (showQuoteDates) {
       filteredProjectEvents = [...filteredProjectEvents, 
-        ...projectEvents.filter(event => event.type === 'track')];
+        ...projectEvents.filter(event => event.type === 'quote')];
     }
-
+    
     if (showConstructionDates) {
       filteredProjectEvents = [...filteredProjectEvents, 
         ...projectEvents.filter(event => event.type === 'construction')];
@@ -601,9 +523,14 @@ const HomePage = () => {
         ...projectEvents.filter(event => event.type === 'payment')];
     }
     
+    if (showTrackDates) {
+      filteredProjectEvents = [...filteredProjectEvents, 
+        ...projectEvents.filter(event => event.type === 'track')];
+    }
+    
     // 合併所有事件
     return [...calendarEvents, ...filteredProjectEvents];
-  }, [calendarEvents, projectEvents, showTrackDates, showConstructionDates, showPaymentDates]);
+  }, [calendarEvents, projectEvents, showQuoteDates, showConstructionDates, showPaymentDates, showTrackDates]);
   
   // 在初始化完成後獲取專案日期
   useEffect(() => {
@@ -772,6 +699,22 @@ const HomePage = () => {
             <FormControlLabel
               control={
                 <Checkbox 
+                  checked={showQuoteDates} 
+                  onChange={(e) => setShowQuoteDates(e.target.checked)}
+                  color="primary"
+                  size="small"
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <CalendarTodayIcon fontSize="small" sx={{ mr: 0.5, color: theme.palette.text.secondary }} />
+                  <Typography variant="body2">顯示估價日期</Typography>
+                </Box>
+              }
+            />
+            <FormControlLabel
+              control={
+                <Checkbox 
                   checked={showConstructionDates} 
                   onChange={(e) => setShowConstructionDates(e.target.checked)}
                   color="primary"
@@ -847,11 +790,17 @@ const HomePage = () => {
                           onClick={() => event.projectId && handleEventClick(event)}
                           sx={{ cursor: event.projectId ? 'pointer' : 'default' }}
                         >
+                          {event.type === 'quote' && (
+                            <CalendarTodayIcon fontSize="small" sx={{ mr: 1, fontSize: '16px', color: '#81c784' }} />
+                          )}
                           {event.type === 'construction' && (
-                            <BuildIcon fontSize="small" sx={{ mr: 1, fontSize: '16px', color: '#388e3c' }} />
+                            <BuildIcon fontSize="small" sx={{ mr: 1, fontSize: '16px', color: '#a0b4ff' }} />
                           )}
                           {event.type === 'payment' && (
                             <MoneyIcon fontSize="small" sx={{ mr: 1, fontSize: '16px', color: '#ffa000' }} />
+                          )}
+                          {event.type === 'track' && (
+                            <CalendarTodayIcon fontSize="small" sx={{ mr: 1, fontSize: '16px', color: '#ffb300' }} />
                           )}
                           {event.type === 'meeting' && (
                             <CalendarTodayIcon fontSize="small" sx={{ mr: 1, fontSize: '16px', color: '#d32f2f' }} />
