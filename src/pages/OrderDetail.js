@@ -550,49 +550,12 @@ export default function OrderDetail() {
                 <Build sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">施工資訊</Typography>
               </Box>
-              <Grid container spacing={2}>                <Grid item xs={12} md={6}>
-                  <Typography><strong>估價日期：</strong> {project.quote_date}</Typography>
-                  <Box sx={{ mb: 1 }}>
-                    <Typography component="span"><strong>施工項目：</strong></Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                      {(() => {
-                        // Try to parse construction_items array or fall back to construction_item
-                        let items = [];
-                        
-                        if (project.construction_items && Array.isArray(project.construction_items)) {
-                          items = project.construction_items;
-                        } else if (project.construction_item) {
-                          // Try to split by comma if it's a string
-                          items = project.construction_item.split(',').map(item => item.trim()).filter(Boolean);
-                        }
-                        
-                        if (items.length > 0) {
-                          return items.map((item, index) => (
-                            <Chip
-                              key={index}
-                              label={item}
-                              size="small"
-                              variant="outlined"
-                              sx={{ 
-                                bgcolor: 'primary.light',
-                                color: 'black',
-                                '& .MuiChip-label': { fontSize: '0.75rem' }
-                              }}
-                            />
-                          ));
-                        } else {
-                          return <Typography component="span" color="textSecondary"> 無</Typography>;
-                        }
-                      })()}
-                    </Box>
-                  </Box>
-                  <Typography><strong>施工天數：</strong> {project.construction_days}</Typography>
-                </Grid>
+              <Grid container spacing={2}>                
                 <Grid item xs={12} md={6}>
-                  <Typography><strong>預計進場日期：</strong> {project.expected_start_date}</Typography>
-                  <Typography><strong>施工金額：</strong> ${project.construction_fee?.toLocaleString()}</Typography>
-                  <Box>
-                    <Typography component="span"><strong>施工範圍：</strong></Typography>
+                  <Typography><strong>估價日期：</strong> {project.quote_date}</Typography>
+                  <Typography><strong>施工天數：</strong> {project.construction_days}</Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Typography fontWeight="bold">施工範圍：</Typography>
                     {(() => {
                       const scope = project.construction_scope || '無';
                       const previewLength = 30;
@@ -600,7 +563,13 @@ export default function OrderDetail() {
                       const preview = isLong ? scope.slice(0, previewLength) + '...' : scope;
 
                       return (
-                        <Typography component="span" sx={{ ml: 1 }}>
+                        <Typography
+                          sx={{
+                            ml: 1,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}
+                        >
                           {isDisplayScopeExpanded || !isLong ? scope : preview}
                           {isLong && (
                             <Typography
@@ -621,6 +590,78 @@ export default function OrderDetail() {
                       );
                     })()}
                   </Box>
+
+
+
+                  {/* <Typography><strong>施工天數：</strong> {project.construction_days}</Typography> */}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>預計進場日期：</strong> {project.expected_start_date}</Typography>
+                  {/* <Typography><strong>施工金額：</strong> ${project.construction_fee?.toLocaleString()}</Typography> */}
+                  {/* 施工項目*/}
+                  <Box sx={{ mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'nowrap',
+                      gap: 0.5,
+                      mt: 0.5,
+                      overflowX: 'auto',
+                      maxWidth: '100%',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      component="span"
+                      sx={{
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      施工項目：
+                    </Typography>
+
+                    {(() => {
+                      let items = [];
+
+                      if (project.construction_items && Array.isArray(project.construction_items)) {
+                        items = project.construction_items;
+                      } else if (project.construction_item) {
+                        items = project.construction_item.split(',').map(item => item.trim()).filter(Boolean);
+                      }
+
+                      if (items.length > 0) {
+                        return items.map((item, index) => (
+                          <Chip
+                            key={index}
+                            label={item}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              bgcolor: 'primary.light',
+                              color: 'black',
+                              flexShrink: 0,
+                              whiteSpace: 'nowrap',
+                              '& .MuiChip-label': { fontSize: '0.75rem', whiteSpace: 'nowrap' },
+                            }}
+                          />
+                        ));
+                      } else {
+                        return (
+                          <Typography
+                            component="span"
+                            color="textSecondary"
+                            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                          >
+                            無
+                          </Typography>
+                        );
+                      }
+                    })()}
+                  </Box>
+                  </Box>
+
                 </Grid>
                 {/* <Grid item xs={12}>
                   <Typography><strong>注意事項：</strong> {project.project_notes}</Typography>
