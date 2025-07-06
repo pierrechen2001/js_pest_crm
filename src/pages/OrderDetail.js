@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 
 import { useAuth } from '../context/AuthContext';
 import ProjectForm from '../components/ProjectForm';
+import ProjectLogDialog from '../components/ProjectLogDialog';
 import {
   Box,
   Card,
@@ -497,7 +498,13 @@ export default function OrderDetail() {
                   const preview = isLong ? note.slice(0, previewLength) + '...' : note;
 
                   return (
-                    <Typography color="textSecondary">
+                    <Typography 
+                      color="textSecondary"
+                      sx={{
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       {customerNoteExpanded || !isLong ? note : preview}
                       {isLong && (
                         <Typography
@@ -683,7 +690,13 @@ export default function OrderDetail() {
                     const preview = isLong ? note.slice(0, previewLength) + '...' : note;
 
                     return (
-                      <Typography color="textSecondary">
+                      <Typography 
+                        color="textSecondary"
+                        sx={{
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
                         {projectNoteExpanded || !isLong ? note : preview}
                         {isLong && (
                           <Typography
@@ -889,9 +902,13 @@ export default function OrderDetail() {
                       <Box
                         sx={{
                           maxWidth: '150px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: expandedLogId === log.log_id ? 'normal' : 'nowrap'
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          overflow: expandedLogId === log.log_id ? 'visible' : 'hidden',
+                          textOverflow: expandedLogId === log.log_id ? 'clip' : 'ellipsis',
+                          display: expandedLogId === log.log_id ? 'block' : '-webkit-box',
+                          WebkitLineClamp: expandedLogId === log.log_id ? 'none' : 2,
+                          WebkitBoxOrient: 'vertical'
                         }}
                         title={log.work_item}
                       >
@@ -914,9 +931,13 @@ export default function OrderDetail() {
                       <Box
                         sx={{
                           maxWidth: '150px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: expandedLogId === log.log_id ? 'normal' : 'nowrap'
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          overflow: expandedLogId === log.log_id ? 'visible' : 'hidden',
+                          textOverflow: expandedLogId === log.log_id ? 'clip' : 'ellipsis',
+                          display: expandedLogId === log.log_id ? 'block' : '-webkit-box',
+                          WebkitLineClamp: expandedLogId === log.log_id ? 'none' : 2,
+                          WebkitBoxOrient: 'vertical'
                         }}
                         title={log.work_scope}
                       >
@@ -975,137 +996,14 @@ export default function OrderDetail() {
         </Card>
       </Box>
 
-      <Dialog
+      <ProjectLogDialog
         open={openLogDialog}
         onClose={() => setOpenLogDialog(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>新增專案日誌</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            {/* 第一行：日期、金額、未稅、含稅 */}
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                type="date"
-                label="日期"
-                value={newLog.log_date}
-                onChange={(e) => setNewLog({ ...newLog, log_date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="金額"
-                type="number"
-                value={newLog.amount}
-                onChange={(e) => setNewLog({ ...newLog, amount: e.target.value })}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="未稅"
-                type="number"
-                value={newLog.amount_untaxed}
-                onChange={(e) => setNewLog({ ...newLog, amount_untaxed: e.target.value })}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="含稅"
-                type="number"
-                value={newLog.amount_taxed}
-                onChange={(e) => setNewLog({ ...newLog, amount_taxed: e.target.value })}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
-                }}
-              />
-            </Grid>
-
-            {/* 第二行：人員、施作工項 */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="人員"
-                value={newLog.personnel}
-                onChange={(e) => setNewLog({ ...newLog, personnel: e.target.value })}
-                placeholder="負責人員姓名"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="施作工項"
-                value={newLog.work_item}
-                onChange={(e) => setNewLog({ ...newLog, work_item: e.target.value })}
-                placeholder="具體施作項目"
-              />
-            </Grid>
-
-            {/* 第三行：範圍、保固年限 */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="範圍"
-                value={newLog.work_scope}
-                onChange={(e) => setNewLog({ ...newLog, work_scope: e.target.value })}
-                placeholder="工作範圍描述"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="保固年限"
-                type="number"
-                value={newLog.warranty_years}
-                onChange={(e) => setNewLog({ ...newLog, warranty_years: e.target.value })}
-                InputProps={{
-                  endAdornment: <Typography sx={{ ml: 1 }}>年</Typography>
-                }}
-                inputProps={{ 
-                  step: "0.1",
-                  min: "0"
-                }}
-              />
-            </Grid>
-
-            {/* 第四行：備註 */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="備註"
-                multiline
-                rows={3}
-                value={newLog.notes}
-                onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
-                placeholder="其他備註資訊"
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenLogDialog(false)}>取消</Button>
-          <Button 
-            onClick={handleAddLog} 
-            variant="contained" 
-            color="primary"
-            disabled={!newLog.log_date}
-          >
-            新增
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={handleAddLog}
+        logData={newLog}
+        setLogData={setNewLog}
+        mode="create"
+      />
 
       <Dialog
         open={openDeleteDialog}
@@ -1125,147 +1023,17 @@ export default function OrderDetail() {
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      <ProjectLogDialog
         open={openEditLogDialog}
         onClose={() => {
           setOpenEditLogDialog(false);
           setEditingLog(null);
         }}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>編輯專案日誌</DialogTitle>
-        <DialogContent sx={{ flexGrow: 1, overflowY: 'auto', px: 2 }}>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            {/* 第一行：日期、金額、未稅、含稅 */}
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                type="date"
-                label="日期"
-                value={editingLog?.log_date || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, log_date: e.target.value }))}
-                InputLabelProps={{ shrink: true }}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="金額"
-                type="number"
-                value={editingLog?.amount || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, amount: e.target.value }))}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="未稅"
-                type="number"
-                value={editingLog?.amount_untaxed || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, amount_untaxed: e.target.value }))}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <TextField
-                fullWidth
-                label="含稅"
-                type="number"
-                value={editingLog?.amount_taxed || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, amount_taxed: e.target.value }))}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
-                }}
-              />
-            </Grid>
-
-            {/* 第二行：人員、施作工項 */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="人員"
-                value={editingLog?.personnel || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, personnel: e.target.value }))}
-                placeholder="負責人員姓名"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="施作工項"
-                value={editingLog?.work_item || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, work_item: e.target.value }))}
-                placeholder="具體施作項目"
-              />
-            </Grid>
-
-            {/* 第三行：範圍、保固年限 */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="範圍"
-                value={editingLog?.work_scope || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, work_scope: e.target.value }))}
-                placeholder="工作範圍描述"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="保固年限"
-                type="number"
-                value={editingLog?.warranty_years || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, warranty_years: e.target.value }))}
-                InputProps={{
-                  endAdornment: <Typography sx={{ ml: 1 }}>年</Typography>
-                }}
-                inputProps={{ 
-                  step: "0.1",
-                  min: "0"
-                }}
-              />
-            </Grid>
-
-            {/* 第四行：備註 */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="備註"
-                multiline
-                rows={3}
-                value={editingLog?.notes || ''}
-                onChange={(e) => setEditingLog(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="其他備註資訊"
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => {
-              setOpenEditLogDialog(false);
-              setEditingLog(null);
-            }}
-          >
-            取消
-          </Button>
-          <Button 
-            onClick={handleEditLog} 
-            variant="contained" 
-            color="primary"
-            disabled={!editingLog?.log_date}
-          >
-            儲存
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={handleEditLog}
+        logData={editingLog}
+        setLogData={setEditingLog}
+        mode="edit"
+      />
 
       <Dialog
         open={openDeleteLogDialog}
