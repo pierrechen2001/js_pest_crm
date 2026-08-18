@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { signInToSupabaseWithGoogleToken } from '../lib/googleSupabaseAuth';
 import VersionBadge from '../components/VersionBadge';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [error, setError] = useState("");
@@ -23,6 +24,7 @@ const Login = () => {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const signInAttemptRef = useRef(false);
   const navigate = useNavigate();
+  const { updateUserName } = useAuth();
 
   const handleGoogleLogin = async () => {
     if (signInAttemptRef.current) return;
@@ -117,7 +119,7 @@ const Login = () => {
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('id, email, is_approved, role')
+          .select('id, email, name, is_approved, role')
           .eq('email', email)
           .single();
         existingUser = data;
@@ -153,6 +155,8 @@ const Login = () => {
         localStorage.setItem("loginMethod", "google");
         localStorage.setItem("userRoles", JSON.stringify([isAdmin ? 'admin' : 'user']));
         localStorage.setItem("isApproved", JSON.stringify(isAdmin ? true : false));
+        localStorage.setItem("userId", JSON.stringify(newUser.id));
+        updateUserName(newUser.name || name);
         if (isAdmin) {
           navigate("/");
         } else {
@@ -167,18 +171,24 @@ const Login = () => {
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
           localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
+          localStorage.setItem("userId", JSON.stringify(existingUser.id));
+          updateUserName(existingUser.name || name);
           navigate("/");
         } else if (!existingUser.is_approved) {
           // Not approved: redirect to pending
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
           localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
+          localStorage.setItem("userId", JSON.stringify(existingUser.id));
+          updateUserName(existingUser.name || name);
           navigate("/pending-approval");
         } else {
           // Approved user: redirect to customers
           localStorage.setItem("loginMethod", "google");
           localStorage.setItem("userRoles", JSON.stringify([existingUser.role]));
           localStorage.setItem("isApproved", JSON.stringify(existingUser.is_approved));
+          localStorage.setItem("userId", JSON.stringify(existingUser.id));
+          updateUserName(existingUser.name || name);
           navigate("/");
         }
       }

@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
 const UserProfile = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserName } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
@@ -36,6 +36,7 @@ const UserProfile = () => {
         .update({ name })
         .eq('id', user.id);
       if (error) throw error;
+      updateUserName(name);
       setSuccess('個人資訊已更新');
       setOpenSnackbar(true);
     } catch (err) {
@@ -115,4 +116,4 @@ const UserProfile = () => {
   );
 };
 
-export default UserProfile; 
+export default UserProfile;
