@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { 
   Container, 
   Box, 
@@ -12,16 +12,24 @@ import {
   Paper
 } from "@mui/material";
 import GoogleIcon from '@mui/icons-material/Google';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { signInToSupabaseWithGoogleToken } from '../lib/googleSupabaseAuth';
+import VersionBadge from '../components/VersionBadge';
 
 const Login = () => {
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const signInAttemptRef = useRef(false);
   const navigate = useNavigate();
 
   const handleGoogleLogin = async () => {
+    if (signInAttemptRef.current) return;
+
+    signInAttemptRef.current = true;
+    setIsSigningIn(true);
+
     try {
       setError("");
       console.log("Login: Starting Google login process");
@@ -87,19 +95,21 @@ const Login = () => {
   
       console.log("Login: Using Supabase to sign in with ID token");
   
-      // Sign in with Supabase
-      const { data, error: supabaseError } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: id_token,
-      });
-  
-      if (supabaseError) throw supabaseError;
+      // Reuse a valid Supabase session and deduplicate any simultaneous call
+      // made by AuthContext while Google Auth is updating.
+      const { data, reusedSession } = await signInToSupabaseWithGoogleToken(id_token);
   
       // 🔥 Add or Update User in Supabase Database
-      const email = profile.getEmail();
-      const name = profile.getName();
-      const google_id = profile.getId();
-      const picture_url = profile.getImageUrl();
+      const email = data.user?.email || profile.getEmail();
+      const name = reusedSession
+        ? data.user?.user_metadata?.full_name || profile.getName()
+        : profile.getName();
+      const google_id = reusedSession
+        ? data.user?.user_metadata?.provider_id || profile.getId()
+        : profile.getId();
+      const picture_url = reusedSession
+        ? data.user?.user_metadata?.avatar_url || profile.getImageUrl()
+        : profile.getImageUrl();
   
       // Check if the user already exists
       let existingUser = null;
@@ -176,6 +186,9 @@ const Login = () => {
       console.error("Login: Error during Google login:", error);
       setError(error.message || "Google 登入失敗");
       setOpenSnackbar(true);
+    } finally {
+      signInAttemptRef.current = false;
+      setIsSigningIn(false);
     }
   };
 
@@ -197,6 +210,7 @@ const Login = () => {
         zIndex: 1200,
       }}
     >
+      <VersionBadge />
       <Box
         sx={{
           width: '100%',
@@ -271,6 +285,7 @@ const Login = () => {
               variant="contained"
               startIcon={<GoogleIcon />}
               onClick={handleGoogleLogin}
+              disabled={isSigningIn}
               sx={{ 
                 mb: 2,
                 py: 1.5,
@@ -285,7 +300,7 @@ const Login = () => {
                 transition: 'all 0.2s ease-in-out',
               }}
             >
-              使用 Google 帳號登入
+              {isSigningIn ? '登入中...' : '使用 Google 帳號登入'}
             </Button>
             <Typography 
               variant="caption" 

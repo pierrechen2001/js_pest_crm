@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import { gapi } from "gapi-script";
 import { assignRolePermissions } from '../lib/permissionUtils';
 import LoadingScreen from '../components/LoadingScreen';
+import { signInToSupabaseWithGoogleToken } from '../lib/googleSupabaseAuth';
 
 // Create context
 const AuthContext = createContext(null);
@@ -61,20 +62,20 @@ export const AuthProvider = ({ children }) => {
       
       debugLog('Processing Google user:', { email: profile.getEmail() });
       
-      // Sign in with Supabase using Google token
-      const { data, error } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: googleToken,
-      });
-
-      if (error) throw error;
+      // This shared helper reuses an existing Supabase session and deduplicates
+      // concurrent calls from AuthContext and the login page.
+      const { data, reusedSession } = await signInToSupabaseWithGoogleToken(googleToken);
       if (!data.user) throw new Error('No user data returned');
 
-      debugLog('Successfully authenticated with Supabase');
+      debugLog(
+        reusedSession
+          ? 'Using existing Supabase session'
+          : 'Successfully authenticated with Supabase'
+      );
 
-      
       // Set user data
-      const fulluser = await fetchFullUser(profile.getEmail());
+      const authenticatedEmail = data.user.email || profile.getEmail();
+      const fulluser = await fetchFullUser(authenticatedEmail);
 
       if (!fulluser) {
         throw new Error('User not found in database');
@@ -143,11 +144,21 @@ export const AuthProvider = ({ children }) => {
         
         debugLog('Google Auth initialized successfully');
         
-        // If user is already signed in with Google, update the auth state
+        // Google Auth is also used by Calendar, but Supabase is the source of
+        // truth for application authentication. Never exchange a Google token
+        // again when a valid Supabase session already exists.
         if (authInstance.isSignedIn.get()) {
-          debugLog('Found existing Google session');
-          const googleUser = authInstance.currentUser.get();
-          await handleGoogleUser(googleUser);
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+          if (sessionError) {
+            console.warn('Unable to check the Supabase session:', sessionError);
+          } else if (session?.user) {
+            debugLog('Supabase session already exists; skipping Google token exchange');
+          } else {
+            debugLog('Found existing Google session without a Supabase session');
+            const googleUser = authInstance.currentUser.get();
+            await handleGoogleUser(googleUser);
+          }
         }
         
         isInitialized = true;

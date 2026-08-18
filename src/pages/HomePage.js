@@ -21,6 +21,7 @@ import { format, addDays, subDays, parseISO, isSameDay } from 'date-fns';
 import zhTW from 'date-fns/locale/zh-TW';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import VersionBadge from '../components/VersionBadge';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -590,6 +591,7 @@ const HomePage = () => {
   
   return (
     <Box sx={{ p: 3 }}>
+      <VersionBadge />
       {loading || loadingProjects ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
           <CircularProgress />
@@ -849,4 +851,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage; 
+export default HomePage;
